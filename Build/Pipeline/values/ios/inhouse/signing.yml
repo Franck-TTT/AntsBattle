@@ -1,0 +1,6 @@
+values:
+  # Tactile's enterprise certificate signs every game's in-house build. The profile is the game's
+  # AppSigning inhouse.mobileprovision, for the in-house bundle id.
+  XCODE_CODE_SIGNING:
+    - ProvisioningProfile: 'inhouse.mobileprovision'
+      SigningCertificate: "iPhone Distribution: Tactile Entertainment ApS"

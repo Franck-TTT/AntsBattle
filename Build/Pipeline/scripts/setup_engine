@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+"""
+Sets up the engine before the release is published (GameHubPublishReleaseStep), which needs it:
+
+- the Node the engine CLI needs, the same one the build script uses, also linked at
+  ~/.cache/tactile-game/node-current so the pipeline values can name it (GAME_HUB_NODE_PATH);
+- the engine checkout at <ROOT_PATH>/game-engine, where the publish step finds the CLI;
+- the game's own packages (npm install);
+- the engine's host tools, which cook and pack the release, and on iOS the Hermes build.
+
+It loads the build script's functions, as run_tests does.
+"""
+import importlib.machinery
+import importlib.util
+import os
+import shutil
+
+BUILD_SCRIPT = "build_game"
+NODE_LINK = os.path.join(os.path.expanduser("~"), ".cache", "tactile-game", "node-current")
+
+
+def load_build_script():
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), BUILD_SCRIPT)
+    loader = importlib.machinery.SourceFileLoader(BUILD_SCRIPT, path)
+    spec = importlib.util.spec_from_loader(BUILD_SCRIPT, loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
+def link_node():
+    """Points NODE_LINK at the Node use_node() put first on PATH. Replaced in one rename, so a build
+    reading it never sees it missing."""
+    home = os.path.dirname(os.path.dirname(os.path.realpath(shutil.which("node"))))
+    staged = NODE_LINK + ".%d" % os.getpid()
+    os.symlink(home, staged)
+    os.replace(staged, NODE_LINK)
+    print("node-current -> " + home, flush=True)
+
+
+def prepare_platform(build, engine, platform):
+    """iOS: the Hermes build, as build_ios makes it, kept in the engine checkout between builds."""
+    if platform == "ios":
+        hermes = os.path.join(engine, "third_party", "hermes")
+        if not os.path.isdir(os.path.join(hermes, "build-apple", "hermesvm.xcframework")):
+            build.run(["node", "third_party/fetch.mjs", "hermes"], cwd=engine)
+            build.run(["bash", os.path.join(hermes, "build-apple.sh")], cwd=engine)
+
+
+if __name__ == "__main__":
+    build = load_build_script()
+    values = build.pipeline_values()
+    root = values["ROOT_PATH"]
+    project = os.path.join(root, values["GAME_PROJECT_DIRECTORY"])
+    build.use_node()
+    link_node()
+    build.use_toolchain()
+    engine = build.checkout_engine(root, values["ENGINE_REPOSITORY"], values["ENGINE_REVISION"])
+    build.install_packages(project)
+    build.build_host_tools(engine)
+    prepare_platform(build, engine, values["PLATFORM"])

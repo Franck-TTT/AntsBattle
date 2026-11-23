@@ -1,0 +1,62 @@
+# Content (in-house build type): the game's code and content as a signed release for over-the-air delivery (ADR 0122), what
+# a hub launches or the game's own app applies as an update. No app is built or signed. It is
+# published to CONTENT_PUBLISH_TO (values/content/content.yml); the artifacts are content.zip and
+# content-manifest.json.
+# Values are defined in .pipeline/values
+values:
+  # The in-house app's bundle id and display name (Versioning) and its build type.
+  - product/inhouse
+  - game/game
+  - content/content
+
+# Plugins are defined in .pipeline/nuget.yml
+plugins:
+  - name: BuildPlugins.ProjectVersioning
+  - name: BuildPlugins.SaveArtifacts
+  - name: BuildPlugins.GameHub
+
+steps:
+  # VersioningStep takes VERSION_CODE from BRANCH_REVISION, which on Git is the commit SHA.
+  # Scoped to this step, the server build ID takes its place: it is the content's version, which only
+  # ever goes up, as a content manifest requires (a device refuses an older one).
+  - name: Versioning
+    values:
+      - BRANCH_REVISION: "<BUILD_ID>"
+    run:
+      stepId: VersioningStep
+
+  # Every game test on the JS engine the platform ships, then `gameengine check`: a failure stops the
+  # build before anything is packed or signed.
+  - name: Run Tests
+    run:
+      script: Build/Pipeline/scripts/run_tests
+
+  # Node, the engine checkout, the game's packages and the engine's host tools, which the publish
+  # step runs.
+  - name: Setup Engine
+    run:
+      script: Build/Pipeline/scripts/setup_engine
+
+  # `gameengine release pack` for this platform and the channel of the branch (a main branch,
+  # GAME_MAIN_BRANCHES: the build type's; any other: inhouse-<branch>), signed with
+  # CONTENT_SIGNING_KEY, cooking only the bundles CONTENT_PUBLISH_TO lacks, verified against the
+  # project's own releases.trusted, then published there (the content manifest last, into the
+  # channel's folder): leaves <ARTIFACTS_PATH>/content.zip and content-manifest.json.
+  - name: Publish Release
+    values:
+      - GAME_HUB_NODE_PATH: "<USER_PATH>/.cache/tactile-game/node-current/bin"
+    run:
+      stepId: GameHubPublishReleaseStep
+
+  - name: Save Artifacts
+    values:
+      - STORE_ARTIFACT: "<ARTIFACTS_PATH>/content.zip"
+    run:
+      stepId: SaveArtifactsStep
+
+  # The signed content manifest on its own (it is also published next to the files).
+  - name: Save Content Manifest
+    values:
+      - STORE_ARTIFACT: "<ARTIFACTS_PATH>/content-manifest.json"
+    run:
+      stepId: SaveArtifactsStep

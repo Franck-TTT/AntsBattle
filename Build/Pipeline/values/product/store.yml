@@ -1,0 +1,13 @@
+values:
+  # PRODUCT_NAME is the .app the engine's Xcode project builds: the project name in
+  # Game/project.gameengine.json.
+  PRODUCT_NAME: "AntsBattle"
+  # The name under the icon (scripts/build_game).
+  PRODUCT_DISPLAY_NAME: "Ants Battle"
+  PRODUCT_BUNDLE_IDENTIFIER: "com.tactile.antsbattle"
+  # The cheat console stays out of store builds (build_game).
+  GAME_RELEASE_CHEATS: false
+  # The build type this product's Content builds publish for (inhouse or store): a main branch's builds
+  # (GAME_MAIN_BRANCHES) publish to the channel of this name, the folder its app reads its content manifest
+  # from, game-engine/<game>/store/; any other branch's are refused (GameHubPublishReleaseStep).
+  GAME_BUILD_TYPE: "store"

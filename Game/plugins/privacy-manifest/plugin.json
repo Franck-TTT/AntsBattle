@@ -1,0 +1,8 @@
+{
+  "id": "privacy-manifest",
+  "description": "The app's iOS privacy manifest (PrivacyInfo.xcprivacy): the reasons for the required-reason APIs the game's own code and the engine use. Vendor SDKs ship their own.",
+  "services": [],
+  "ios": {
+    "class": "PrivacyManifestPlugin"
+  }
+}

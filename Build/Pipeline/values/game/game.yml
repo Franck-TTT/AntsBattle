@@ -1,0 +1,17 @@
+values:
+  # The Game Engine project, in place of the Unity folder.
+  GAME_PROJECT_DIRECTORY: Game
+  PROJECT_PATH: <ROOT_PATH>/Game
+  # The engine is a separate Git repository, cloned by scripts/build_game at this commit.
+  ENGINE_REPOSITORY: git@github.com:tactilegames/game-engine.git
+  ENGINE_REVISION: 9c6ac5787ba1cec0bc8f0cc404ded35e19e1bfa7
+  # The game's main branches, separated by spaces: their Content builds publish to the build type's
+  # channel (inhouse or store), the one the apps read. Any other branch's in-house builds publish to
+  # inhouse-<branch> (GameHubPublishReleaseStep). A new game is built from chore/initial
+  # (template/new-game.mjs), so it is listed. Add the game's working branch when it moves to another
+  # one, or its builds stop reaching inhouse. Unset, the main branches are main, master and trunk.
+  GAME_MAIN_BRANCHES: "main chore/initial"
+  # Read-only GitHub token: the engine downloads its prebuilt V8 from a release of its private repo.
+  GH_TOKEN:
+    value: "op://automation-tactile-build-server/github_api_token/credential"
+    is_env: true

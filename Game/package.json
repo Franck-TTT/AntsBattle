@@ -1,0 +1,9 @@
+{
+  "name": "ants-battle-tactile-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "size": "node tools/check_size.mjs"
+  }
+}

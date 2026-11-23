@@ -1,0 +1,10 @@
+values:
+  XCODE_BUILD_ARCHITECTURES: arm64
+  KEYCHAIN_PASSWORD: "op://automation-tactile-build-server/keychain-password/password"
+  # Where scripts/build_game generates the Xcode project. Its project and scheme are both
+  # Game, the engine's app target, which the iOS build plugin looks up as UNITY_TARGET_NAME.
+  XCODE_PROJECT_PATH: <ROOT_PATH>/Game/.gameengine/build/ios/pipeline
+  UNITY_TARGET_NAME: Game
+  # The profiles CodeSignStep reads: app-signing ProvisioningProfiles/<this name>/, with appstore,
+  # appstore_adhoc and inhouse .mobileprovision files (values/ios/*/signing.yml).
+  APPSIGNING_GAME_NAME: "AntsBattle"

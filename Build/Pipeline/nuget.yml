@@ -1,0 +1,15 @@
+dependencies:
+  - name: BuildPlugins.ProjectVersioning
+    version: 1.*
+  - name: BuildPlugins.VerifyReleaseCandidate
+    version: 1.*
+  - name: BuildPlugins.AppSigning
+    version: 1.*
+  - name: BuildPlugins.Android
+    version: 1.*
+  - name: BuildPlugins.SaveArtifacts
+    version: 1.*
+  - name: BuildPlugins.IOS
+    version: 1.*
+  - name: BuildPlugins.GameHub
+    version: 1.*

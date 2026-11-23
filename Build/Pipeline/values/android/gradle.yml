@@ -1,0 +1,19 @@
+values:
+  # Tactile's shared Android keystores, which every Tactile and Promineo game signs with. A game
+  # with its own upload key replaces the file and the two op:// items.
+  # Upload keystore: scripts/build_game signs the .aab with it.
+  KEYSTORE_FILE_PATH:
+    value: "<ROOT_PATH>/AppSigning/Keystores/tactile-android-upload.jks"
+    is_env: true
+  KEYSTORE_ALIAS: 
+    value: "op://automation-tactile-build-server/keystore.tactile-android-upload/alias"
+    is_env: true
+  KEYSTORE_PASSWORD: 
+    value: "op://automation-tactile-build-server/keystore.tactile-android-upload/password"
+    is_env: true
+  # Bundletool
+  BUNDLETOOL_APK_OUTPUT_PATH: "<ARTIFACTS_PATH>/universal.apk"
+  # Keystore used by Bundletool for internal distribution
+  BUNDLETOOL_KEYSTORE_FILE_PATH: "<ROOT_PATH>/AppSigning/Keystores/tactile-android-sign.jks"
+  BUNDLETOOL_KEYSTORE_ALIAS: "op://automation-tactile-build-server/keystore.tactile-android-sign/alias"
+  BUNDLETOOL_KEYSTORE_PASSWORD: "op://automation-tactile-build-server/keystore.tactile-android-sign/password"

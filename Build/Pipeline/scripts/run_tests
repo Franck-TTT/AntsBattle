@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""
+Runs the game's tests for the Build Server pipeline, before the game build, and fails the step on any
+failure, so the build stops before it builds or signs:
+
+- `gameengine test --tier t0,t1` on the JS engine the build's platform ships, V8 on Android and Hermes
+  on iOS: every test, with each one's result in the log. So every engine is tested by the builds of its
+  own platform, and a test that breaks on one engine only stops that platform's build. `gameengine
+  check --tests` is not enough: it runs only T0, so it skips every renderTest (T1). A run that finds no
+  test fails too.
+- `gameengine check`: typecheck, validate, the recorded pipelines, a desktop cook and a headless smoke
+  run of the cooked game.
+
+It sets up the same Node, toolchain and engine checkout as the build script, by loading that script's
+functions: BUILD_SCRIPT is the only line to change when this file is copied into a game whose build
+script has another name.
+
+The runner logs a failed script's whole stderr as errors, twice, and makes it the step's error message.
+rustup, git, pnpm and cargo write their progress there, so everything this step runs writes to stdout
+instead, and stderr gets only what failed: the failing tests and their assertions, or the command.
+"""
+import importlib.machinery
+import importlib.util
+import os
+import re
+import signal
+import subprocess
+import sys
+import traceback
+
+BUILD_SCRIPT = "build_game"
+# The JS engine each platform's game build links.
+ENGINES = {"android": "v8", "ios": "hermes"}
+
+
+def load_build_script():
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), BUILD_SCRIPT)
+    loader = importlib.machinery.SourceFileLoader(BUILD_SCRIPT, path)
+    spec = importlib.util.spec_from_loader(BUILD_SCRIPT, loader)
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
+def build_hermes_lane(engine, run):
+    """The Hermes host the iOS tests run on: it links the desktop Hermes library, which the build script
+    never builds (iOS uses its own xcframework). Both are kept in the engine checkout, in
+    third_party/hermes/build and target/hermes."""
+    hermes = os.path.join(engine, "third_party", "hermes")
+    if not os.path.isdir(os.path.join(hermes, "build", "lib")):
+        run(["bash", os.path.join(hermes, "build.sh")], cwd=engine)
+    run(["cargo", "build", "--release", "-p", "gameengine-host", "--no-default-features",
+         "--features", "hermes,desktop,protocol", "--target-dir", "target/hermes"], cwd=engine)
+
+
+def gameengine(engine, project, args):
+    """A gameengine command, its output copied line by line into the step log. Exits the step when it
+    fails, and returns the output otherwise."""
+    print("$ gameengine " + " ".join(args), flush=True)
+    process = subprocess.Popen(["node", os.path.join(engine, "tools", "cli", "bin", "gameengine.mjs")] + args + ["--project", project],
+                               cwd=engine, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    # A cancelled build gets SIGTERM: pass it on, so the command ends with the step. The host processes it
+    # started exit on their own a few seconds later.
+    signal.signal(signal.SIGTERM, lambda *_: process.send_signal(signal.SIGTERM))
+    output = []
+    for line in process.stdout:
+        print(line, end="", flush=True)
+        output.append(line)
+    code = process.wait()
+    if code != 0:
+        text = "".join(output)
+        counts = re.search(r"^\d+ passed, \d+ failed", text, re.MULTILINE)
+        result = counts.group(0) if counts else "exit code %d" % code
+        sys.exit("\n".join(["gameengine %s failed (%s), the full output is above:" % (" ".join(args), result)]
+                           + what_failed(text)))
+    return "".join(output)
+
+
+def what_failed(output):
+    """One line per ✗ block of a gameengine command's output: what failed and the first line of why,
+    without the steps and hash. The runner logs the summary twice, so it stays this short. The last 20
+    lines when there is no ✗ block."""
+    lines = output.splitlines()
+    failed = []
+    for i, line in enumerate(lines):
+        if line.startswith("✗"):
+            name = re.sub(r"\s+\(\d+ steps, \w+\)$", "", line)
+            why = lines[i + 1].strip() if i + 1 < len(lines) and lines[i + 1].startswith("    ") else ""
+            failed.append("%s: %s" % (name, why) if why else name)
+    return failed or lines[-20:]
+
+
+def run_tests(engine, project, js):
+    output = gameengine(engine, project, ["test", "--tier", "t0,t1", "--js", js])
+    # The run's summary line: "<n> passed, <m> failed". Without a test the run passes, and so would this step.
+    summary = re.search(r"^(\d+) passed, (\d+) failed", output, re.MULTILINE)
+    if not summary or int(summary.group(1)) + int(summary.group(2)) == 0:
+        sys.exit("gameengine test --js %s ran no test: a game needs at least one, in Game/tests" % js)
+
+
+def reporting_only_the_failure(steps):
+    """Runs steps with stderr pointed at stdout, and writes only what failed to the real stderr."""
+    failure = os.fdopen(os.dup(2), "w")
+    os.dup2(1, 2)
+
+    def report(message):
+        sys.stdout.flush()
+        failure.write("Run Tests failed: %s\n" % message)
+        failure.flush()
+        sys.exit(1)
+
+    try:
+        steps()
+    except SystemExit as e:
+        if isinstance(e.code, str):
+            report(e.code)
+        raise
+    except subprocess.CalledProcessError as e:
+        command = " ".join(e.cmd) if isinstance(e.cmd, list) else e.cmd
+        report("%s failed with exit code %d. Its output is in the log above." % (command, e.returncode))
+    except Exception as e:
+        traceback.print_exc()
+        sys.stdout.flush()
+        report("%s: %s. The traceback is in the log above." % (type(e).__name__, e))
+
+
+def test_game():
+    build = load_build_script()
+    values = build.pipeline_values()
+    js = ENGINES.get(values["PLATFORM"])
+    if not js:
+        sys.exit("unsupported platform: " + values["PLATFORM"])
+    root = values["ROOT_PATH"]
+    project = os.path.join(root, values["GAME_PROJECT_DIRECTORY"])
+    build.use_node()
+    build.use_toolchain()
+    engine = build.checkout_engine(root, values["ENGINE_REPOSITORY"], values["ENGINE_REVISION"])
+    build.install_packages(project)
+    # The V8 host and the cooker, built as the game build builds them. check runs on the V8 host.
+    build.build_host_tools(engine)
+    if js == "hermes":
+        build_hermes_lane(engine, build.run)
+    gameengine(engine, project, ["gen"])
+    run_tests(engine, project, js)
+    gameengine(engine, project, ["check", "--rebuild"])
+
+
+if __name__ == "__main__":
+    reporting_only_the_failure(test_game)

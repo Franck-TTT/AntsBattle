@@ -1,0 +1,146 @@
+{
+  "format": "__TACTILE_<NAME>__",
+  "features": {
+    "identity": {
+      "title": "Identity",
+      "required": true
+    },
+    "signing": {
+      "title": "Signing",
+      "required": true
+    },
+    "buildServer": {
+      "title": "Build Server project",
+      "required": true
+    }
+  },
+  "placeholders": [
+    {
+      "name": "GAME_NAME",
+      "feature": "identity",
+      "description": "Internal project name, PascalCase, no spaces. The .app, the Xcode project and the AppSigning folder use it.",
+      "secret": false,
+      "example": "PuzzleQuest",
+      "howToGet": "Pick it with the producer. It never changes after the first build.",
+      "pattern": "^[A-Z][A-Za-z0-9]+$"
+    },
+    {
+      "name": "DISPLAY_NAME",
+      "feature": "identity",
+      "description": "The name under the icon in the store build.",
+      "secret": false,
+      "example": "Puzzle Quest",
+      "howToGet": "The producer."
+    },
+    {
+      "name": "DISPLAY_NAME_INHOUSE",
+      "feature": "identity",
+      "description": "The name under the icon in the in-house build.",
+      "secret": false,
+      "example": "Puzzle Quest Inhouse",
+      "howToGet": "Usually the display name plus \" Inhouse\"."
+    },
+    {
+      "name": "CODE_NAME",
+      "feature": "identity",
+      "description": "Lowercase code name with dashes. Repository and package name.",
+      "secret": false,
+      "example": "puzzle-quest",
+      "howToGet": "The producer.",
+      "pattern": "^[a-z][a-z0-9-]+$"
+    },
+    {
+      "name": "SHORT_CODE",
+      "feature": "identity",
+      "description": "Two or three letter short code.",
+      "secret": false,
+      "example": "PQ",
+      "howToGet": "The producer.",
+      "pattern": "^[A-Z]{2,4}$"
+    },
+    {
+      "name": "BUNDLE_ID",
+      "feature": "identity",
+      "description": "Store bundle id (iOS and Android).",
+      "secret": false,
+      "example": "com.example.puzzlequest",
+      "howToGet": "The producer, from the store account the game ships under.",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z0-9_]+)+$"
+    },
+    {
+      "name": "BUNDLE_ID_INHOUSE",
+      "feature": "identity",
+      "description": "In-house bundle id.",
+      "secret": false,
+      "example": "com.example.puzzlequest.inhouse",
+      "howToGet": "Usually the store bundle id plus \".inhouse\". It needs an enterprise profile in AppSigning.",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z0-9_]+)+$"
+    },
+    {
+      "name": "STORE_ACCOUNT",
+      "feature": "signing",
+      "description": "Which Apple store account publishes the game. It fills APPLE_TEAM_ID and APPLE_DISTRIBUTION_CERT, so the two can't disagree. The in-house build stays on Tactile's enterprise account.",
+      "secret": false,
+      "example": "promineo",
+      "howToGet": "The producer: which company publishes the game. One of tactile-aps (Tactile Games ApS), promineo (Grupo Promineo), tactile-uk (Tactile Games Limited).",
+      "pattern": "^(tactile-aps|promineo|tactile-uk)$",
+      "inFiles": false,
+      "choices": {
+        "tactile-aps": {
+          "label": "Tactile Games ApS",
+          "APPLE_TEAM_ID": "4ZRE6C9AS9",
+          "APPLE_DISTRIBUTION_CERT": "iPhone Distribution: Tactile Games ApS (4ZRE6C9AS9)"
+        },
+        "promineo": {
+          "label": "Grupo Promineo",
+          "APPLE_TEAM_ID": "GGH4HNW8J2",
+          "APPLE_DISTRIBUTION_CERT": "iPhone Distribution: Grupo Promineo S.L. (GGH4HNW8J2)"
+        },
+        "tactile-uk": {
+          "label": "Tactile Games Limited",
+          "APPLE_TEAM_ID": "DQ244W96MV",
+          "APPLE_DISTRIBUTION_CERT": "iPhone Distribution: Tactile Games Limited (DQ244W96MV)"
+        }
+      }
+    },
+    {
+      "name": "APPLE_TEAM_ID",
+      "feature": "signing",
+      "description": "Apple developer team id of the store account: ios.teamId, for local iOS builds. Filled from STORE_ACCOUNT.",
+      "secret": false,
+      "example": "ABCDE12345",
+      "howToGet": "Set STORE_ACCOUNT: it fills this.",
+      "pattern": "^[A-Z0-9]{10}$",
+      "fromValue": "STORE_ACCOUNT"
+    },
+    {
+      "name": "APPLE_DISTRIBUTION_CERT",
+      "feature": "signing",
+      "description": "The store account's iOS distribution certificate, as its App Store and ad hoc profiles name it: Build/Pipeline/values/ios/store/signing.yml. Filled from STORE_ACCOUNT.",
+      "secret": false,
+      "example": "iPhone Distribution: Grupo Promineo S.L. (GGH4HNW8J2)",
+      "howToGet": "Set STORE_ACCOUNT: it fills this.",
+      "pattern": "^iPhone Distribution: .+ \\([A-Z0-9]{10}\\)$",
+      "fromValue": "STORE_ACCOUNT"
+    },
+    {
+      "name": "APPSIGNING_NAME",
+      "feature": "signing",
+      "description": "The game's folder under app-signing ProvisioningProfiles/, with appstore, appstore_adhoc and inhouse .mobileprovision. Build/Pipeline/values/ios/xcode.yml APPSIGNING_GAME_NAME.",
+      "secret": false,
+      "example": "PuzzleQuest",
+      "howToGet": "The Build Server owners add the game to the app-signing repo (games_config and ProvisioningProfiles/<name>/). Usually the same as GAME_NAME.",
+      "pattern": "^[A-Za-z0-9]+$"
+    },
+    {
+      "name": "BUILD_SERVER_PROJECT",
+      "feature": "buildServer",
+      "description": "The game's project name on the Build Server, PascalCase. No file holds it: the Build Server reads it from its own project list.",
+      "secret": false,
+      "example": "PuzzleQuest",
+      "howToGet": "A Build Server owner creates the project (the build-server tools cannot). Usually the same as GAME_NAME. Build/build_config.json leaves the store orgs (apple_appstore_org, google_playstore_org) empty on purpose: only automated store upload reads them, and an empty org fails the upload instead of sending it to the wrong account. Ask the Build Server owner for the account's org ids when upload is wanted.",
+      "pattern": "^[A-Z][A-Za-z0-9]+$",
+      "inFiles": false
+    }
+  ]
+}

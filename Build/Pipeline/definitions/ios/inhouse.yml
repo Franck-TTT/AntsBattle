@@ -1,0 +1,49 @@
+# Values are defined in .pipeline/values
+values:
+  - product/inhouse
+  - game/game
+  - ios/inhouse/signing
+  - ios/xcode
+
+# Plugins are defined in .pipeline/nuget.yml
+plugins:
+  - name: BuildPlugins.ProjectVersioning
+  - name: BuildPlugins.AppSigning
+  - name: BuildPlugins.IOS
+
+steps:
+  # VersioningStep takes VERSION_CODE from BRANCH_REVISION, which on Git is the commit SHA.
+  # Scoped to this step, the server build ID takes its place.
+  - name: Versioning
+    values:
+      - BRANCH_REVISION: "<BUILD_ID>"
+    run:
+      stepId: VersioningStep
+
+  # Every game test (`gameengine test --tier t0,t1`), then `gameengine check`: a failure stops the
+  # build here, before it builds or signs anything.
+  - name: Run Tests
+    run:
+      script: Build/Pipeline/scripts/run_tests
+
+  # The engine build in place of the Unity build: leaves the Xcode project at XCODE_PROJECT_PATH.
+  - name: Generate Xcode Project
+    run:
+      script: Build/Pipeline/scripts/build_game
+
+  # The keychain and provisioning profiles the signing uses, at <ROOT_PATH>/AppSigning.
+  - name: Clone AppSigning
+    run:
+      stepId: CloneAppSigningStep
+
+  - name: Xcode Clean Up
+    run:
+      script: clean_xcode_cache
+
+  - name: Build Xcode Project
+    run:
+      stepId: XcodeBuildStep
+
+  - name: Sign Xcode Project
+    run:
+      stepId: CodeSignStep

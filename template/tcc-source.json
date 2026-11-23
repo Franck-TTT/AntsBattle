@@ -1,0 +1,10 @@
+{
+  "repository": "tactilegames/template.tactile-game-template",
+  "branch": "main",
+  "commit": "4a5154e853a423171b5dd0730aa4f72e455cef74",
+  "source": "bundled",
+  "fallbackReasons": [
+    "GitHub: the template clone exited with code 128.",
+    "Create API: the template request returned HTTP 403."
+  ]
+}

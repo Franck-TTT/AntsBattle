@@ -1,0 +1,9 @@
+values:
+  # The store account's distribution certificate, exactly as the provisioning profiles name it:
+  # the legal entity and the team id, for example "iPhone Distribution: Grupo Promineo S.L. (GGH4HNW8J2)".
+  XCODE_CODE_SIGNING:
+    - ProvisioningProfile: 'appstore.mobileprovision'
+      SigningCertificate: "iPhone Distribution: Tactile Games ApS (4ZRE6C9AS9)"
+    - ProvisioningProfile: 'appstore_adhoc.mobileprovision'
+      SigningCertificate: "iPhone Distribution: Tactile Games ApS (4ZRE6C9AS9)"
+      Postfix: adhoc

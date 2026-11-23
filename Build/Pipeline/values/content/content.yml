@@ -1,0 +1,26 @@
+values:
+  # The release signing key (ADR 0122): the whole release-key.json that `gameengine release keygen`
+  # wrote, { privateKey, publicKey }, kept in 1Password. GameHubPublishReleaseStep writes it to a private
+  # temporary file for the pack only. Its public half is in Game/project.gameengine.json
+  # releases.trusted for the game's own id (and, for a studio key, in the hub as "*").
+  CONTENT_SIGNING_KEY:
+    value: "op://automation-tactile-build-server/game-engine-studio-release-key/credential"
+    is_env: true
+  # Where GameHubPublishReleaseStep publishes the content's files (bundles, signed records, the content
+  # manifest last): s3://<bucket>/<folder> or a local folder. Bundles already there
+  # are reused instead of cooked again. Tactile's automatic asset bundles, in a folder of this game's
+  # own (game-engine/<game id>), where releases.manifest.url in Game/project.gameengine.json finds
+  # <channel>/content-manifest-<platform>-<abi>.json: to move it, change the folder there too.
+  CONTENT_PUBLISH_TO:
+    value: "s3://tactile-automatic-asset-bundles/game-engine/AntsBattle"
+  # Where devices download those files from, written into the content manifest: the automatic asset
+  # bundles CDN, same game name.
+  CONTENT_FILES_URL:
+    value: "https://automatic-asset-bundles.tactilews.com/game-engine/AntsBattle"
+  # The upload key for that bucket (1Password item tactile-automatic-asset-bundles-s3).
+  AWS_ACCESS_KEY_ID:
+    value: "op://automation-tactile-build-server/tactile-automatic-asset-bundles-s3/username"
+    is_env: true
+  AWS_SECRET_ACCESS_KEY:
+    value: "op://automation-tactile-build-server/tactile-automatic-asset-bundles-s3/credential"
+    is_env: true

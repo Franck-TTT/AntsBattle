@@ -1,0 +1,140 @@
+{
+  "build_pipeline": {
+    "branch": "v1"
+  },
+  "settings": {
+    "skip_test": {
+      "display_name": "Skip Unit Tests (in-house only)",
+      "type": "checkbox",
+      "group": "Settings",
+      "default": true
+    }
+  },
+  "project": {
+    "apple_appstore_org": "",
+    "google_playstore_org": ""
+  },
+  "requirements": {
+    "xcode": "26.2"
+  },
+  "builds": [
+    {
+      "id": 1,
+      "kind": "build",
+      "platform": "android",
+      "type": "store",
+      "store": "Google",
+      "display_name": "Android (Store)",
+      "builder": "BuildPipeline/build.py",
+      "pipeline": "Build/Pipeline/definitions/android/store.yml",
+      "group": "build"
+    },
+    {
+      "id": 2,
+      "kind": "build",
+      "type": "inhouse",
+      "platform": "ios",
+      "display_name": "iOS (Inhouse)",
+      "builder": "BuildPipeline/build.py",
+      "pipeline": "Build/Pipeline/definitions/ios/inhouse.yml",
+      "group": "build"
+    },
+    {
+      "id": 3,
+      "kind": "build",
+      "platform": "ios",
+      "type": "store",
+      "store": "Apple",
+      "display_name": "iOS (Store)",
+      "builder": "BuildPipeline/build.py",
+      "pipeline": "Build/Pipeline/definitions/ios/store.yml",
+      "group": "build"
+    },
+    {
+      "id": 4,
+      "kind": "build",
+      "type": "inhouse",
+      "platform": "android",
+      "display_name": "Android (Inhouse)",
+      "builder": "BuildPipeline/build.py",
+      "pipeline": "Build/Pipeline/definitions/android/inhouse.yml",
+      "group": "build"
+    },
+    {
+      "id": 5,
+      "kind": "patch",
+      "type": "store",
+      "platform": "android",
+      "display_name": "Content Android (Store)",
+      "builder": "BuildPipeline/build.py",
+      "pipeline": "Build/Pipeline/definitions/android/content-store.yml",
+      "group": "content"
+    },
+    {
+      "id": 6,
+      "kind": "patch",
+      "type": "store",
+      "platform": "ios",
+      "display_name": "Content iOS (Store)",
+      "builder": "BuildPipeline/build.py",
+      "pipeline": "Build/Pipeline/definitions/ios/content-store.yml",
+      "group": "content"
+    },
+    {
+      "id": 7,
+      "kind": "patch",
+      "type": "inhouse",
+      "platform": "android",
+      "display_name": "Content Android (Inhouse)",
+      "builder": "BuildPipeline/build.py",
+      "pipeline": "Build/Pipeline/definitions/android/content-inhouse.yml",
+      "group": "content"
+    },
+    {
+      "id": 8,
+      "kind": "patch",
+      "type": "inhouse",
+      "platform": "ios",
+      "display_name": "Content iOS (Inhouse)",
+      "builder": "BuildPipeline/build.py",
+      "pipeline": "Build/Pipeline/definitions/ios/content-inhouse.yml",
+      "group": "content"
+    }
+  ],
+  "actions": [
+    {
+      "name": "reorder-same-agent",
+      "display_name": "Reorder on same agent",
+      "trigger": "manual",
+      "available_states": [
+        "finished",
+        "cancelled",
+        "failed"
+      ],
+      "prerequisites": {
+        "kind": "build"
+      },
+      "request": {
+        "method": "POST",
+        "url": "https://api.tactile.build/builds",
+        "headers": {
+          "authorization": "<<user.authorization>>",
+          "Content-Type": "application/json"
+        },
+        "body": [
+          {
+            "projectName": "<<build.projectName>>",
+            "branch": "<<build.branch>>",
+            "revision": "<<build.revision>>",
+            "buildConfigId": "<<build.buildConfigId>>",
+            "platform": "<<build.platform>>",
+            "type": "<<build.type>>",
+            "kind": "<<build.kind>>",
+            "buildAgent": "<<buildAgent._id>>",
+            "settings": "<<build.settings>>"
+          }
+        ]
+      }
+    }
+  ]
+}

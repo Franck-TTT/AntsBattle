@@ -1,0 +1,16 @@
+{
+  "values": {
+    "GAME_NAME": "AntsBattle",
+    "DISPLAY_NAME": "Ants Battle",
+    "DISPLAY_NAME_INHOUSE": "Ants Battle Inhouse",
+    "CODE_NAME": "ants-battle-tactile-engine",
+    "SHORT_CODE": "AB",
+    "BUNDLE_ID": "com.tactile.antsbattle",
+    "BUNDLE_ID_INHOUSE": "com.tactile.antsbattle.inhouse",
+    "STORE_ACCOUNT": "tactile-aps",
+    "APPSIGNING_NAME": "AntsBattle",
+    "BUILD_SERVER_PROJECT": "AntsBattle",
+    "APPLE_TEAM_ID": "4ZRE6C9AS9",
+    "APPLE_DISTRIBUTION_CERT": "iPhone Distribution: Tactile Games ApS (4ZRE6C9AS9)"
+  }
+}

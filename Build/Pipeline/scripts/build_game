@@ -1,0 +1,392 @@
+#!/usr/bin/env python3
+"""
+Builds the game (a Game Engine project, not Unity) for the Build Server pipeline.
+
+It replaces the Unity steps of the store pipelines and leaves the same outputs the Tactile build
+plugins expect after a Unity build:
+
+- android: the release .aab, signed with the upload keystore, at ARTIFACTS_PATH/app-bundle.aab.
+  BundletoolStep turns it into the universal.apk afterwards.
+- ios: the Xcode project, with the engine libraries in it, at XCODE_PROJECT_PATH. Its project and
+  scheme are both called UNITY_TARGET_NAME, as XcodeBuildStep and CodeSignStep look them up by that
+  name. Those two steps build and sign it.
+
+The engine is a separate Git repository: it is cloned at ENGINE_REVISION next to the project
+(<ROOT_PATH>/game-engine), where the project's tsconfig.json looks for it.
+"""
+import argparse
+import json
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+
+
+def pipeline_values():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--values", type=json.loads, required=True)
+    values = parser.parse_args().values
+    # The runner serializes the values once more when they are already JSON text.
+    return json.loads(values) if isinstance(values, str) else values
+
+
+def release_cheats(values):
+    """Whether the build carries the cheat console: GAME_RELEASE_CHEATS from the product values, true
+    for in-house and false for store. The runner passes YAML true as a JSON boolean, and a quoted
+    "true" stays a string: both count. Anything else, or a missing value, means off."""
+    return str(values.get("GAME_RELEASE_CHEATS", "")).lower() == "true"
+
+
+def release_args(values):
+    return ["--config", "release", "--report"] + (["--cheats"] if release_cheats(values) else [])
+
+
+def run(args, cwd, env=None):
+    print("$ " + " ".join(args), flush=True)
+    subprocess.run(args, cwd=cwd, env=env, check=True)
+
+
+# The engine's CLI runs its TypeScript sources directly, which needs Node 23.6 or later. The build
+# agents have an older Node, so the script brings its own, cached in the agent's home.
+NODE_VERSION = "24.9.0"
+
+
+def use_node():
+    arch = "arm64" if os.uname().machine == "arm64" else "x64"
+    name = "node-v%s-darwin-%s" % (NODE_VERSION, arch)
+    home = os.path.join(os.path.expanduser("~"), ".cache", "tactile-game", name)
+    if not os.path.isfile(os.path.join(home, "bin", "node")):
+        os.makedirs(os.path.dirname(home), exist_ok=True)
+        url = "https://nodejs.org/dist/v%s/%s.tar.gz" % (NODE_VERSION, name)
+        run(["sh", "-c", 'curl -fsSL "%s" | tar -xz -C "%s"' % (url, os.path.dirname(home))], cwd=os.path.dirname(home))
+    os.environ["PATH"] = os.path.join(home, "bin") + os.pathsep + os.environ["PATH"]
+    run(["node", "--version"], cwd=home)
+
+
+GRADLE_VERSION = "8.14.3"
+GH_VERSION = "2.63.2"
+CMAKE_VERSION = "3.31.6"
+NINJA_VERSION = "1.12.1"
+XCODEGEN_VERSION = "2.43.0"
+RUST_TARGETS = ["aarch64-linux-android", "armv7-linux-androideabi", "x86_64-linux-android", "aarch64-apple-ios"]
+
+
+def use_toolchain():
+    """Rust, Gradle and the agent's Android SDK and NDK (the ones the Unity builds use)."""
+    cache = os.path.join(os.path.expanduser("~"), ".cache", "tactile-game")
+    home = os.path.expanduser("~")
+    sdk = os.path.join(home, "android-sdk-macosx-j17")
+    ndk = os.path.join(home, "android-ndk-r27c")
+    if os.path.isdir(sdk):
+        os.environ.setdefault("ANDROID_HOME", sdk)
+    if os.path.isdir(ndk):
+        # The engine passes the NDK folder name to Gradle as ndkVersion, which must be the revision
+        # (27.2.12479018), not a name like android-ndk-r27c: link it under its revision.
+        with open(os.path.join(ndk, "source.properties")) as f:
+            revision = [l.split("=")[1].strip() for l in f if l.startswith("Pkg.Revision")][0]
+        link = os.path.join(cache, "ndk", revision)
+        if not os.path.islink(link):
+            os.makedirs(os.path.dirname(link), exist_ok=True)
+            os.symlink(ndk, link)
+        os.environ.setdefault("ANDROID_NDK_HOME", link)
+    os.environ.setdefault("JAVA_HOME", "/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home")
+
+    gradle = os.path.join(cache, "gradle-%s" % GRADLE_VERSION)
+    if not os.path.isfile(os.path.join(gradle, "bin", "gradle")):
+        url = "https://services.gradle.org/distributions/gradle-%s-bin.zip" % GRADLE_VERSION
+        run(["sh", "-c", 'curl -fsSL -o gradle.zip "%s" && unzip -qo gradle.zip && rm gradle.zip' % url], cwd=cache)
+    os.environ["GAMEENGINE_GRADLE"] = os.path.join(gradle, "bin", "gradle")
+
+    # CMake, which the engine host's SDL3 build runs.
+    cmake = os.path.join(cache, "cmake-%s-macos-universal" % CMAKE_VERSION)
+    if not os.path.isdir(cmake):
+        url = "https://github.com/Kitware/CMake/releases/download/v%s/cmake-%s-macos-universal.tar.gz" % (CMAKE_VERSION, CMAKE_VERSION)
+        run(["sh", "-c", 'curl -fsSL "%s" | tar -xz' % url], cwd=cache)
+    os.environ["PATH"] = os.path.join(cmake, "CMake.app", "Contents", "bin") + os.pathsep + os.environ["PATH"]
+
+    # Ninja, which the Hermes build for iOS runs.
+    ninja = os.path.join(cache, "ninja-%s" % NINJA_VERSION)
+    if not os.path.isfile(os.path.join(ninja, "ninja")):
+        os.makedirs(ninja, exist_ok=True)
+        url = "https://github.com/ninja-build/ninja/releases/download/v%s/ninja-mac.zip" % NINJA_VERSION
+        run(["sh", "-c", 'curl -fsSL -o ninja.zip "%s" && unzip -qo ninja.zip && rm ninja.zip' % url], cwd=ninja)
+    os.environ["PATH"] = ninja + os.pathsep + os.environ["PATH"]
+
+    # XcodeGen, which turns the engine's project.yml into the Xcode project.
+    xcodegen = os.path.join(cache, "xcodegen-%s" % XCODEGEN_VERSION)
+    if not os.path.isfile(os.path.join(xcodegen, "xcodegen", "bin", "xcodegen")):
+        os.makedirs(xcodegen, exist_ok=True)
+        url = "https://github.com/yonaskolb/XcodeGen/releases/download/%s/xcodegen.zip" % XCODEGEN_VERSION
+        run(["sh", "-c", 'curl -fsSL -o xcodegen.zip "%s" && unzip -qo xcodegen.zip && rm xcodegen.zip' % url], cwd=xcodegen)
+    os.environ["GAMEENGINE_XCODEGEN"] = os.path.join(xcodegen, "xcodegen", "bin", "xcodegen")
+
+    # The GitHub CLI, which the engine uses (with GH_TOKEN) to download its release assets.
+    gh = os.path.join(cache, "gh_%s_macOS_arm64" % GH_VERSION)
+    if not os.path.isfile(os.path.join(gh, "bin", "gh")):
+        url = "https://github.com/cli/cli/releases/download/v%s/gh_%s_macOS_arm64.zip" % (GH_VERSION, GH_VERSION)
+        run(["sh", "-c", 'curl -fsSL -o gh.zip "%s" && unzip -qo gh.zip && rm gh.zip' % url], cwd=cache)
+    os.environ["PATH"] = os.path.join(gh, "bin") + os.pathsep + os.environ["PATH"]
+
+    os.environ["RUSTUP_HOME"] = os.path.join(cache, "rustup")
+    os.environ["CARGO_HOME"] = os.path.join(cache, "cargo")
+    cargo_bin = os.path.join(cache, "cargo", "bin")
+    if not os.path.isfile(os.path.join(cargo_bin, "rustup")):
+        run(["sh", "-c", "curl -fsSL https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal"], cwd=cache)
+    os.environ["PATH"] = cargo_bin + os.pathsep + os.environ["PATH"]
+    run(["rustup", "target", "add"] + RUST_TARGETS, cwd=cache)
+    print("ANDROID_HOME=%s ANDROID_NDK_HOME=%s" % (os.environ.get("ANDROID_HOME"), os.environ.get("ANDROID_NDK_HOME")))
+
+
+def checkout_engine(root, repo, revision):
+    engine = os.path.join(root, "game-engine")
+    if not os.path.isdir(os.path.join(engine, ".git")):
+        shutil.rmtree(engine, ignore_errors=True)
+        run(["git", "clone", "--filter=blob:none", repo, engine], cwd=root)
+    # --tags: a revision whose branch was deleted is still reachable from its tag, which a plain
+    # fetch only follows when it already fetches the commit. --force: a tag moved upstream would
+    # otherwise fail the fetch.
+    run(["git", "fetch", "--quiet", "--tags", "--force", "origin"], cwd=engine)
+    run(["git", "checkout", "--quiet", "--force", revision], cwd=engine)
+    run(["git", "clean", "-fdq", "-e", "target", "-e", "third_party/hermes/build-apple",
+         "-e", "third_party/hermes/build", "-e", "third_party/hermes/src"], cwd=engine)
+    # The engine is a pnpm workspace (packageManager in its package.json): npm cannot install it.
+    run(["npx", "--yes", "pnpm@10.33.0", "install", "--frozen-lockfile"], cwd=engine)
+    return engine
+
+
+def install_packages(project):
+    """The game's own packages (`file:packages/<name>` dependencies): the engine finds them in
+    node_modules and fails the build when one is declared but not installed."""
+    run(["npm", "install", "--no-audit", "--no-fund", "--no-package-lock"], cwd=project)
+
+
+def stamp_version(project, version_name, version_code, bundle_id):
+    """The version from VersioningStep and the build type's bundle id, in the fields the engine
+    builds read: the store and in-house builds differ in their bundle id and display name. The
+    project name stays: it is the game's identity in multiplayer, the same on every platform. The
+    display name goes into each platform's project instead (build_android, build_ios). Returns the
+    file as it was, for restore_config."""
+    path = os.path.join(project, "project.gameengine.json")
+    with open(path) as f:
+        original = f.read()
+    config = json.loads(original)
+    config["version"] = version_name
+    config["bundleId"] = {"ios": bundle_id, "android": bundle_id}
+    config.setdefault("android", {})["versionCode"] = int(version_code)
+    config.setdefault("ios", {})["buildNumber"] = int(version_code)
+    with open(path, "w") as f:
+        json.dump(config, f, indent=2)
+        f.write("\n")
+    return original
+
+
+def restore_config(project, original):
+    """The stamped project.gameengine.json is tracked: left modified, the agent's next checkout of
+    the repository refuses to overwrite it and the Clean up step fails."""
+    with open(os.path.join(project, "project.gameengine.json"), "w") as f:
+        f.write(original)
+
+
+def build_host_tools(engine):
+    # The host tools only run on this agent, so their Rust and C/C++ code both target its own SDK.
+    # Otherwise C code compiled for an older macOS calls ___isPlatformVersionAtLeast for its
+    # availability checks, and the host link fails on it (seen on an Intel agent, where rustc
+    # defaults to macOS 10.12).
+    sdk = subprocess.run(["xcrun", "--sdk", "macosx", "--show-sdk-version"], stdout=subprocess.PIPE, text=True, check=True)
+    os.environ.setdefault("MACOSX_DEPLOYMENT_TARGET", sdk.stdout.strip())
+    # The host tools the build runs on the agent: the content cooker and the V8 host that compiles
+    # the game scripts. Kept between builds in target/.
+    run(["cargo", "build", "--release", "-p", "gameengine-cook", "-p", "gameengine-host"], cwd=engine)
+
+
+def write_android_label(gradle_project, label):
+    """The label under the icon: app_name in the Gradle project's strings.xml, which the manifest's
+    android:label names. Escaped as the engine escapes it (an Android resource string). Fails when
+    the engine's template no longer has exactly one app_name, rather than ship the wrong label."""
+    path = os.path.join(gradle_project, "app", "src", "main", "res", "values", "strings.xml")
+    with open(path) as f:
+        text = f.read()
+    escaped = (label.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+               .replace('"', "&quot;").replace("'", "\\'"))
+    text, count = re.subn(r'(<string name="app_name">)[^<]*(</string>)', lambda m: m.group(1) + escaped + m.group(2), text)
+    if count != 1:
+        sys.exit("%s has %d app_name strings, expected 1: the Android label was not set" % (path, count))
+    with open(path, "w") as f:
+        f.write(text)
+    print("android label: " + label)
+
+
+def build_android(engine, project, values):
+    # The prebuilt V8 the Android player links (the engine does not keep it in Git).
+    run(["node", "third_party/fetch.mjs", "v8"], cwd=engine)
+    env = dict(os.environ)
+    env["GAMEENGINE_ANDROID_KEYSTORE"] = os.environ["KEYSTORE_FILE_PATH"]
+    env["GAMEENGINE_ANDROID_KEYSTORE_PASSWORD"] = os.environ["KEYSTORE_PASSWORD"]
+    env["GAMEENGINE_ANDROID_KEY_ALIAS"] = os.environ["KEYSTORE_ALIAS"]
+    env["GAMEENGINE_ANDROID_KEY_PASSWORD"] = os.environ["KEYSTORE_PASSWORD"]
+    # The engine labels the app with the project name, which is also the game's multiplayer identity,
+    # and has no field for the label alone (https://github.com/tactilegames/game-engine/issues/158).
+    # So the build runs in its two stages, and the label goes into the Gradle project between them,
+    # as build_ios does in the Xcode project.
+    stage = gameengine(engine, project, ["build", "android"] + release_args(values) + ["--stage", "project"], env)
+    check_cheats(stage, values)
+    write_android_label(stage["project"], values["PRODUCT_DISPLAY_NAME"])
+    manifest = os.path.join(stage["project"], "build-report.json")
+    report = gameengine(engine, project, ["build", "android", "--stage", "bundle", "--manifest", manifest], env)
+    aab = report["artifact"]["path"]
+    destination = values.get("GRADLE_AAB_FILE_PATH") or os.path.join(values["ARTIFACTS_PATH"], "app-bundle.aab")
+    shutil.copyfile(aab, destination)
+    print("aab: " + destination)
+
+
+IOS_TRIPLE = "aarch64-apple-ios"
+
+# The engine's own build of the library with the game's native systems in it (its transpiled sim
+# systems, its native/ crate, its packages' crates). A release build carries no debug protocol.
+# Prints the library's path on stdout. Cargo writes to stderr.
+PLAYER_LIB = """
+const [engine, project, triple] = process.argv.slice(1);
+const { buildPlayerLib } = await import(engine + '/tools/cli/src/native.ts');
+console.log(buildPlayerLib(project, { triple, js: 'hermes', protocol: false }).lib);
+"""
+
+
+def build_player_lib(engine, project):
+    """The per-game libgameengine_game.a, built by the engine's own function, so it follows the engine
+    instead of a copy of it. The engine has no command for it yet."""
+    print("$ buildPlayerLib (%s, hermes, release)" % IOS_TRIPLE, flush=True)
+    result = subprocess.run(["node", "--input-type=module", "-e", PLAYER_LIB, engine, project, IOS_TRIPLE],
+                            cwd=engine, stdout=subprocess.PIPE, text=True)
+    if result.returncode != 0:
+        sys.exit("building the iOS library with the game's native systems failed, see above")
+    print("player lib: " + result.stdout.strip().splitlines()[-1], flush=True)
+
+
+def build_ios(engine, project, values):
+    # The engine's own `build ios` archives and signs with an Apple team in one go. Here only the
+    # project is wanted, so the libraries are built as it builds them, then the project is assembled
+    # around them (--dry-run assembles without building) and generated.
+    # Hermes first: the desktop build (its compiler and headers) and the iOS xcframework, which
+    # the Rust library build needs.
+    if not os.path.isdir(os.path.join(engine, "third_party", "hermes", "build-apple", "hermesvm.xcframework")):
+        run(["node", "third_party/fetch.mjs", "hermes"], cwd=engine)
+        run(["bash", os.path.join(engine, "third_party", "hermes", "build-apple.sh")], cwd=engine)
+
+    xcode = values["XCODE_PROJECT_PATH"]
+    args = ["build", "ios"] + release_args(values) + ["--dry-run", "--out", xcode]
+    # Which library the game links is the engine's call: with native systems (sim systems transpile
+    # by default since engine 6d478985) it is the per-game library, otherwise the plain Hermes one.
+    # A dry run reports it without building, so the project is assembled once to ask, and again
+    # around the library built.
+    shutil.rmtree(xcode, ignore_errors=True)
+    native = gameengine(engine, project, args, dict(os.environ)).get("nativeSystems") is True
+    if native:
+        build_player_lib(engine, project)
+    else:
+        run(["cargo", "rustc", "-p", "gameengine-ffi", "--crate-type", "staticlib", "--release",
+             "--target", IOS_TRIPLE, "--no-default-features", "--features", "hermes"], cwd=engine)
+    shutil.rmtree(xcode, ignore_errors=True)
+    report = gameengine(engine, project, args, dict(os.environ))
+    check_cheats(report, values)
+    if report.get("missing"):
+        sys.exit("the Xcode project is missing: " + ", ".join(report["missing"]))
+    print("native systems: " + ("on" if native else "off"))
+
+    # XcodeBuildStep runs `-scheme <UNITY_TARGET_NAME> -project <UNITY_TARGET_NAME>.xcodeproj`: the
+    # engine's scheme is its app target, Game, so the project gets that name too.
+    target = values["UNITY_TARGET_NAME"]
+    spec = os.path.join(xcode, "project.yml")
+    with open(spec) as f:
+        lines = f.read().splitlines()
+    lines = ['name: "%s"' % target if line.startswith("name: ") else line for line in lines]
+    # The engine's display name is the project name, which is also the .app's name that the signing
+    # steps look up (PRODUCT_NAME): only the name under the icon changes.
+    display = values["PRODUCT_DISPLAY_NAME"]
+    # json.dumps quotes and escapes it, which is also a valid YAML double-quoted string.
+    lines = [line[:line.index("C")] + "CFBundleDisplayName: " + json.dumps(display) if line.strip().startswith("CFBundleDisplayName:") else line
+             for line in lines]
+    with open(spec, "w") as f:
+        f.write("\n".join(lines) + "\n")
+    run([os.environ.get("GAMEENGINE_XCODEGEN", "xcodegen"), "generate", "--spec", "project.yml"], cwd=xcode)
+    print("xcode project: " + os.path.join(xcode, target + ".xcodeproj"))
+    if values.get("APPSIGNING_GAME_NAME") == "Prototypes":
+        write_prototype_entitlements(xcode, values["PRODUCT_BUNDLE_IDENTIFIER"])
+
+
+# The enterprise team that holds the wildcard prototype.* in-house profile (app-signing
+# ProvisioningProfiles/Prototypes).
+PROTOTYPE_TEAM = "M985P8DJ45"
+
+
+def write_prototype_entitlements(xcode, bundle_id):
+    """CodeSignStep signs with the profile's own entitlements unless the signing entry names a file. The
+    Prototypes profile's application-identifier is the wildcard M985P8DJ45.prototype.*, which an app
+    can't be signed with, so the in-house signing entry names prototype.entitlements, written here: the
+    profile's entitlements with the game's own bundle id. A flat dict only (the plugin's parser stops at
+    the first </dict>), and nothing the profile doesn't allow."""
+    with open(os.path.join(xcode, "prototype.entitlements"), "w") as f:
+        f.write("""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>application-identifier</key>
+	<string>%s.%s</string>
+	<key>com.apple.developer.team-identifier</key>
+	<string>%s</string>
+	<key>get-task-allow</key>
+	<false/>
+	<key>keychain-access-groups</key>
+	<array>
+		<string>%s.*</string>
+		<string>com.apple.token</string>
+	</array>
+</dict>
+</plist>
+""" % (PROTOTYPE_TEAM, bundle_id, PROTOTYPE_TEAM, PROTOTYPE_TEAM))
+    print("prototype entitlements: %s.%s" % (PROTOTYPE_TEAM, bundle_id))
+
+
+def check_cheats(report, values):
+    """The engine's --report says whether the cheats are in the bundle: a store build with them fails."""
+    included = report.get("contents", {}).get("cheats") is True
+    print("cheats: " + ("included" if included else "not included"))
+    if included != release_cheats(values):
+        sys.exit("cheats are %s, but GAME_RELEASE_CHEATS is %s" % ("in" if included else "out", values.get("GAME_RELEASE_CHEATS")))
+
+
+def gameengine(engine, project, args, env):
+    cli = os.path.join(engine, "tools", "cli", "bin", "gameengine.mjs")
+    run(["node", cli, "gen", "--project", project], cwd=engine, env=env)
+    print("$ gameengine " + " ".join(args), flush=True)
+    result = subprocess.run(["node", cli] + args + ["--project", project, "--json"], cwd=engine, env=env,
+                            stdout=subprocess.PIPE, text=True)
+    print(result.stdout)
+    if result.returncode != 0:
+        sys.exit("gameengine %s failed with exit code %d" % (" ".join(args), result.returncode))
+    return json.loads(result.stdout[result.stdout.index("{"):])
+
+
+if __name__ == "__main__":
+    # A cancelled build gets SIGTERM: exit through the finally below, which restores the config.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+    values = pipeline_values()
+    root = values["ROOT_PATH"]
+    project = os.path.join(root, values["GAME_PROJECT_DIRECTORY"])
+    use_node()
+    use_toolchain()
+    engine = checkout_engine(root, values["ENGINE_REPOSITORY"], values["ENGINE_REVISION"])
+    platform = values["PLATFORM"]
+    original_config = stamp_version(project, values["VERSION_NAME"], values["VERSION_CODE"], values["PRODUCT_BUNDLE_IDENTIFIER"])
+    try:
+        install_packages(project)
+        build_host_tools(engine)
+        if platform == "android":
+            build_android(engine, project, values)
+        elif platform == "ios":
+            build_ios(engine, project, values)
+        else:
+            sys.exit("unsupported platform: " + platform)
+    finally:
+        restore_config(project, original_config)

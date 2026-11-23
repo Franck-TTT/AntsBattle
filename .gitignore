@@ -1,0 +1,8 @@
+# The engine checkout the project's tsconfig.json looks for (a symlink locally, cloned on the build server).
+/game-engine
+# Engine build output and caches.
+.gameengine/
+.DS_Store
+# Values the setup script was given: they hold no secrets, only op:// references, but stay local.
+template/values.local.json
+__pycache__/

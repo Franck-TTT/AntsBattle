@@ -1,0 +1,56 @@
+# Values are defined in .pipeline/values
+values:
+  - product/store
+  - game/game
+  - android/gradle
+
+# Plugins are defined in .pipeline/nuget.yml
+plugins:
+  - name: BuildPlugins.ProjectVersioning
+  - name: BuildPlugins.VerifyReleaseCandidate
+  - name: BuildPlugins.AppSigning
+  - name: BuildPlugins.Android
+  - name: BuildPlugins.SaveArtifacts
+
+steps:
+  # VersioningStep takes VERSION_CODE from BRANCH_REVISION, which on Git is the commit SHA.
+  # Scoped to this step, the server build ID takes its place.
+  - name: Versioning
+    values:
+      - BRANCH_REVISION: "<BUILD_ID>"
+    run:
+      stepId: VersioningStep
+
+  # Flags a store build from a version branch (1.0.0) with no skipped steps as a release candidate,
+  # and only warns otherwise. Its Unity manifest checks find no Packages/manifest.json here.
+  - name: Verify Release Candidate
+    run:
+      stepId: VerifyReleaseCandidateStep
+
+  # Every game test (`gameengine test --tier t0,t1`), then `gameengine check`: a failure stops the
+  # build here, before it builds or signs anything. Not named "Run Tests": the runner skips a step
+  # with that name when the Skip Unit Tests setting is on, and store builds always run their tests.
+  - name: Run Store Tests
+    run:
+      script: Build/Pipeline/scripts/run_tests
+
+  # The keystores the script and Bundletool sign with, at <ROOT_PATH>/AppSigning.
+  - name: Clone AppSigning
+    run:
+      stepId: CloneAppSigningStep
+
+  # The engine build in place of the Unity build and Gradle: leaves the signed app-bundle.aab.
+  - name: Build Game
+    run:
+      script: Build/Pipeline/scripts/build_game
+
+  # Sets the universal APK as the main artifact
+  - name: Extract APK from AAB
+    run:
+      stepId: BundletoolStep
+
+  - name: Save Artifacts
+    values:
+      - STORE_ARTIFACT: "<ARTIFACTS_PATH>/app-bundle.aab"
+    run:
+      stepId: SaveArtifactsStep
