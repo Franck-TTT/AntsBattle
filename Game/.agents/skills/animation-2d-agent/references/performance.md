@@ -8,17 +8,15 @@ rig you have, `gameengine anim2d metrics <file> --device <class>` applies the sa
 
 - **Machine:** Apple M2 Max (12 cores), macOS 26, release build, one core per instance (the
   engine poses instances in parallel on its job threads; the numbers are per instance).
-- **Rigs** (`gameengine_skel2d::bench`): a 31-bone rig (5 chains of 6 bones, 30 drawn slots, a
+- **Rigs:** a 31-bone rig (5 chains of 6 bones, 30 drawn slots, a
   typical phone character) and a 100-bone rig (9 chains of 11, 99 slots, a hero at the `phone`
   budget), one region per bone, animation `a0` rotating every bone with bezier keys. Each row
   switches one feature on over that baseline. 50 and 200 instances: the cost per instance was the
   same at both (it scales linearly with instances).
 - **Pose CPU** (tracks, timelines, constraints, physics, world transforms; what the game pays per
-  instance per frame, presentation included):
-  `cargo test -p gameengine-skel2d --release -- --ignored --nocapture feature_costs`
+  instance per frame, presentation included).
 - **Draw lists** (draw calls, why batches broke, bytes uploaded per frame, CPU-skinned vertices, CPU
-  to build the draw list after posing): `cargo test -p gameengine-render --release -- --ignored --nocapture skel2d_feature_costs`
-  (needs a GPU).
+  to build the draw list after posing).
 - **Not measured here:** the GPU's time (vertex skinning, fill, overdraw). A desktop GPU says
   nothing about a phone's; see "What only a device can tell" below.
 - The editor's wasm evaluator (viewport, lint, Metrics view) is a tool cost, never a game cost:
@@ -203,7 +201,7 @@ fires events (cheap: ~0.1 ms p95 for 35 rigs on the reference desktop). On a **p
 `gameengine step 300` runs 300 steps in one frame, so `systemTimeMs` per frame adds them up: measure
 system times on a running session.
 
-**3. Hold it with a budget** (design.md § 11.5): `tests/budgets/<name>.json` with a replay that
+**3. Hold it with a budget**: `tests/budgets/<name>.json` with a replay that
 plays the scene, checked in T1 by `gameengine test <project> --tier t1` (structural:
 `drawCallsMax`, `pipelinesCreatedDuringPlay`, `gcPausesOver4msMax`) and on devices by
 `gameengine lab run <job>` / `gameengine lab phones <job>` (`frameTimeP95Ms`, `gpuTimeP95Ms`,

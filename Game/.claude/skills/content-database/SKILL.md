@@ -1,13 +1,11 @@
 ---
 name: content-database
-version: 1.22.0
+version: 1.23.0
 tier: optional
 description: Typed content data and downloadable packs — dataAsset/loadData for levels, items, waves and rewards, and collections (*.collection.json) delivered in-app or on demand. Use when adding levels or content tables, making content designer-editable, or shipping a content pack separately.
 ---
 
 # Content database: data assets and collections
-
-**Covers:** The game's content database in Game Engine — typed data assets (dataAsset, p.ref, JSON under assets/ with $type, loadData/listData) for levels, items, waves and rewards, and collections (collections/*.collection.json) that group scenes and data with everything they reference into bundles delivered in-app or on demand (collection:<name>, requestCollection). Use when adding levels or tables of content, making content designer-editable, splitting content into downloadable packs, or when a level/content pack must ship separately.
 
 **Data assets** are typed records designers edit (like ScriptableObjects). **Collections** group
 content that ships and loads together (like AssetBundles), with their dependencies resolved for you.
@@ -183,7 +181,7 @@ await loading.run({ collections: ['world-2'], load: ['world-2'], swap: levels[0]
 services.bundles.on('progress', (p) => bar.set(p.bytes / p.total)); // your own progress UI
 ```
 
-Where the bytes come from (`project.gameengine.json` `delivery`, ADR 0109):
+Where the bytes come from (`project.gameengine.json` `delivery`):
 
 ```json
 "delivery": { "url": "https://cdn.example.com/my-game/{key}", "maxConcurrent": 2, "retries": 3 }
@@ -198,9 +196,9 @@ Where the bytes come from (`project.gameengine.json` `delivery`, ADR 0109):
   checks the hash and keeps the file.
 - Downloads stream to disk, are checked against the cooked manifest, retried, and kept in user
   data; kept copies of older builds are deleted. `services.bundles.remove({ name })` frees one.
-- **Live content after the app shipped** (a live-ops event, ADR 0122 step 6): add the event's
+- **Live content after the app shipped** (a live-ops event): add the event's
   collection (and an on-demand bundle group for its art), then make a content release on the code
-  that shipped and publish it:
+  that shipped and publish it (keys, manifests and channels: skill `releases`):
   `gameengine release pack --version 8 --key content-key.json --content-of <the shipped release>` (a
   release directory, or the `shipped/` folder a store build keeps beside its report), then upload
   its `files/` as it is, `content-manifest-<platform>-<abi>.json` last. The app finds the manifest through

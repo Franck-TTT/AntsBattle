@@ -1,13 +1,11 @@
 ---
 name: culling
-version: 1.2.0
+version: 1.3.0
 tier: optional
 description: Culling per device and platform — render.culling (distance, layerDistances, minScreenSize, animation, particles, occlusion, lodCrossFade, lodHysteresis, perspective2d), DrawDistance/HLOD, Occluder, AlwaysAnimate, VisibilityNotifier. Use for off-screen cost, draw distance, LOD pops, occlusion or "is it on screen".
 ---
 
 # Culling
-
-**Covers:** what the engine leaves out of a frame and how a project switches each part per device class and platform (ADR 0138, design.md § 6.10): distance and screen-size culling, off-screen animation and effects, CPU and GPU occlusion, LOD cross-fades and HLOD hand-overs, 2D under perspective cameras, and the presentation visibility API.
 
 Culling is presentation: it never changes the hash, replays or tests' results. What can cost more
 than it saves is off by default where it might; measure before turning it on.

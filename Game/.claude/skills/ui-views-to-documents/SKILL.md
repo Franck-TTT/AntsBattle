@@ -1,15 +1,13 @@
 ---
 name: ui-views-to-documents
-version: 1.4.0
-tier: required
+version: 1.5.0
+tier: optional
 description: Porting TSX views (src/views/*.view.tsx) into UI documents so they edit in the UI mode — inventory, mapping, keeping ids, thin <Widget doc> views, before and after renders. Use when an older project's views are missing from the UI documents Library, or when asked to port, convert or migrate views.
 ---
 
 # Port TSX views to UI documents
 
-**Covers:** Moving an existing project's TSX views (defineView in src/views/*.view.tsx with ui/*.style.css) into UI documents (ui/**/*.ui.json) so they show and edit in the editor's UI mode — the inventory, before renders, what moves into documents and what stays TSX, the TSX/CSS to document mapping (Button, Text, Sprite, Show, For, ScrollView, fx-* entrances, 9-slice), keeping element ids so flow tests pass, rewriting each view to a thin <Widget doc>, and proving the port with before/after renders and the game tests. Use when a project made before UI documents has views that are not in the UI documents Library, or when asked to port, convert or migrate views to documents.
-
-A project made before UI documents (ADR 0122) has its UI as TSX views and stylesheets. They keep working, but
+A project made before UI documents has its UI as TSX views and stylesheets. They keep working, but
 the editor's UI mode only shows documents, so designers cannot tune them. A project that stays on TSX
 also rebuilds by hand what documents carry: flight points (`point=target`, `widgetPoint`, aimed at by
 `ui.animateTo`), `keepCaps` fills, 9-slice faces and content padding from the texture's `.gmeta`, and editing in the editor.

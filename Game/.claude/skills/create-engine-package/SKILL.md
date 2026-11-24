@@ -1,6 +1,6 @@
 ---
 name: create-engine-package
-version: 1.7.0
+version: 1.10.0
 tier: optional
 description: Create and maintain Game Engine package repositories from the GitHub template using an installed engine. Use when extracting reusable code, adding schemas, mobile SDK plugins, Rust or build steps, testing a packed package, or changing its minimum engine version, CI and automatic release.
 ---
@@ -12,15 +12,15 @@ Use this skill for the package repository. For consuming a package in a game, re
 
 ## New repository
 
-Create `tactilegames/gameengine.<name>` through the GitHub template
-[`tactilegames/gameengine.package-template`](https://github.com/tactilegames/gameengine.package-template).
+Create `<owner>/gameengine.<name>` from the engine's package template
+([`gameengine.package-template`](https://github.com/tactilegames/gameengine.package-template)).
 Use **Use this template**, or:
 
 ```sh
-gh repo create tactilegames/gameengine.<name> --template tactilegames/gameengine.package-template --private --clone
+gh repo create <owner>/gameengine.<name> --template tactilegames/gameengine.package-template --private --clone
 ```
 
-The npm name is `@tactilegames/gameengine.<name>`. The dot separates the engine target from the
+The npm name is `@<scope>/gameengine.<name>` (skill `packages` names the scopes). The dot separates the engine target from the
 name; hyphens belong inside the name, such as `gameengine.web-service-client`.
 
 In the new checkout, read `AGENTS.md`, `README.md` and `recipes/README.md`, then use its explicit
@@ -50,6 +50,14 @@ start with its repository instructions instead of running initial configuration 
 4. Open a scoped PR with the evidence and remaining gaps. Eligible default-branch merges
    version and publish automatically. Enabling publication or changing credentials/access
    still needs owner authorization. Games keep their lock until they update.
+
+## When pure native calls pay
+
+Use pure native calls for bulk work on larger typed arrays; measure the
+package's TypeScript twin before choosing. Measured on a low-end Android phone, V8 at
+about 100 items cost roughly 1.2x as much as TypeScript because call overhead dominates.
+Hermes favoured native more: about 4.5 µs versus 127 µs for 100-item reads. These are
+per-call measurements, not frame-rate gains.
 
 ## Read only the reference needed
 

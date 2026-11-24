@@ -1,13 +1,11 @@
 ---
 name: editor-modes
-version: 1.14.0
+version: 1.15.0
 tier: optional
 description: Project editor modes (editor/modes/*.tsx, defineEditorMode) — custom panels docked beside the built-in ones, viewport tools, inspectors and palette actions through @gameengine/editor-api and the undoable command bus. Use when designers need a level, wave, dialogue or content tool next to the game view.
 ---
 
 # Editor modes and inspectors
-
-**Covers:** Building the project's own editor tools — editor modes (editor/modes/*.tsx with defineEditorMode: the mode's own panels plus the editor's built-in ones — the running game (play), the scene view, hierarchy, inspector, console … — docked left/right/bottom/centre and sized, a viewport tool with pointer input in world coordinates, snapping, picking and overlays), whole-entity inspectors, custom component editors and palette actions — through @gameengine/editor-api, writing only through the undoable command bus. Use when designers need a level, wave, dialogue or content tool next to the game view, or when an inspector should show more than one component.
 
 The editor loads your project's editor code and reloads it on save. Everything lives in
 `editor/` (never in the game bundle) and is typed by `@gameengine/editor-api`:
@@ -35,7 +33,7 @@ panel docks there), an optional viewport tool, header controls (`toolbar`), and 
 while it is active. Only the header (project, **Mode** picker, the mode's tools) stays; the
 Scene mode's toolbars and panels are hidden. Designers switch with **Mode**; the editor remembers
 the choice per project. Switching modes never resizes the window: the mode fits itself into the
-window as it is (`resizeWindow` is deprecated and ignored). Play works as usual: panels stay, the tool steps aside.
+window as it is (`resizeWindow` is ignored). Play works as usual: panels stay, the tool steps aside.
 
 The editor's own modes sit in the same picker: Play, VFX (searchable effect list), UI documents
 (the visual editor for `ui/**/*.ui.json`, skill `ui-documents`), Materials (shaders, materials and
@@ -59,7 +57,7 @@ export default defineEditorMode(({ React, ui }) => {
   return {
     id: 'td.waves',           // unique in the project; remembered per project
     title: 'Waves',
-    icon: '≋',
+    icon: 'list',
     panels: [{ id: 'waves', title: 'Waves', dock: 'left', render: Waves }],
     viewportTools: [/* see below */],
     onActivate: (api) => () => { /* cleanup when the mode stops or reloads */ },
@@ -112,7 +110,7 @@ panels: [
 - **Read:** `api.scene()` / `api.useScene()` (entities with `guid`, `name`, `parent`,
   `components`, `prefab`), `api.selected()` / `api.useSelection()`, `api.schema.types()`,
   `api.schema.enumValues('TileKind')`, `api.assets.list()` and `api.assets.thumbnailUrl(path)`
-  for an `<img>`. Anything else through `api.query('scene.inspect', …)` (docs/generated/commands.md).
+  for an `<img>`. Anything else through `api.query('scene.inspect', …)` (`gameengine query --list`).
 - **Follow files on disk:** `api.assets.useRevision({ dir: 'assets/data/levels', suffixes: ['.json'] })` is a
   number that grows each time matching files change, whoever wrote them (the bus, a project tool, an agent,
   a text editor): put it in the dependencies of the effect that re-reads them. `api.assets.onChanged(listener,
@@ -133,8 +131,8 @@ panels: [
   `h.execute(...)` / `h.group(label, fn)` for its edits and `h.undo()` / `h.redo()` on the panel's
   buttons and keys. The scene's Ctrl+Z never reaches these steps, nor they the scene's; call
   `h.clear()` when the task changes. Scoped edits are file edits (`asset.*`,
-  `project.setAssetGroup`); JSON edits undo per value, so tasks sharing `locales/en.json` undo in any
-  order. `h.undo()` rejects with `E_CONFLICT` (and clears the history) when a value it would restore
+  `project.setAssetGroup`); JSON edits undo per value, so tasks sharing one JSON file (a string
+  table) undo in any order. `h.undo()` rejects with `E_CONFLICT` (and clears the history) when a value it would restore
   was changed since: show the message, never retry.
 - **Asset groups for imported files:** `project.setAssetGroup { name, include: ['assets/story/ch1/bg.png'] }`
   (and `project.removeAssetGroup`) in the import's group, so one undo takes back both; Play picks

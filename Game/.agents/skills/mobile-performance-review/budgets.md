@@ -12,7 +12,7 @@ numbers from your own device lab runs (`gameengine lab`) as soon as you have the
 | `android-low-compat` | 2–3 GB RAM, 4–6 year-old SoC, GLES/Vulkan 1.0 | 30 fps, must not crash |
 | `android-low-mid` | 3–4 GB RAM | 60 fps casual / 30 fps 3D |
 | `android-mid` | 4–6 GB RAM | 60 fps |
-| `android-high` / `iphone-current` / `ipad` | 8 GB+ | 60 fps (never above: the engine caps phones at 60, ADR 0079) |
+| `android-high` / `iphone-current` / `ipad` | 8 GB+ | 60 fps (never above: the engine caps phones at 60) |
 | `iphone-oldest` | oldest supported iPhone (3 GB) | 60 fps casual / 30 fps 3D |
 
 ## Frame time (CPU and GPU)
@@ -22,7 +22,7 @@ numbers from your own device lab runs (`gameengine lab`) as soon as you have the
 | `frameTimeP95Ms` | 16.6 at 60 fps, 33.3 at 30 fps | 60 fps leaves 16.66 ms per frame, 30 fps 33.33 ms. |
 | `gpuTimeP95Ms` | ≤ 70 % of the frame (≈ 11–12 ms at 60 fps) | Phones throttle under sustained load; plan for 35–45 % less than peak and use only 60–70 % of the GPU at the target rate. |
 | `scriptTimeP95Ms` | low 5–8, mid 4, high 2 | Leaves the rest of the CPU frame for engine, render submission and the OS. |
-| `stepTimeMs` p95 (one 60 Hz sim step) | ≈ 8 on `phone-low` | At 30 fps a frame runs two steps plus presentation in 33.3 ms (ADR 0102). |
+| `stepTimeMs` p95 (one 60 Hz sim step) | ≈ 8 on `phone-low` | At 30 fps a frame runs two steps plus presentation in 33.3 ms. |
 | `hitchFrames` | 0 over 2× the frame budget during play | Visible stutter; "slow rendering" in Android vitals is frames over 16 ms. |
 | Frozen frames | none over 700 ms | Android vitals' frozen-frame threshold. |
 | `gcMaxMs` / GC pauses over 4 ms | ≤ 8 ms max, 0 over 4 ms during play | A GC pause is a hitch; steady-state play should not allocate per frame. |
@@ -46,14 +46,15 @@ Lower the frame rate in menus and idle screens: 60 fps costs roughly 1.5–2× t
 Draw calls are usually the first bottleneck in 2D and simple 3D mobile games: atlas sprites and
 UI, share materials, avoid interleaving sorting layers between atlases. The engine's structural
 budget `drawCallsMax` is checked in T1 on every run (the engine keeps a 60-object
-board plus UI under 30 draws).
+board plus UI under 30 draws). `trianglesMax` and `instancesMax` budget the triangles row and the
+instances behind it: one 9k-triangle model is fine, 73 copies of it in view are 640k.
 
 ## Fill rate and bandwidth (720p Mali-class phones)
 
 Low-end Android phones (Mali-G52/G57, PowerVR GE-series, Adreno 5xx–610; 720×1600 screens)
 share a few GB/s of memory bandwidth between the GPU, CPU and display. A 2D frame there is
 bound by how many full-screen pixels it writes and reads, not by draw calls. Bytes per screen
-pixel per frame, by how the engine draws (computed from its render paths, ADR 0099):
+pixel per frame, by how the engine draws (computed from its render paths):
 
 | Setup | Passes | ≈ DRAM bytes per pixel | 720×1600 at 60 fps |
 |---|---|---|---|

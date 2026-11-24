@@ -1,17 +1,17 @@
 ---
 name: post-effects
-version: 1.1.0
+version: 1.3.0
 tier: optional
 description: Custom full-screen effects — domain 'post' materials, postColor/postBlur/postDepth, a post profile's effects (*.post.json), stages scene/display/overlay, per-device overrides, optional effects, post.set/post.clear. Use for a blur, hit flash, colour wash, frosted pause screen, fog or any look the fixed post stack lacks.
 ---
 
 # Post effects
 
-**Covers:** full-screen passes you write yourself: a `*.material.ts` with `domain: 'post'`
-(`@gameengine/materials`), listed in a post profile's `effects` (`*.post.json`), and driven at
-run time with `post` from `@gameengine/runtime`. Bloom, tonemapping, grading, vignette, SSAO,
-depth of field and anti-aliasing stay the profile's fixed fields (skill `device-tiers`); this is
-for everything else. Surface materials are skill `vfx-materials`.
+A post effect is a `*.material.ts` with `domain: 'post'` (`@gameengine/materials`), listed in a
+post profile's `effects` (`*.post.json`) and driven at run time with `post` from
+`@gameengine/runtime`. Bloom, tonemapping, grading, vignette, SSAO, depth of field and
+anti-aliasing stay the profile's fixed fields (skill `device-tiers`). Surface materials are skill
+`vfx-materials`.
 
 ## The rule: presentation only
 
@@ -148,7 +148,7 @@ stage's size; the blur pyramid is built once per stage that reads it (a chain of
 passes, 2 levels on compat, 4 on mobile, 6 on desktop); depth is read only where an effect asks.
 On phone-low budget about one display effect: mark extras `optional` or remove them in
 `overrides`. The `postEffects` quality feature (on by default) switches every effect off for a
-level; `quality show` lists it.
+level; `quality show` lists it. A game with post that ships on Android turns `render.android.drawIntoWindow` on (skill `device-tiers`).
 
 ## Check it
 

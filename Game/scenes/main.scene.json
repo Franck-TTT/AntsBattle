@@ -1,12 +1,57 @@
 {
   "$schemaVersion": 2,
+  "guid": "76b5586a-1c06-4634-8801-f405a3facf6f",
   "id": "main",
   "entities": [
     {
       "name": "Camera",
       "id": "camera",
-      "Camera": { "clearColor": "#1a2138ff", "orthoSize": 8 },
-      "LocalTransform": {}
+      "Camera": { "clearColor": "#4d7a36ff" },
+      "CameraShake": { "decay": 1.8, "maxOffset": [0.18, 0.18, 0], "maxAngle": 0.01, "frequency": 22 },
+      "LocalTransform": {},
+      "VisualOffset": {}
+    },
+    {
+      "name": "Effects",
+      "id": "effects",
+      "LocalTransform": {},
+      "children": [
+        {
+          "name": "Fx dust",
+          "id": "fx-dust",
+          "FxHost": {},
+          "LocalTransform": {},
+          "ParticleSystem": { "effect": { "guid": "ce95751b-27ae-467e-bbdf-f3ddbf1bf942" }, "emitting": false }
+        },
+        {
+          "name": "Fx pop",
+          "id": "fx-pop",
+          "FxHost": { "kind": "pop" },
+          "LocalTransform": {},
+          "ParticleSystem": { "effect": { "guid": "64ba6b69-0287-4c32-9c3f-0d9e9def2585" }, "emitting": false }
+        },
+        {
+          "name": "Fx boom",
+          "id": "fx-boom",
+          "FxHost": { "kind": "boom" },
+          "LocalTransform": {},
+          "ParticleSystem": { "effect": { "guid": "512052f8-3383-477c-88b2-9893b145b852" }, "emitting": false }
+        },
+        {
+          "name": "Fx hit",
+          "id": "fx-hit",
+          "FxHost": { "kind": "hit" },
+          "LocalTransform": {},
+          "ParticleSystem": { "effect": { "guid": "c649fb26-4e13-425c-bf82-7d6a390854d3" }, "emitting": false }
+        },
+        {
+          "name": "Fx basehit",
+          "id": "fx-basehit",
+          "FxHost": { "kind": "baseHit" },
+          "LocalTransform": {},
+          "ParticleSystem": { "effect": { "guid": "e05d5282-3a07-427a-a8e4-4595262cc1e8" }, "emitting": false }
+        }
+      ]
     }
   ]
 }

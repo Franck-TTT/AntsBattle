@@ -1,13 +1,11 @@
 ---
 name: dependency-injection
-version: 1.0.1
+version: 1.1.0
 tier: optional
 description: Presentation services wired with @gameengine/di — tokens, providers, lifetimes, scopes, test overrides, `gameengine di check|graph`. Use for SDK and service wrappers, backend clients, save access, signal listeners, UI controllers and view models, or a package's feature module. Never for sim systems.
 ---
 
 # Dependency injection (`@gameengine/di`)
-
-**Covers:** Wiring a game's presentation services with @gameengine/di — typed tokens, provider modules (useValue/useFactory/useClass/useExisting, inject), singleton/scoped/transient lifetimes, lazy/eager/warm start, scopes and disposal, test overrides, the creation report, and `gameengine di check|graph`. Use for SDK and service wrappers, backend clients, save access, signal listeners, UI controllers and view models, or a package's feature module. Never for sim systems.
 
 A container for **presentation** objects: SDK wrappers (analytics, ads, consent, IAP), backend
 clients, save access, signal listeners, UI controllers and view models, feature modules a package
@@ -17,7 +15,9 @@ no decorators and no reflection (it runs on Hermes).
 
 **Never in sim.** Sim systems get data from queries, resources and events; every container API
 throws inside a sim system, and lint `no-di-in-sim` rejects importing `@gameengine/di` in a file
-that defines one (skill `sim-boundaries`). A service's outcome reaches the sim as an event.
+that defines one (skill `sim-boundaries`). A service result that changes the game
+becomes an event the UI emits (`PurchaseDelivered`), handled by a sim system. Nothing the container
+holds is hashed or replayed; that is why it may hold SDKs and clocks.
 
 ## Register
 
@@ -145,13 +145,6 @@ gameengine di graph [--json]                            # tokens, deps, lifetime
 
 MCP: `di_check`, `di_graph`. Keep work out of `app.di.ts`'s module scope: the check imports it in
 Node, where there is no engine.
-
-## Never inject into sim
-
-- No container, token or `get` in a sim system or its file; systems use queries/resources.
-- A service result that changes the game becomes an event the UI emits (`PurchaseDelivered`),
-  handled by a sim system — never a value a system pulls from a service.
-- Nothing the container holds is hashed or replayed; that is why it may hold SDKs and clocks.
 
 Example: `samples/gem-cascade/src/app.di.ts` (analytics forwarding eager, rewarded ads warm, the
 progress store and the shop), created in `src/ui/hud.tsx`, tested in `tests/di.test.ts`.

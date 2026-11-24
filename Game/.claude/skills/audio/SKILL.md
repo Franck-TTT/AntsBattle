@@ -1,18 +1,22 @@
 ---
 name: audio
-version: 1.6.1
+version: 1.7.0
 tier: required
 description: Sound and music — decoded memory cost, .gmeta sound settings (codec, streaming, mono), banks and groups, PlaySound/PlayMusic timing, voice limits, audio budgets per device class. Use when adding sounds or music, when a sound plays late or not at all, when audio memory is over budget, or before shipping.
 ---
 
 # Audio on phones
 
-**Covers:** Sound and music on phones in Game Engine — what decoded audio costs (16-bit PCM at 48 kHz: 96 KB/s mono, 192 KB/s stereo) against cooked size, `.gmeta` sound settings (codec auto/opus/adpcm/pcm, stream_after, mono, bitrate, loudness/normalize, cooldown), streamed music and why it stays out of asset groups and banks, structuring banks and groups (boot vs level), PlaySound/PlayMusic timing (music waits, a sound trigger is dropped after 0.5 s), voice limits and stealing, audio budgets per device class (memory.budgets audio, `gameengine memory report`), memory warnings, and measuring the audio thread on a device (`gameengine device perf`). Use when adding sounds or music, when a sound plays late or not at all, when audio memory is over budget, or before shipping.
-
-Design: `docs/design.md` § 7.4 (mixer, events, banks), § 7.1 (the audio importer), § 7.16 (groups
-and budgets), ADR 0099. Audio is presentation: sim systems raise events (`PlaySound`, `PlayMusic`,
+Audio is presentation: sim systems raise events (`PlaySound`, `PlayMusic`,
 `StopMusic`, `SetBusVolume`, `LoadSoundBank`, `UnloadSoundBank`); the host plays them after the
 step. Replays reproduce the triggers, not the samples.
+
+## The rules that matter most
+
+1. **Sim systems raise audio events** (`PlaySound`, `PlayMusic`); they never call the audio API or wait for a sound.
+2. **Every sound is loaded before it plays:** in the boot bank, or the asset group or bank loaded before its level.
+3. **Music is streamed** through `PlayMusic`, never `PlaySound`, and never listed in a group or bank.
+4. **Effects are mono** unless they need stereo: decoded size follows length × channels.
 
 **Sounds from presentation code** (menu clicks, feedback that follows what the sim already did):
 `audio.play('audio/tap', { bus: 'UI', volume: 0.8 })` from `@gameengine/runtime`, in a UI
@@ -103,7 +107,7 @@ cooldown = 0.08      # seconds between two starts of this sound
 
 ## Structuring banks and groups
 
-A new bank (`*.bank.json`) or sound needs its `.gmeta` sidecar: write a bank with `gameengine cmd asset.setText` (it writes a new file under `assets/` with its sidecar) or run `gameengine cook` once after adding files, and commit the `.gmeta`; until then `validate` fails with `E_ASSET: no .gmeta sidecar`.
+A new bank (`*.bank.json`) or sound needs its `.gmeta` sidecar (skill `work-loop`, § New files, scenes and prefabs).
 
 - **Boot bank** (`project.gameengine.json` → `"audio": { "banks": [{ "guid": "<core.bank.json's .gmeta guid>" }] }`,
   a reference like every file the project file names, loaded at startup): only short sounds every screen uses — UI clicks, the common
@@ -132,14 +136,10 @@ A new bank (`*.bank.json`) or sound needs its `.gmeta` sidecar: write a bank wit
   `audio.overrides.<tier or class>.maxVoices` sets it per device:
   `"audio": { "maxVoices": 32, "overrides": { "phone-low": { "maxVoices": 16 } } }` (skill
   `device-tiers`).
-- Every voice runs through its own resampler on the audio thread whatever its pitch, so `pitch`
-  and `pitchRandom` add nothing; the **number of voices** is what costs. Many loops at once
+- The **number of voices** is what costs; `pitch` and `pitchRandom` add nothing. Many loops at once
   (ambience layers, engine hums) cost every audio period while they play.
 - Buses: Master → Music, SFX, UI, Voice and project buses; `SetBusVolume` for volume and
   low/high-pass (muffle music under a pause menu).
-- Phones run the device in miniaudio's conservative profile with 20 ms periods (AAudio usage
-  `game`): about 50 mixer wake-ups a second instead of hundreds, at a few tens of milliseconds of
-  latency, which casual feedback does not notice.
 - **Silence costs nothing.** After a second with no voice, music or stream playing or waiting,
   the engine stops the output device, so a silent screen makes no audio callbacks. The next sound
   starts it again on the audio device thread (never the game thread) and plays from its first

@@ -1,13 +1,11 @@
 ---
 name: engine-tutorial
-version: 1.3.0
+version: 1.4.0
 tier: required
 description: Editor spotlights and tutorials on any engine area (particles, VFX, animation, UI, materials, scenes, play-testing, builds; editor spotlight, MCP tutorial_pick). Use when someone asks to be shown where something is ("show me…", "where do I find/change…") or how to work with it ("what about X?", "how do we…"), or wants a tutorial.
 ---
 
 # Engine tutorials
-
-**Covers:** Step-by-step tutorials the person picks here in the chat, for their own question, and that then run inside the open editor; pointing at one place in the editor; and writing tutorials for a game's own modes and panels.
 
 The editor has no agent of its own and no tutorial menu: the person asks you, and you show them in
 the open editor. There are two kinds of question, and they get different answers. When they ask you
@@ -33,12 +31,12 @@ first and do not offer a tutorial or ask whether they want to be shown.
 ## "How do we work with …", "what about …", "teach me …"
 
 A whole area, however it is worded ("what about particle effects?", "how does animation work?", "can
-the engine do UI?"): also when another skill (`vfx`, `animation-3d`, `ui-documents`, …) answers it.
+the engine do UI?"): also when another skill (`vfx`, `animation-3d-agent`, `ui-documents`, …) answers it.
 
 1. Answer in two or three sentences. Then offer the tutorials, but only when one matches
    (`score` > 0): a question no tutorial covers gets just the answer.
 2. Show the choice in this chat, ranked for their words:
-   - **A chat app with MCP Apps** (Claude, ChatGPT, Tactile Create Code): MCP `tutorial_pick` with
+   - **A chat app with MCP Apps** (Claude, ChatGPT and others): MCP `tutorial_pick` with
      `query` set to their question shows a picker, best match first. A click runs that tutorial in the
      open editor; you do nothing more.
    - **No MCP Apps** (Claude Code in a terminal, Codex): `gameengine tutorial list --for "<their question>" --json`

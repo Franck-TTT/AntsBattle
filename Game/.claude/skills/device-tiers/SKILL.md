@@ -1,22 +1,28 @@
 ---
 name: device-tiers
-version: 1.25.0
+version: 1.29.0
 tier: required
 description: Cheaper content per device — phone-low first, quality levels low/medium/high per platform (quality.select, quality.levels, --level), opt-in visual features per level (quality features, quality show, W_FEATURE_OFF), overrides in materials, VFX, textures, meshes, post, audio. Use when a game runs badly on phones or an effect is missing on a device.
 ---
 
 # Device tiers
 
-**Covers:** Cheaper content per device in Game Engine — designing for phone-low first, and the `overrides` block keyed by GPU tier (compat, mobile, desktop) or memory class (phone-low, phone, tablet, desktop, memory.budgets names) in materials, VFX, texture and mesh .gmeta, post profiles, render.tiers and audio; how they merge (class over tier), what may differ (presentation only), quality.device(), the governor's vfx/lodBias steps, and how to check each on a device class (validate, material preview --class / --device, texture inspect, vfx stats --device, memory report --device, renderTest { memory }, --memory-class phone-low). Use when a game runs badly on low-end phones, when adding heavy content (an effect, material, big texture, 3D model, post profile), when adding a cheaper look for phone-low or compat, or when an override does not apply.
-
-Design: `docs/design.md` § 6 "Per-device content" and ADR 0103 in the engine repo. Working
+Working
 example: `samples/orbit-garden` (`tests/tiers.test.ts`).
+
+## The rules that matter most
+
+1. **Design for phone-low first**; richer devices get extras.
+2. **Per-device differences go in a content `overrides` block**, never in sim code and never in a copy of the scene.
+3. **Never cut what the player needs to play.**
+4. **The frame rate is a cap** (`render.targetFps`): raise it on low-end phones only after measuring one.
+5. **Check every override** (§ Check it) and on a phone-low phone before shipping.
 
 ## Design for phone-low first
 
 The weakest phone the game ships on sets the design; richer devices get extra, not the other way
 round. A `phone-low` phone is about 3 GB of RAM, a Mali-G52-class GPU and a slow CPU, and runs
-at **30 fps** unless the project opts up (ADR 0102): one frame is 33 ms for two 60 Hz sim steps
+at **30 fps** unless the project opts up: one frame is 33 ms for two 60 Hz sim steps
 plus presentation. Before adding heavy content, decide what that phone draws:
 
 - **Make a cheaper version** when the content is heavy on the GPU or memory: big alpha quads or
@@ -32,6 +38,7 @@ plus presentation. Before adding heavy content, decide what that phone draws:
 ## Keys and merging
 
 A device has these keys, least specific first:
+
 - its **GPU tier**: `compat`, `mobile`, `desktop` (after any device-profile lowering);
 - its **memory class**: `phone-low` (3.3 GB of RAM or less, or any compat GPU), `phone`,
   `tablet`, `desktop`, or a `memory.budgets` name;
@@ -167,14 +174,14 @@ run stays off:
 - **Materials:** `use` draws another material (at most 4 hops). `fallback` is drawn when the
   material cannot load or build on the device. Neither moves `pipelines.json` records. Skill
   `vfx-materials`.
+- **Instances follow their program:** a `*.mat.json` instance draws its `*.material.ts` as the
+  device resolves the program's own `overrides`. A program with instances may `use` only another
+  `*.material.ts` that has every parameter they set; the instances keep their values on it
+  (`validate` fails `E_OVERRIDE_USE` otherwise).
 - **VFX:** `capacityScale` and `rateScale` (the rate also scales bursts); emitter fields by name,
   `enabled: false` to drop one; `use` draws another effect. All emitters disabled draws nothing.
   Edit a `*.vfx.json`'s block with `gameengine vfx set <fx> sparks.rate 40 --device phone-low`
-  (or `capacityScale` / `rateScale` / `use`; `null` removes), not by hand. A new effect or other
-  text asset needs its `.gmeta`: create it with `gameengine cmd asset.setText` (it writes a new
-  file under an existing `assets/` folder with its sidecar) or run `gameengine cook` once, and
-  commit the `.gmeta`.
-  Skill `vfx`.
+  (or `capacityScale` / `rateScale` / `use`; `null` removes), not by hand. Skill `vfx`.
 - **Textures:** `max_size` becomes a mip skip at upload, so one cook serves every device. A
   texture without mips is cooked with extra levels down to its smallest override. It changes
   texels, never how big a sprite or UI image draws, and loose runs apply it too (the smaller of
@@ -183,7 +190,7 @@ run stays off:
   or `max_size` on the whole sprite (skill `atlasing`).
 - **Per platform, not per device:** a texture's cooked *format* (and `quality`, `max_size`) can
   differ by iOS / Android / desktop with `[settings.platform.ios]` (`compression = "none"`) or
-  the project default `textures.platform.android` in `project.gameengine.json` (ADR 0108). That
+  the project default `textures.platform.android` in `project.gameengine.json`. That
   is a cook setting, so it cannot go in `overrides` (`E_OVERRIDE_FIELD`); `gameengine texture
   inspect <key> --device ios,android` shows each platform's result.
 - **Meshes:** each `lod_bias` step accepts a LOD with twice the screen error (−4..4); `min_lod`
@@ -192,6 +199,13 @@ run stays off:
   `render.tiers.<key>` or `quality.levels.<key>` (e.g. `"android.low": { "meshMinLod": 1 }`); a
   mesh's own `overrides` win. A mesh's `max_size` skips the top mips of its embedded images,
   as a texture's does. Skill `models-3d`.
+- **Particles on the CPU:** Android `phone-low` phones of the mobile tier simulate particles on
+  the CPU (`cpuParticles`), since their GPUs pay more for the compute pass;
+  `render.tiers.phone-low.cpuParticles: false` keeps the GPU path, and
+  `quality.levels.<key>.cpuParticles: true` turns it on for another device you measured. A
+  level change, or a `cpuParticles` entry in a `device-profiles.json`
+  `thermalPolicies.<name>.steps` step, moves running effects between the GPU and CPU simulators
+  without restarting them. Particle count is CPU time there (skill `vfx`).
 - **Sky material:** an `Environment.skyMaterial` sky runs its material on every uncovered pixel.
   `skyScale` (0.25–1, default 1) in `render.tiers.<key>` or `quality.levels.<key>` shades it at
   that fraction of the width and height and stretches it behind the scene: `"phone-low":
@@ -235,35 +249,40 @@ run stays off:
   language picker): text, right-to-left layout and subtitles follow on the next frame, the sim never.
   Prefer an `overrides` block over code: it is checked by `validate` and shows in the reports.
 - **The frame rate is a cap, not content.** `render.targetFps` takes the same keys, but the
-  lowest applying entry wins. Raise `"phone-low"` only after `gameengine device perf` on such a
-  phone shows frames fit 16.6 ms with headroom (skill `mobile-performance-review`).
+  lowest applying entry wins: the target is the lowest of `render.targetFps[<tier>]`, the device
+  profile's `targetFps` (30–40 for low-end phones in `device-profiles.json`), the thermal governor
+  and a screen's own cap (`quality.setTargetFps(30)`), never above 60 on phones and never above a
+  rate the display does not run.
+  - The `compat` tier and any phone in the `phone-low` memory class (3 GB or less) run 30 unless
+    `render.targetFps.compat` / `render.targetFps["phone-low"]` says otherwise (0: uncapped, i.e.
+    60); `render.targetFps.mobile` does not raise them.
+  - The project's own entry replaces the profile's `targetFps`: `"mobile": 60` runs 60 on a phone
+    whose benchmark said 30, so set it only for a game that fits 16.6 ms there. 0 is no target,
+    not a choice: the profile's `targetFps` still applies.
+  - Raise `"phone-low"` only after `gameengine device perf` on such a phone shows frames fit
+    16.6 ms with two sim steps' worth of headroom (skill `mobile-performance-review`).
+  - The governor's frame-rate step halves the target (120 → 60 → 30) in the engine's `default`
+    policy; a project's own policy drops to its `targetFps` at once unless it sets `halveFps`.
 - **The quality governor stacks on top.** Under load and heat it scales VFX further (`vfx`) and
   biases LODs (`lodBias`): the phone-low version should already fit without it. A phone that
   cannot hold 60 fps drops to 30 and wins back the render steps that fit at 30. A heavy 3D game
   that would rather run 30 fps with its full look than 60 with a blurred one sets
   `"governor": "visuals-first"` on a `render.tiers` or `quality.levels` entry (e.g. `"mobile"`):
   that ladder lowers the frame rate before render scale, post or shadows.
-- **Tell the governor when the game is loading.** It already ignores frames while assets and
-  pipelines load and for 0.5 s after a start or launch. Work the engine cannot see, such as
-  building a level's meshes or spawning its contents over a few frames, would read as load and
-  lower the render scale or frame rate for the rest of the level: call `quality.settle(seconds)`
-  (presentation, at most 3 s) from the `LateUpdate` or UI code that starts it, once per load:
-  asks that run into each other hold for their first 3 s only. Thermal steps still apply.
-- **First-launch pipeline compiles use the device's cores.** Vulkan and Metal devices compile
-  pipelines on a pool the engine sizes per device (Android: cores − 2, up to 6; iOS: 2). It is
-  set before the tier is known, so it is no `render.tiers` field: `render.pipelineWorkers` (a
-  number, or `{ "android": 4 }` per platform, 1–8) overrides it when a phone measures better with
-  fewer; `render.pipelineFreeCores` (same shape) instead keeps that many cores free on every
-  phone, e.g. `{ "android": 3 }` when the game runs its own worker threads or a loading animation
-  stutters. `adb shell setprop debug.gameengine.pipeline_workers <n>` tries a count on a dev
-  build. The log line `pipelines compile on <n> threads` shows what a device got.
+- **Android OpenGL ES phones draw into the window when the project says so.**
+  `"render": { "android": { "drawIntoWindow": true } }` (new projects have it) lets Dawn draw each
+  frame into the window instead of blitting it there, about 3 ms of GPU a frame with post on a
+  Galaxy A50. It is read when the device is created, so it is no tier or level field; `gameengine
+  check` hints when an Android game with post leaves it off. Check the picture on a device. In a
+  hub, the hub's own setting decides for the games it launches (they draw on its device).
+- **Telling the governor the game is loading** (`quality.settle(seconds)`) and how many cores first-launch pipeline compiles use (`render.pipelineWorkers`, `render.pipelineFreeCores`): `references/tuning.md`.
 
 ## Check it
 
 - `gameengine validate`: `W_OVERRIDE_KEY` (a typo such as `phone_low`, or an emitter name that
   matches nothing), `E_OVERRIDE_FIELD`, `E_OVERRIDE_USE`, `E_OVERRIDE_SIM`.
 - `gameengine material preview <key> --tier mobile --class phone-low --out m.png`; add `--device android`
-  (or `ios`) to see its textures as that platform's cook leaves them (ADR 0107).
+  (or `ios`) to see its textures as that platform's cook leaves them.
 - `gameengine texture inspect <key> --device android,android-etc2,ios`: the cooked texels per device
   (`android-etc2`: a compat-tier Android GPU without ASTC, where textures arrive as ETC2), PSNR per
   mip level, and the size each memory class uploads after its `max_size`.

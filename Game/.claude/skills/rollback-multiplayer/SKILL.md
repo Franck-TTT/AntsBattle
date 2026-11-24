@@ -1,6 +1,6 @@
 ---
 name: rollback-multiplayer
-version: 1.3.0
+version: 1.4.0
 tier: optional
 description: Real-time multiplayer with rollback netcode in Game Engine — PlayerInputs, defineButtons/playerInput, what sim state rollback allows, and `gameengine net test` (latency, jitter, SyncTest). Use for any versus or co-op game where players act at the same time, or for a desync or rollback bug.
 ---
@@ -41,7 +41,7 @@ by the netcode for the local player; sim systems never read
 ## Rules (rollback breaks silently if you bend them)
 
 - **All state in the world:** components, resources, `defineDoc` documents. No module-level
-  variables, no caches in closures, no `Date.now()`/`Math.random()` (use `ctx.rng`).
+  sim state (a scratch buffer every run refills is fine, skill `determinism`), no caches in closures, no `Date.now()`/`Math.random()` (use `ctx.rng`).
 - **Deterministic math only:** `math.*` from `@gameengine/runtime`, not `Math.sin/hypot/…`.
 - **No physics yet:** games with `RigidBody2D/3D` are refused (their native worlds are not
   snapshotted). Write movement and collision as systems.

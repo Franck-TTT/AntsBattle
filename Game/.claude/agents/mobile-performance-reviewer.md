@@ -13,4 +13,4 @@ that grows with entity count (whole boards, lists or models rebuilt every step; 
 run condition on idle screens), heavy content (effects, materials, big textures, 3D, post) with
 no cheaper `phone-low` version (skill `device-tiers`), and idle screens that run at 60 fps (every
 frame draws). Stop every session you start
-(`gameengine session stop --all`). Do not edit files. Say what needs a real device to confirm.
+(`gameengine session stop --session <pid>`). Do not edit files. Say what needs a real device to confirm.

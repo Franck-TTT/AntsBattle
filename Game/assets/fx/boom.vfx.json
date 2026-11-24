@@ -1,0 +1,180 @@
+{
+ "$schemaVersion": 1,
+ "name": "boom",
+ "emitters": [
+  {
+   "name": "flash",
+   "capacity": 1,
+   "bursts": [
+    {
+     "at": 0,
+     "count": 1
+    }
+   ],
+   "loop": false,
+   "lifetime": [
+    0.14,
+    0.14
+   ],
+   "speed": [
+    0,
+    0
+   ],
+   "size": [
+    2.0,
+    2.0
+   ],
+   "color": [
+    1,
+    0.85,
+    0.5,
+    1
+   ],
+   "colorOverLife": [
+    [
+     0,
+     1,
+     1,
+     1,
+     1
+    ],
+    [
+     1,
+     1,
+     1,
+     1,
+     0
+    ]
+   ],
+   "sizeOverLife": [
+    [
+     0,
+     0.5
+    ],
+    [
+     1,
+     1.1
+    ]
+   ],
+   "blend": "additive"
+  },
+  {
+   "name": "shards",
+   "capacity": 24,
+   "bursts": [
+    {
+     "at": 0,
+     "count": 16
+    }
+   ],
+   "loop": false,
+   "shape": {
+    "kind": "circle",
+    "radius": 0.1
+   },
+   "lifetime": [
+    0.25,
+    0.45
+   ],
+   "speed": [
+    4,
+    7
+   ],
+   "drag": 6,
+   "size": [
+    0.08,
+    0.14
+   ],
+   "color": [
+    1,
+    0.6,
+    0.15,
+    1
+   ],
+   "orient": "velocity",
+   "stretch": 0.06,
+   "colorOverLife": [
+    [
+     0,
+     1,
+     1,
+     1,
+     1
+    ],
+    [
+     1,
+     1,
+     0.2,
+     0.05,
+     0
+    ]
+   ],
+   "blend": "additive"
+  },
+  {
+   "name": "smoke",
+   "capacity": 10,
+   "bursts": [
+    {
+     "at": 0,
+     "count": 7
+    }
+   ],
+   "loop": false,
+   "shape": {
+    "kind": "circle",
+    "radius": 0.4
+   },
+   "lifetime": [
+    0.5,
+    0.8
+   ],
+   "speed": [
+    0.4,
+    1.2
+   ],
+   "drag": 2,
+   "size": [
+    0.5,
+    0.8
+   ],
+   "rotation": [
+    0,
+    6.28
+   ],
+   "color": [
+    0.25,
+    0.2,
+    0.18,
+    0.8
+   ],
+   "colorOverLife": [
+    [
+     0,
+     1,
+     1,
+     1,
+     0.7
+    ],
+    [
+     1,
+     1,
+     1,
+     1,
+     0
+    ]
+   ],
+   "sizeOverLife": [
+    [
+     0,
+     0.6
+    ],
+    [
+     1,
+     1.4
+    ]
+   ],
+   "blend": "alpha"
+  }
+ ]
+}

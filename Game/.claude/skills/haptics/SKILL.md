@@ -1,13 +1,11 @@
 ---
 name: haptics
-version: 1.1.2
+version: 1.2.0
 tier: optional
 description: Haptics and vibration — haptics.json entries per platform, services.haptics.*, Button haptic=, the player's setting, the Haptics mode, E_HAPTICS. Use when adding or tuning a vibration, tap, rumble or game-feel feedback, when it feels wrong on iPhone or Android, or when porting Unity haptics.
 ---
 
 # Haptics
-
-**Covers:** Haptic feedback in Game Engine — named entries in haptics.json tuned per platform (strength and impact style for iOS, Android, desktop), services.haptics.play / impact / notification / selection / pattern, Button haptic= and ui.button defaults, the player's on/off setting and the repeat gap, how each platform plays a strength (iOS Taptic Engine and Core Haptics, Android Vibrator amplitudes and predefined effects, desktop gamepad rumble), the editor's Haptics mode, validate's E_HAPTICS, and what tests can and cannot prove. Use when adding or tuning a vibration, buzz, tap, rumble or "game feel" feedback, when haptics feel too weak or too strong on iPhone or Android, or when porting Unity haptics (Handheld.Vibrate, Nice Vibrations, Lofelt).
 
 Haptics are presentation: call them from UI controllers, views and `LateUpdate` code, never from
 a sim system (service calls throw in sim). A sim event ("MatchCleared") that presentation reacts
@@ -44,7 +42,6 @@ tap, most Android motors a weaker, buzzier one. So each action gets a named entr
   (`selection light medium heavy soft rigid success warning error`), because `haptic=` takes both.
 - `gameengine validate` / `check` report mistakes as `E_HAPTICS` with the path
   (`entries.match.android.strength: must be a number from 0 to 1`); unknown keys are errors.
-  JSON Schema: `docs/generated/haptics.schema.json` in the engine repo.
 - The running game reloads the file when it changes (editor save, undo, an agent's edit).
 
 ## Playing them
@@ -61,7 +58,7 @@ buzz('match');
 
 - `haptic=` on any pressable element (plays on press-down; `hapticOn="click"` on the completed
   tap) and `ui.button.haptic` in `project.gameengine.json` take an entry name or a preset.
-- Presets and direct calls still work: `impact({ style })`, `notification({ type })`,
+- Presets and direct calls: `impact({ style })`, `notification({ type })`,
   `selection()`, `pattern({ pulses })`. They play strength 1 everywhere unless you pass
   `tuning: { ios: { strength: 0.7 }, android: { strength: 1, style: 'medium' } }` yourself;
   prefer an entry, which designers can tune without a code change.
@@ -70,35 +67,9 @@ buzz('match');
 - `services.haptics.supported()` → `{ haptics, patterns }`: hide the settings toggle where
   `haptics` is false.
 
-## What the engine does before a platform plays
-
-1. `play` looks the name up (a map built when the file loads) and becomes the entry's own call,
-   with `tuning` filled for all three platforms. `services.calls` records that resolved call.
-2. The player's setting: `services.haptics.setEnabled({ enabled })` / `isEnabled()`, answered by
-   the engine and remembered across launches. While off, every call is dropped
-   (`backend: 'haptics-off'`) and still resolves.
-3. The repeat gap: the same kind (method + style or type) closer than 35 ms (patterns 120 ms) is
-   dropped (`haptics-too-soon`), so a per-frame call cannot buzz nonstop. Different styles do not
-   block each other. The same named entry (`play`) repeated within 100 ms plays once.
-4. At most one haptic a frame reaches the device: a later call in the same frame plays only when
-   it is stronger (selection < light/soft < medium/rigid < heavy < notification < pattern); the
-   rest are dropped (`haptics-coalesced`). Fire haptics freely from cascades and combos: the
-   engine keeps the device to one call a frame, and on Android the vibrator calls run off the
-   game thread.
-5. The platform's plugin plays it, reading only its own `tuning` key.
-
-`haptics` is built into every Android and iOS build (ADR 0084); no `plugins` entry is needed and
-`E_PLUGIN` never fires for it.
-
 ## Platform differences
 
-| | iOS | Android | Desktop |
-|---|---|---|---|
-| Impacts | `UIImpactFeedbackGenerator(style)` (kept prepared), `impactOccurred(intensity: strength)` | API 30+ with hardware-tuned effects: `EFFECT_TICK` (light, soft), `EFFECT_CLICK` (medium), `EFFECT_HEAVY_CLICK` (rigid, heavy) at strength 1; otherwise, and always below strength 1, a one-shot (light 20 ms at 100, soft 30 ms at 80, medium 35 ms at 170, rigid 25 ms at 255, heavy 50 ms at 255 of 255) with amplitude × strength and the tap shortened to 60–100 % | gamepad rumble, motors × strength |
-| Selection | `UISelectionFeedbackGenerator` at 1; below 1 a Core Haptics transient at 0.5 × strength | `EFFECT_TICK`, or 12 ms at 80, scaled like impacts | short rumble |
-| Notifications | `UINotificationFeedbackGenerator` at 1; below 1 Core Haptics transients (two taps, three for error) × strength | waveforms: two taps (success, warning), three (error), amplitudes × strength | rumble taps |
-| Patterns | Core Haptics continuous events, intensity × strength; nothing without Core Haptics | waveform, amplitude = intensity × strength × 255 | rumble per pulse |
-| No hardware support | iPads and old phones: generators do nothing, Core Haptics is absent (`supported()` false) | no amplitude control: fixed amplitude, so strength only shortens taps (0 still silences); no vibrator: nothing, logged once | no pad: nothing; the editor and `gameengine test` only record calls (mock) |
+Each preset and entry maps to the platform's own pattern (iOS feedback generators and Core Haptics, Android vibration effects; desktop plays nothing). The exact mapping and what the engine checks before a platform plays: `references/platforms.md`.
 
 - Android's default is the Vibrator as game usage, so the phone's "touch feedback" setting does not
   mute it. `"services": { "haptics": { "android": { "mode": "view" } } }` in

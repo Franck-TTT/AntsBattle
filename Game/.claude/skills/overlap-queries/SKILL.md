@@ -1,13 +1,11 @@
 ---
 name: overlap-queries
-version: 1.1.0
+version: 1.2.0
 tier: optional
 description: Physics-free overlap checks — Bounds2D/3D shapes, overlapPairs and overlapQuery, raycastBounds, the TypeScript twin. Use for pickups, triggers, hitboxes, 'what is near me', line of sight, and rollback games. Not for things that push or bounce (that is physics).
 ---
 
 # Overlap queries without a physics world
-
-**Covers:** Physics-free overlap checks in Game Engine — Bounds2D/Bounds3D shapes (circle/sphere, AABB, oriented box, capsule), overlapPairs2D/3D, overlapPairsInto2D/3D, overlapQuery2D/3D, raycastBounds2D/3D, and the pure TypeScript twin (contactShapes, rayShape, sweepPairs). Use for pickups, triggers, hitboxes, "what is near me", line of sight against gameplay shapes, and any rollback game (physics is not snapshotted). Not for things that must push or bounce off each other: that is physics2d/physics3d.
 
 `Bounds2D` / `Bounds3D` are plain `sim: true` components. The `overlap.*` host ops read
 them straight from the world every call — no bodies to create, no physics step, no
@@ -91,7 +89,7 @@ export const Detonate = defineSystem({
   name: 'Detonate',
   query: query(read(Mine)),
   run(ctx, q) {
-    const owners = new Map<EntityId, number>();
+    const owners = new Map<EntityId, number>();   // fine in a system that runs on few entities; a hot one reads the owner from a column (skill `perf-to-rust`)
     for (const c of q.chunks()) for (let i = 0; i < c.length; i++) owners.set(c.entity(i), c.get(Mine, i).owner);
     for (const { a, b } of overlapContacts2D()) {
       const mine = owners.has(a) ? a : owners.has(b) ? b : undefined;

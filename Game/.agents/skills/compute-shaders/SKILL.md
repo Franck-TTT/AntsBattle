@@ -1,18 +1,16 @@
 ---
 name: compute-shaders
-version: 1.0.1
+version: 1.1.0
 tier: optional
 description: GPU compute shaders for presentation — compute.create/set/dispatch/read, *.compute.wgsl, storage textures, ping-pong, compute:<program>/<texture> material keys, vertexOffset displacement, dynamic mesh vertices written on the GPU. Use for fluid, gas, wave, cloth or crowd simulation that only needs to look right.
 ---
 
 # Compute shaders
 
-**Covers:** game compute programs (`compute` in `@gameengine/runtime`): WGSL compute shaders you
-write, run on the GPU before each frame's 3D work, whose results materials and dynamic meshes
-read without a trip to the CPU. Use them for maths-heavy presentation: water, smoke, clouds,
-cloth, wind on grass, thousands of impostors. For a texture your code computes texel by texel on
-the CPU use dynamic textures (`textures`, skill `vfx-materials`); for painting onto a mesh use
-skill `surface-paint`.
+Compute programs (`compute` in `@gameengine/runtime`) are WGSL compute shaders that run on the GPU
+before each frame's 3D work; materials and dynamic meshes read their results without a trip to
+the CPU. For a texture your code computes texel by texel on the CPU use dynamic textures
+(`textures`, skill `vfx-materials`); for painting onto a mesh use skill `surface-paint`.
 
 ## The rule: presentation only
 

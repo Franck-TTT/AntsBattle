@@ -1,13 +1,11 @@
 ---
 name: models-3d
-version: 1.26.0
+version: 1.27.0
 tier: optional
 description: 3D models, rigs and clips — importing FBX and glTF/GLB, .gmeta import settings, prefabs, skinned meshes, outfits, blend shapes, Unity model@clip.fbx animations, meshes built at run time. Use when adding or porting a 3D model, character, rig or animation, or when one looks wrong or does not animate.
 ---
 
 # 3D models and animation clips
-
-**Covers:** 3D models, rigs and animation clips in Game Engine — importing FBX (straight from Unity or a DCC tool) and glTF/GLB as mesh assets, .gmeta import settings (lods, max_texture_size, material, per-material alpha_mode/alpha_cutoff/double_sided, FBX scale and rig = "generic"), models as prefabs, skinned meshes, outfits on a shared skeleton, body sliders (JointOffset) and blend shapes, Unity's model@clip.fbx animation files played through `file#clip` in *.animctrl.json, meshes built from code at run time (meshes.create: generated terrain, water, trails), and checking imports with gameengine validate. Use when adding or porting any 3D model, character, rig or animation, and when a model looks wrong (size, orientation, missing texture, see-through parts drawing solid, not animating).
 
 Models are mesh assets: drop `.fbx`, `.glb` or `.gltf` under `assets/`, and the engine imports
 them (loose files in dev, cooked to `.lmesh` for devices; both go through the same importer, so
@@ -271,7 +269,7 @@ if (ctx.events.read(Tap).length > 0) triggerAnim(c, i, 'wave');
 ## Props on bones (`BoneAttach`)
 
 A separate entity (a hat, a weapon, an item in a hand, a swappable part) follows a joint of a
-skinned mesh with `BoneAttach { rig, joint, space }` (ADR 0120): the renderer draws it, and every
+skinned mesh with `BoneAttach { rig, joint, space }`: the renderer draws it, and every
 mesh under it, where it posed that joint this frame, so clips, blends, layers and IK all carry it.
 
 - `space: 'Joint'` (default) is Unity's "child of a bone": parent the prop to the rig, and its
@@ -298,7 +296,7 @@ particles, lights and sprites under the prop stay at its sim placement. A wrong 
 at its sim placement too. Playable ads refuse it, as they refuse `Animator`. Example:
 `samples/hero-stage/assets/scenes/props.scene.json`.
 
-## Characters: outfits, body sliders, faces (ADR 0127)
+## Characters: outfits, body sliders, faces
 
 - **Clothes, hair, armour on a body**: give each piece its own entity with a `MeshRenderer` and
   `SharedSkeleton { rig: "@body" }`. It is skinned by the body's pose this frame, joints matched
@@ -357,7 +355,7 @@ All four are presentation (not hashed): sim code never reads them, and playable 
 Mirroring: Unity flips X to go left-handed; the engine is right-handed like glTF, so positions
 you copy from a Unity scene need `x → -x` (and rotations mirrored) — the same as for glTF ports.
 
-## Meshes built from code (ADR 0134)
+## Meshes built from code
 
 Geometry the game computes (a terrain from a seed, water moved per vertex, a ribbon trail, a
 sliced shape) is a dynamic mesh: build it from typed arrays, draw it by its key.

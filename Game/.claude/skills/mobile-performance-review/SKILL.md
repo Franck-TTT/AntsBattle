@@ -1,16 +1,22 @@
 ---
 name: mobile-performance-review
-version: 1.25.2
+version: 1.30.0
 tier: required
 description: Mobile performance review of a file, feature or game — measure first (perf.stats, profile.markers, `gameengine device perf`, capacity sweeps), then check CPU, GPU, memory, load-time and download budgets per device class. Use before shipping a feature, when a budget test fails, for 'will this run on low-end phones', or a drop to 30 fps.
 ---
 
 # Mobile performance review
 
-**Covers:** Reviewing a Game Engine game (a file, a feature, or the whole project) for mobile CPU, GPU, memory, load-time and download-size budgets — measure first (perf.stats, render.stats, profile.markers, T1 structural budgets, `gameengine device perf` on a probe build, Perfetto, the device lab), then read the code the numbers point at. Default budgets per device class (budgets.md), fill rate and bandwidth on 720p Mali-class phones (render scale, msaa 1, hdr false, no post in 2D, device-profiles.json), GPU-bound frames at low clocks, idle screens (every frame draws), frame-rate caps (quality.setTargetFps and the resolved project, device and quality caps), pipelines.json, UI batching and 3D residency, the sim-step CPU budget at 30 fps on phone-low, why the quality governor stepped down (its `quality` log line: CPU- or GPU-bound, thermal), capacity sweeps (`@gameengine/runtime/capacity`: the largest load a device holds at 60 and 30 fps), named trace sections (script.system:<name>, render.*), idle screens that call no scripts, and cheaper per-device content (skill device-tiers); points each finding at the skill that fixes it. Use before shipping a feature, when a budget test fails, or when asked "will this run on low-end phones".
-
 Numbers first, then code. A review that only reads code guesses; one that only measures can't
 say what to change. Budgets per device class, with sources: [budgets.md](budgets.md).
+
+## The rules that matter most
+
+1. **Numbers first, then code**, and every finding cites a number and a budget.
+2. **The verdict comes from a probe build on a `phone-low` phone**, never from a dev build or a desktop.
+3. **Measure the busiest scene the player reaches**, the steady cost and the spikes.
+4. **Idle screens call (almost) no scripts and run at 30 fps.**
+5. **A fix never changes the hash**: prove it with a hash trace taken before the fix (skill `determinism`).
 
 ## 1. Scope
 
@@ -26,12 +32,10 @@ the engine, report engine issues separately). Note the scope in the report.
 
 ## 2. Measure
 
-For an Android ADPF scheduling comparison, dev/probe builds read `debug.gameengine.adpf` when a hint session starts, including a normal probe launch without a debug listener. `off` disables hints; decimal 25–100 scales the work deadline; empty/invalid input uses 100. Set before launch and restart between conditions. This changes scheduling hints, not the frame-rate target or thermal policy. Hold the device lease, record and restore the previous property value, and compare the same unit/workload. Release builds ignore this property, including release test builds with protocol access. Do not infer a performance gain from the switch alone.
-
 Headless, on this machine (relative numbers, structural facts):
 
 ```sh
-gameengine test --tier t1                     # structural budgets: drawCallsMax, pipelines created during play, GC pauses > 4 ms
+gameengine test --tier t1                     # structural budgets: drawCallsMax, trianglesMax, instancesMax, pipelines created during play, GC pauses > 4 ms
 gameengine run --headless --tier mobile --scene assets/scenes/level_01.scene.json   # --tier mobile: see draw calls below
 gameengine call perf.start
 gameengine step 600
@@ -46,13 +50,29 @@ gameengine test --native both                 # Rust systems vs their TypeScript
 gameengine build android --config release --dry-run   # size budgets (tests/budgets/size.json)
 ```
 
+**See the frame** (the Rendering Inspector; any view and filter, for that one shot, without changing the game view):
+
+```sh
+gameengine screenshot --report                                  # pauses, then every debug view on one labelled sheet with draw calls, triangles and vertices (.gameengine/render-report.png); resumes after
+gameengine screenshot /tmp/tri.png --pause --view triangleDensity --hide kind:ui   # red: triangles under ~8 px (LOD should switch sooner), blue: coarse
+gameengine screenshot /tmp/tex.png --view texelDensityTextured  # red: more texels than the screen shows (a smaller texture looks the same), blue: stretched
+gameengine screenshot /tmp/od.png --view overdrawDepth --isolate kind:particles   # also wireframe, batches, transparency, unlit, uv, depth, cascades, clusters
+gameengine screenshot /tmp/d.png --draw 200                     # the frame up to its 200th draw; `call render.frame --params '{"draw":200}'` lists what each draw drew
+gameengine quality sweep --content kind:particles,kind:ui,group:props   # what each piece of content costs, hidden against runs that draw it; phones: device perf --content-sweep
+```
+
+Selectors: `kind:<meshes|sprites|text|shapes|tilemaps|skeletons|particles|trails|ui|lights|shadows|post|sky|fog>`,
+`layer:<0..31>`, `sorting:<layer>`, `model:`/`material:`/`effect:`/`texture:` globs, `entity:<Name glob>`, and
+`group:<name>` from `render.inspectorGroups` in project.gameengine.json. Move the camera to the area that runs badly
+first, and put the report in your findings: one image shows where the frame goes.
+
 **Measure on a release host.** Every run prints `host: <path> (debug|release)`: a debug host runs
 Rust (marshalling, native systems, steps) several times slower, so its script and step times
-say nothing about a phone. `cargo build --release -p gameengine-host` in the engine checkout,
+say nothing about a phone. `gameengine doctor --rebuild` builds stale engine binaries,
 or point `GAMEENGINE_HOST` (`GAMEENGINE_HOST_HERMES` for the Hermes lane) at a release binary;
 the CLI runs the newest build that is not older than its sources.
 
-**Measure the sim on the lane it ships on.** Sim systems ship transpiled to Rust (ADR 0116), and
+**Measure the sim on the lane it ships on.** Sim systems ship transpiled to Rust, and
 on Hermes phones the TypeScript lane is several times slower, so check the lane before reading any
 sim time. A phone build prints `sim: N systems transpiled to Rust` or a warning that its sim runs as
 TypeScript with the reason and the fix (`sim` in `build-report.json`); the device perf report has a
@@ -100,59 +120,16 @@ verdict: a flagship hides what the weakest supported phone cannot do.
    (its cook turns `sim.hashInDev` off) unless the project sets `sim.hashInDev: true`; `device
    perf` names the build it measured and warns on a dev build or on such a probe.
 2. `gameengine device install` / `device run`, play to the scene, then
-   `gameengine device perf --seconds 20` (Android; `--json` for data; `--seconds` up to 300 sets the
-   window, and the HUD it turns on goes off again afterwards): the engine's performance report (frame intervals, slow frames, CPU/script/GPU per frame, render load, GC,
-   thermal, memory, worst frames), CPU per thread of the app from `/proc` over the same window
-   (game, the GPU thread `gameengine-gpu` on OpenGL ES or the render thread `gameengine-render`
-   on Vulkan, audio, V8 workers, Dawn), and `dumpsys meminfo`
-   (Java, native, graphics, code). Its `setup:` line names what the device runs: profile and
-   source (`project` when the project's `device-profiles.json` matched, `database` for the
-   engine's), quality level, tier, render scale, msaa, hdr format, memory class; the report also
-   prints its frame-rate target. To compare two builds (an optimisation, a regression hunt), add
-   `--unlocked`: frames are no longer held at the 60 (or 30) fps cap and quality is pinned to the
-   device profile, so a gain below the cap shows as more fps instead of more idle time, and the
-   governor cannot lower quality in one build and not the other. Compare an unlocked run only
-   with other unlocked runs (its slow-frame counts use the unlocked display-rate target and CPU hints may ask for
-   higher clocks); ship decisions still use the capped run. Read its thread lines together:
-   - `per frame ms: cpu (main thread)` is the frame loop's whole frame, waits excluded. It
-     includes `render phase on the GPU thread (main waits)`: the snapshot, UI layout and submit the
-     frame loop hands to the GPU thread and waits through. A large handed-over phase is UI layout
-     or extraction cost (UI nodes, 2D content, skeletons), not GPU time.
-   - `gpu thread ms: render and present (vsync waits excluded)` is what the GPU thread does
-     while the next frame simulates: recording, uploads, present. It only costs the frame when it
-     exceeds the frame loop's time, so compare the two; `render.wait` in a trace is the frame loop
-     waiting for it.
-   - `systems (ms per frame, top N)` lists the sim systems that cost the most, with per-run mean
-     and max; `(LateUpdate)` marks presentation systems. The first capture frame's times are
-     skipped (they hold everything since launch). Point a `perf-to-rust` or `ecs-systems` finding
-     at the named system.
-   Launch time is in the device log: `startup: first frame N ms after launch` and `startup: interactive
-   N ms after launch` (the first frame with nothing loading).
-   Only OpenGL ES phones have a GPU thread; Vulkan and Metal phones and the desktop player lend
-   the renderer to a render thread per frame and print neither the `render phase` nor the
-   `gpu thread` line.
-   `gameengine device perf --counters` adds the CPU's hardware counters per thread role (game
-   loop, render, job pool, V8 workers, audio…) and per core, from simpleperf (dev builds, or
-   probe builds that are profileable). Read a hot role's row: low IPC with high back-end stalls
-   and L2 refills is memory-bound (data layout, skill `ecs-systems`); high front-end stalls or
-   branch mispredicts per 1k instructions is branchy or large code; a SIMD share near zero in a
-   numeric native system means it is not vectorised (`gameengine native asm`); a game loop that
-   runs mostly on little cores is a scheduling problem, not slow code. Missing events on a CPU
-   are listed, not fatal.
-3. For a timeline, record a Perfetto system trace with app tracing on for the game (Android
-   Studio's System Trace, or a Perfetto config whose `ftrace_config.atrace_apps` names the app id
-   and `atrace_categories` includes `gfx` and `view`). Without app tracing the engine's sections
-   are missing. The engine adds sections:
-   `frame`, `sim.step`, `script.system`, `script.call`, `render.wait`, `render.acquire`,
-   `render.encode`, `present` — next to the CPU frequency, scheduling and (where the device
-   exposes it) GPU frequency tracks. Inside `render.encode`: `render.warm`, `render.batch2d`,
-   `render.skel2d`, `render.3d`, `render.particles`, `render.graph`, `render.submit`, and the
-   one-time work `render.preload`, `render.pipeline`, `render.texture-upload`,
-   `render.atlas-page`, `render.glyph-page`, `render.glyph-upload`, `render.buffer-grow`,
-   `render.bind-group`, `render.target`. A long `render.encode` names its cause there. Script
-   sections are named per system and function (`script.system:<name>`, `script.call:<fn>`; on
-   desktop they appear in `profile.markers`), so a long `sim.step` names the system. Named
-   sections cost nothing while tracing is off.
+   `gameengine device perf --seconds 20` (Android; `--json` for data): frame intervals, slow
+   frames, CPU/script/GPU per frame, the sim systems that cost the most, CPU per thread, thermal
+   and memory. Its `setup:` line names the profile, quality level, tier and render scale the
+   device runs. To compare two builds add `--unlocked` (compare an unlocked run only with other
+   unlocked runs; ship decisions still use the capped run); `--counters` adds CPU hardware
+   counters. Launch time is in the device log (`startup: first frame N ms after launch`). How to
+   read each line: `references/device-profiling.md`.
+3. For a timeline, record a Perfetto system trace with app tracing on for the game; each hot
+   path is a named section (`script.system:<name>`). What to record and the section list:
+   `references/device-profiling.md`.
 4. `gameengine device logs` (Android: logcat tag `gameengine`; iOS dev and probe builds: the
    session's log) for the hitch lines: `hitch pipeline: N created during play`, `slow render
    frame: … (N pipelines created, N textures uploaded, N buffers grown, N render targets
@@ -165,76 +142,18 @@ verdict: a flagship hides what the weakest supported phone cannot do.
    p50/p95 frame) and the **spikes** (level start, first effect, first popup, a level switch: the
    worst frames, hitch lines and the trace around them). They have different fixes.
 
-### Capacity sweep: how much load a device holds
-
-To find how many entities, effects or voxels a phone holds at 60 and 30 fps, declare a capacity
-sweep in a cheats file. To establish 60 fps capacity, its resolved target must be at least 60.
-A 30 fps target only establishes the 30 fps criterion. `quality.setTargetFps` is a per-screen cap;
-it does not lift every project, device or quality cap. Use an explicit benchmark configuration
-and confirm the resolved target before timing, without changing shared-device settings:
-
-```ts
-// src/crowd.cheats.ts
-import { read } from '@gameengine/runtime';
-import { defineCapacityCheat, defineCapacitySweep } from '@gameengine/runtime/capacity';
-import { runCheat } from '@gameengine/runtime/cheats';
-import { Crowd } from './schema.gen.ts';
-import { SetCrowd } from './debug.cheats.ts'; // a sim cheat that respawns `agents` agents
-
-const CrowdSweep = defineCapacitySweep({
-  name: 'crowd',
-  unit: 'agents',
-  steps: [250, 500, 1000, 2000, 4000, 8000], // smallest first
-  resources: [read(Crowd)], // what ready/report/finish read; resources only, no queries
-  start: (n) => runCheat(SetCrowd, { agents: n }), // change sim state through input, as a UI would
-  ready: (n, ctx) => ctx.resource(Crowd).alive[0] === n, // asked every frame until true (default: at once)
-  report: (_n, ctx) => ({ alive: ctx.resource(Crowd).alive[0]! }), // extra numbers for the log line
-  finish: () => runCheat(SetCrowd, { agents: 100 }), // put the normal load back
-});
-export const Capacity = defineCapacityCheat({ sweeps: [CrowdSweep] }); // cheat benchmark.capacity
-```
-
-Each step starts its load, waits for `ready`, warms up `warmSec` (2), measures `measureSec` (4) of
-frame intervals and logs `[capacity] {json}`: fps, p50/p90/p99/max ms, `simSpeed` (below 1: the
-sim fell behind), thermal, governor step (`qualityChanged`: it moved mid-step) and `targetFps`
-(below 60, nothing holds 60: lift the cap first). A step **holds 60** at p90 ≤ 17.5 ms and **holds 30**
-at p90 ≤ 35 ms (a 60 Hz screen paces a missed frame to exactly 33.3 ms, so that still holds 30).
-The sweep stops after the first step over 35 ms, a load not ready in 120 s, or the ladder's end;
-the `summary` line gives per sweep the largest step at which it and every smaller step held
-(`hold60`, `hold30`). Read the lines from the device log (`gameengine device logs`, logcat). Only
-a presenting player on a phone measures frames: headless sessions and game tests report the sim
-step (16.67 ms) as every frame interval. In a game test, run two small steps with `ctx.cheat(Capacity, { maxSteps: 2, warmSec: 0.25,
-measureSec: 0.5 })` and step with `ctx.clock.advance(16)` until `capacityProgress()?.summary`:
-test frame times are the runner's, so check the run's shape, not the numbers. Make the ladder
-double each step and start below what a `phone-low` phone holds.
+To find how many entities, effects or voxels a phone holds at 60 and 30 fps, declare a capacity sweep in a cheats file (`defineCapacityCheat`): `references/capacity-sweep.md`. Frames over budget while CPU per thread is low ("GPU busy at low clocks"), and Android ADPF comparisons: `references/device-profiling.md`.
 
 ### CPU budget per frame, per tier
 
 The sim runs at 60 Hz whatever the frame rate, so a frame runs as many sim steps as the time it
 covers. At 60 fps that is one step and presentation in 16.6 ms; at 30 fps (`compat`, and
-`phone-low` by default, ADR 0102) it is **two steps plus presentation in 33.3 ms**. Budget one
+`phone-low` by default) it is **two steps plus presentation in 33.3 ms**. Budget one
 sim step (`stepTimeMs` p95, all systems) on a `phone-low` phone at about **8 ms**, leaving
 ~17 ms for two steps and the rest for UI, audio and render submission; a step over 16 ms
 there is a hitch that compounds (the next frame owes more steps). Headless `stepTimeMs` on a
 desktop is several times faster than a phone: compare it relative to a baseline, and take the
 verdict from `device perf`.
-
-### Diagnose "GPU busy at low clocks"
-
-Symptom: frames over budget, but CPU per thread (`device perf`) is low and `render.encode` is
-short; the time sits in `render.acquire` / `present` (waiting on the GPU), often with the GPU at
-a low frequency in Perfetto. On OpenGL ES (most Mali-class phones) the `gpu` number is the whole
-frame, timed from Dawn's work-done callback (a millisecond or two late from polling), and the
-governor counts a window GPU-bound when it misses the target with the GPU 85 % busy; the driver
-may block for a buffer inside the first draw, so look at `render.encode` too, not only the
-waits. Where timestamps exist (Vulkan, Metal) `gpu` is the whole frame too, every pass from the
-world to UI, post and the present blit (ADR 0309), but it times execution, not a frame held back
-for a buffer: read the waits as well, as the governor does: an overrunning frame that waited at
-least a quarter of its interval on the surface counts as GPU-bound, unless its main-thread work
-alone already misses the budget (ADR 0297). Fix fill and
-bandwidth, not draw calls: render scale, `msaa: 1`, `hdr: false`, no post profile in 2D, less
-overdraw (below). Low clocks under a light load are the driver saving power, not a fault; the
-same load at a high clock is what heats the phone.
 
 Drive the scenario the player actually stresses: the busiest level, the biggest board, a full
 UI screen over gameplay, 10+ minutes of play for heap growth and thermals. Record a replay of it
@@ -243,6 +162,7 @@ UI screen over gameplay, 10+ minutes of play for heap growth and thermals. Recor
 ## 3. Read the code the numbers point at
 
 **CPU / script (per frame)**
+
 - Systems that are hot in `profile.markers`: per-entity work over large queries, nested loops
   over entities (O(n²) proximity checks — use `SpatialHash` or `overlap*`), work every step that
   could run on change (`changed()` filters, events) or every N steps.
@@ -255,6 +175,12 @@ UI screen over gameplay, 10+ minutes of play for heap growth and thermals. Recor
   `perf-to-rust`). A native system over a large table that loops serially can run in parallel
   ranges (`par_for_each` with a constant batch size); `gameengine native asm <System>` shows
   whether its loop vectorised.
+- A first call several times the later mean (device report `first runs since launch`) on code
+  the player reaches once per action, with a later mean in budget, is cold code, not a Rust
+  candidate: warm it under the boot or load cover with `defineWarmup` (skill `perf-to-rust`,
+  "Slow only the first time"), and measure the first call and the cover on a phone before and after.
+  That is a V8 fix: the engine skips warm-ups on Hermes (no JIT; the report says
+  `warm-ups: skipped (hermes: …)`), so on Hermes the first call is cut only by cheaper code or Rust.
 - **Idle screens must call (almost) no scripts.** In Perfetto each script call is a
   `script.system:<name>` section (desktop: `profile.markers`). A menu or paused screen that still
   shows every system each step is paying ~15–40 µs per call on a low-end phone. Gate level systems
@@ -275,6 +201,7 @@ UI screen over gameplay, 10+ minutes of play for heap growth and thermals. Recor
 - Meta documents: large state replaced instead of patched (skill `meta-economy`, cost at scale).
 
 **GPU / draw calls**
+
 - Draw calls vs budget (`render.stats`): sprites and UI images not in atlases, several atlases
   interleaved across sorting layers, per-entity material variants, masks and clip rects that
   break batches, text in many fonts/sizes. Per-entity colours or values on one 3D material go in
@@ -285,7 +212,7 @@ UI screen over gameplay, 10+ minutes of play for heap growth and thermals. Recor
   particle count. Live instances of one effect share one draw per emitter (a combo of 40 bursts
   of a 3-emitter effect is 3 draws), except `space: local`, `orient: local` and random sheet start
   frames, which draw per instance; unsorted effects that agree on blend, mask interaction and
-  texture page share draws too (skill `vfx`, ADR 0092), so mixed blend modes and big standalone
+  texture page share draws too (skill `vfx`), so mixed blend modes and big standalone
   effect textures are what add draws. Many short effects at once: one stopped system and
   `burstAt(system, positions)` instead of an entity each.
 - Off-screen and invisible 2D content (outside every orthographic camera, alpha 0,
@@ -338,6 +265,7 @@ UI screen over gameplay, 10+ minutes of play for heap growth and thermals. Recor
   it is missing, partial or stale; a release build refuses it (skill `ship-mobile`).
   `render.pipelines` → `blobCache` says whether the disk cache served a second launch.
 - 3D: triangles vs budget, LODs, shadow cascades per tier, skinned meshes count, real-time lights.
+- Android with post: `render.android.drawIntoWindow` is on (skill `device-tiers`); measure before and after on the phone, and check the picture.
 
 **Memory**
 - Scene render target: the mobile tier defaults to 4× MSAA into a 16-bit float target, about
@@ -374,30 +302,19 @@ UI screen over gameplay, 10+ minutes of play for heap growth and thermals. Recor
   (`pipelinesCreatedDuringPlay`); store download over 150 MB without on-demand bundles.
 
 **Thermal / battery**
+
 - 60 fps in menus and idle screens: the screen's UI controller should call
   `quality.setTargetFps(30)` while it shows and `quality.setTargetFps(null)` when it closes
   (`@gameengine/runtime`; presentation only, the 60 Hz sim step and the hash do not change).
   Effects that run while invisible, timers polling services every frame.
-- Frame-rate settings: the target is the lowest of `render.targetFps[<tier>]`, the device
-  profile's `targetFps` (30–40 for low-end phones in `device-profiles.json`), the thermal
-  governor and the screen's cap, never above 60 on phones (ADR 0079) and never above a rate the
-  display does not run. The governor's frame-rate step halves the target (120 → 60 → 30) in the engine's
-  `default` policy; a project's own policy drops to its `targetFps` at once unless it sets `halveFps`. The project's own
-  `render.targetFps` entry replaces the profile's `targetFps`: `"mobile": 60` runs 60 on a phone
-  whose benchmark said 30, so set it only for a game that fits 16.6 ms there. 0 is no target,
-  not a choice: the profile's `targetFps` still applies. The `compat` tier
-  (low-end phones) runs 30 unless `render.targetFps.compat` says otherwise (0: uncapped, i.e. 60), and so does
-  any phone in the `phone-low` memory class (3 GB or less) unless `render.targetFps["phone-low"]` is set (ADR 0102).
-  `render.targetFps.mobile` does not raise it: setting `"phone-low": 60` is a decision to take only after
-  `gameengine device perf` on such a phone shows frames fit 16.6 ms with two sim steps' worth of headroom. Do not ask for 90/120
-  on mobile: a steady 60 beats a hot 120. `gameengine run --run-sec 5` prints the target and the
-  frame intervals on desktop.
+- Frame-rate settings: what decides the target, and when `"phone-low": 60` is allowed, is skill `device-tiers` (§ Rules, "The frame rate is a cap"). Do not ask for 90/120 on mobile: a steady 60 beats a hot 120. `gameengine run --run-sec 5` prints the target and the frame intervals on desktop.
 
 ## 4. Where the fix lives
 
 | Finding | Skill |
 |---|---|
 | Hot system, allocation per step, hot/cold data, Rust port, parallel ranges, vectorisation | `perf-to-rust` |
+| First call much slower than later ones, later ones in budget: a warm-up under a cover | `perf-to-rust` |
 | Per-step work that could run on change, polling instead of events | `ecs-systems` |
 | Spawn/despawn churn, memory over budget, level-switch peaks, loading | `asset-memory` |
 | Draw calls from sprites and UI art | `atlasing` |
@@ -418,18 +335,17 @@ A review counts what a phone-low phone draws **before** the governor steps in.
 
 Every change is an Info line, category `quality`, in every build:
 `governor step 1/5 (load, cpu-bound), target 30 fps, render scale 1.00, msaa 0`. `qualityLevel`
-and the `n/m` count the steps in effect. The cause names the fix (ADR 0297):
+and the `n/m` count the steps in effect. The cause names the fix:
 
 - `load, gpu-bound`: most slow frames were render-side, so it took the policy's next step in
   order (the `default` policy: render scale, then post, shadows, `vfx` and `lodBias`, then MSAA,
   frame rate last). Fix fill and bandwidth (above).
 - `load, cpu-bound`: most slow frames were main-thread work (script, GC, sim steps,
-  presentation), and a quarter of the last second's frames ran over budget by more than 10 %.
-  It took only a frame-rate step, and only after about two seconds of it (a shorter burst, such
-  as a drag, keeps the rate): render steps do not lower CPU time, so render quality stays. Fix
-  the CPU cost (`perf-to-rust`, `ecs-systems`, allocation per step that feeds GC). It returns to
-  60 after four calm seconds (longer after a failed try, up to 16 s) once the frame, counted with
-  one sim step instead of two, fits 85 % of 16.6 ms in three frames of four.
+  presentation). It takes only a frame-rate step, after about two seconds of it: render steps do
+  not lower CPU time, so render quality stays. Fix the CPU cost (`perf-to-rust`, `ecs-systems`,
+  allocation per step that feeds GC). It returns to 60 after four calm
+  seconds (longer after a failed try, up to 16 s) once the frame, counted with one sim step
+  instead of two, fits 85 % of 16.6 ms in three frames of four.
 - `thermal <state>`: the device's thermal state set a floor (fair the first step, serious half,
   critical all). Fix sustained load and idle screens (Thermal / battery, above).
 - `headroom`: a step undone because frames fit again.
@@ -455,6 +371,7 @@ pipelines.json; testing)`. Then one entry per finding with its evidence:
   scale), **medium** = within 20 % of a budget or grows with content, **low** = hygiene.
 - Every finding cites a number (measured, or computed from the code at a stated scale) and a
   budget from `tests/budgets/*.json` or budgets.md. No number, no finding — say what to measure.
+- Attach a render report (`gameengine screenshot --report`) of each area that runs badly.
 - End with: what was measured and on what (headless vs device), what could not be measured here
   (real GPU time, thermals, memory limits need devices), and the budgets file to add if missing.
 

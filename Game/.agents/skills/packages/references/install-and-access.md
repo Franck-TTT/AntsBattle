@@ -62,7 +62,7 @@ moves it.
 
 ## Private access and install failures
 
-For approved private Tactile packages, use engine sign-in and the distribution's registry defaults.
+For approved private packages in the engine's registry, use engine sign-in and the distribution's registry defaults.
 Developers do not need a GitHub token or an npm login. Credentials accompany both metadata and
 tarball requests, and must never appear in logs, project files, lockfiles or caches.
 
@@ -79,7 +79,7 @@ pins the tag to its commit. The command logs `no engine login: installing … fr
 | Symptom | Check next |
 |---|---|
 | 401 | The engine session's access token may be missing, expired or for the wrong audience. Commands fall back to GitHub when git credentials exist; otherwise sign out of the editor, sign in again and retry. |
-| 403 | The signed-in account needs `tactile-create:npm-packages:view`. Ask the owner to check access; repeated login does not grant permission. |
+| 403 | The signed-in account lacks package read access in the registry. Ask the owner to check access; repeated login does not grant permission. |
 | 404 | Check the exact package name, published version and allowed scope. A local repository or a merged PR alone is not a published package. |
 | 503 | Gateway upstream configuration is missing; report it to the registry owner. |
 | Integrity mismatch | Stop using that download; investigate the registry/cache response rather than editing integrity hashes. |
@@ -87,7 +87,7 @@ pins the tag to its commit. The command logs `no engine login: installing … fr
 | Dependency conflict | Read the conflicting ranges, choose compatible versions and regenerate the lockfile through the installer. |
 | Offline cache miss | Restore the locked dependencies online once; an incomplete cache cannot supply a missing tarball. |
 
-These HTTP meanings describe the Tactile Create gateway. Another registry may use different errors.
+These HTTP meanings describe the engine's registry gateway. Another registry may use different errors.
 
 Existing pnpm/yarn Git projects retain Git's own authentication. Use their existing SSH or
 CI credential setup and pin tags or commits. `package check --remote` checks Git access; it

@@ -1,13 +1,11 @@
 ---
 name: atlasing
-version: 1.18.1
+version: 1.19.0
 tier: optional
-description: Sprite atlases and 2D draw calls — atlas groups in .gmeta, trimming, page sizes, UI art in atlases, keyed-out backgrounds, nearest filtering and r8 textures, `gameengine profile batches|atlas`. Use when draw calls are over budget, when adding sprites or UI art, or before a mobile build.
+description: Sprite atlases, 2D draw calls and 2D draw order — atlas groups in .gmeta, trimming, page sizes, sorting layers, sortByY and sortByZ, SpriteMask, tiled and filled sprites, SpriteRibbon, `gameengine profile batches|atlas`. Use when draw calls are over budget, when sprites draw in the wrong order, or when adding sprites or UI art.
 ---
 
 # Atlasing
-
-**Covers:** Cutting 2D draw calls with sprite atlases in Game Engine — atlas = "auto" or named groups in .gmeta, trimming, page sizes per platform, UI images in atlases, keying out a background colour (key = "#ffffff"), the art warnings of gameengine validate (art cut out on a background, frame lines), and the reports that say why draws broke and which images are far larger than drawn (gameengine profile batches, profile atlas). Use when draw calls are over budget, when adding sprites or UI art, or before a mobile build.
 
 Consecutive 2D draws merge into one draw call while they share a texture page, blend mode,
 mask interaction and kind (sprite, shape, text). Atlases put sprites on shared pages. World
@@ -49,7 +47,7 @@ backgrounds and UI art, check small text and sharp edges in a device screenshot 
 pages pack on the 6×6 block grid, so they cannot be power-of-two: with `atlas.pot` on, the cook
 refuses an `astc6x6` group.
 Per-platform entries (`[settings.platform.ios] compression = "none"`, or the project's
-`textures.platform` default; ADR 0108) count too: automatic groups only join sprites that cook
+`textures.platform` default) count too: automatic groups only join sprites that cook
 alike on every platform, and `gameengine validate` warns `W_ATLAS_SETTINGS` when a named group's
 sprites disagree on one.
 
@@ -204,7 +202,6 @@ probe build on a device (skill `ship-mobile`). Named groups pack the same way lo
 6. Source art kept only for baking (layered originals, hi-res masters next to the exported
    sprites) must not ship or be atlased: `"exclude": ["assets/source/**"]` on the bundles in
    `project.gameengine.json` (skill `content-database`).
-
 7. Off-screen and invisible items already cost nothing: sprites, tiles, glyphs and shapes
    outside every orthographic camera, and those with alpha 0 or `visible: false`, are left out
    before batching (`not drawn:` line of `profile batches`, `render.stats().culled2d` /

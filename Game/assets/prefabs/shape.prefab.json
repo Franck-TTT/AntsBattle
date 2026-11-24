@@ -1,0 +1,13 @@
+{
+  "$schemaVersion": 2,
+  "guid": "b929e7d8-fb08-49ef-afe5-0fa3d6ff266e",
+  "id": "shape",
+  "entities": [
+    {
+      "name": "Shape",
+      "id": "shape-root",
+      "LocalTransform": {},
+      "Shape": { "kind": "Circle", "size": [0.2, 0.2], "radius": 0.1, "order": 2 }
+    }
+  ]
+}

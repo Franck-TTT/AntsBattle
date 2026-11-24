@@ -1,13 +1,11 @@
 ---
 name: multiplayer
-version: 1.16.1
+version: 1.17.0
 tier: optional
 description: Online multiplayer — fixed matches, open rooms (join while it runs), always-open worlds, authoritative or relay servers, web/native clients, rollback, turn and snapshot sync, matchmaking and LAN. Use for online play, persistent worlds, deploying servers, late join or reconnect.
 ---
 
 # Multiplayer
-
-**Covers:** Set up and work with multiplayer in Game Engine — the `multiplayer` block, real-time (rollback) and turn matches, relay vs authoritative servers, the input map, `multiplayer.join/submitTurn/say`, server notices and events (`mp send`, `defineServerTask`), hidden objects and fog of war, input vs snapshot sync, `mp test`, `mp serve`, `mp balance`, `build server`, TLS, flood limits, matchmaking (`defineMatchmaker`, parties, ratings), and PC matches a player hosts (`multiplayer.host/lanHosts/joinHost`, `run --host/--join`, LAN discovery, firewall errors). Use when adding online play, a LAN or player-hosted PC match, a match server, turn or async turn games, ranked matchmaking, parties, server-driven events or emotes, fog of war or anti-wall-hack, or deploying servers.
 
 One system for phones, PCs and browser builds, real-time and turn by turn. Players send only their **input**,
 packed: buttons and a stick per frame (a few bytes, delta-coded), or one event per turn. A
@@ -66,8 +64,8 @@ Add the block to `project.gameengine.json` (every field is optional; the scalars
   does not stall while a fast one keeps rollbacks shallow (costs `maxWindow + 2` snapshots, set it
   to 30–40 for a game played on mobile data, 0 for a LAN game); `inputDelay` (0–4, default the
   server's 1) is the frames between a local input and the frame it applies to: 0 applies it to the
-  frame being simulated and the client then runs that much further ahead. `adaptive: false` is the
-  old fixed margin and window. `status()` shows `marginMs`, `jitterMs`, `window`, `inputDelay`,
+  frame being simulated and the client then runs that much further ahead. `adaptive: false` gives a
+  fixed margin and window. `status()` shows `marginMs`, `jitterMs`, `window`, `inputDelay`,
   `stalls` split in `windowStalls` and `pacingWaits`.
 
 ## 2. Join from presentation, read the match in sim
@@ -110,7 +108,7 @@ inside a sim system.
   the same state in LateUpdate.
 - **Show your own look at once.** The sim learns a rollback correction of your seat later; show the
   camera from presentation state instead: write a `VisualOffset` rotation on the entity a
-  `VirtualCamera` sits on (relative to its sim pose), which the camera now follows.
+  `VirtualCamera` sits on (relative to its sim pose), which the camera follows.
 - **Predict other players.** A missing remote input repeats that seat's last one, wrong at every
   change. `multiplayer.onPredict(({ seat, frame, history }) => ({ buttons, stick }))` returns a better
   guess from the seat's last eight confirmed inputs (`history`, oldest first, each with its frame);
@@ -118,7 +116,6 @@ inside a sim system.
   calls a frame per remote seat, re-simulated frames too), and only decides speculative frames:
   the server's input replaces it and the frames that differ are re-simulated, so it cannot desync.
   Extrapolate by `frame − history.at(-1).frame`, not by one step: the history lags by the round trip.
-
 
 ### Browser builds
 
@@ -133,68 +130,9 @@ match permits 256 KiB packets and a 2 MiB / 256-event receive queue. Its pre-ope
 8 packets / 64 KiB, so the hello waits safely for the connection. Backpressure, overflow and failed
 connections reach `multiplayer.status().error` / `events()` explicitly. Hidden tabs stop stepping
 and can disconnect. Save the seat token and use the game's reconnect policy on return.
-The engine's explicit `pnpm test:web:multiplayer` verifies mixed native/browser authoritative input
-and snapshot matches; see `ship-web` for toolchain and runner setup.
+Browser clients: skill `ship-web`.
 
 ## 3. Real-time games
-
-### Open rooms: join a match that is running
-
-A fixed match starts when every seat is taken. For an arena people drop in and out of, make the room **open** (ADR 0439): it starts at its first seat, a quick match joins the fullest running room that has a seat free (else makes one), and a seat is retaken as players leave. Real-time, input sync, `authority: "server"` only:
-
-```json
-"multiplayer": { "mode": "realtime", "authority": "server", "players": 4, "lateJoin": true }
-```
-
-`lateJoin` is `true` or `{ "event": "SeatChanged", "graceSeconds": 15 }`; `join()` is open by default then (`join({ open: false })` for a fixed match). Declare the event in the schema with `seat: u32()` and `present: bool()` (the server refuses to start without them; `fresh: bool()` is optional and sent only when declared): the server raises `{ seat, present, fresh }` at the **same frame on every device and the server**, so the sim, not presentation, decides who exists:
-
-```ts
-// schema/game.schema.ts
-export const SeatChanged = event('SeatChanged', { seat: u32(), present: bool(), fresh: bool() }, { sim: true });
-// a sim system with events: [SeatChanged]
-for (const e of ctx.events.read(SeatChanged)) { /* set the seat entity's `active` to e.present; reset it when e.fresh */ }
-```
-
-- **Seats exist always** (one entity each, an `active` flag the event sets): a seat without a player plays the neutral input, never its last one. Leave and disconnect both raise `present: false` (200 ms after the change, on the same frame everywhere, like every presence event); a reconnect that replaces its own live connection raises nothing; `fresh` is true when a new player takes the seat and false when the one it was held for returns, so reset a seat's score on `fresh` only.
-- A clean leave (`multiplayer.leave()`) frees the seat; a lost connection holds it for `graceSeconds` (the player returns with `join({ seat })`, which the game does after a reconnect). A room with every seat free ends; it has no length limit.
-- A player who joins a running room is sent the server's world (at most 1 MiB; a bigger world refuses the join with `E_LIMIT`) and continues from it: do not keep sim state outside the world (the same rule as for rollback), or the joiner differs from the others. The first `status().frame` is the room's frame, not 0.
-- `MatchEvent` `joined` / `left` (presentation) arrive once each for toasts ("Ana joined"): `left` when the player leaves or drops, `joined` when a seat is taken or its held player returns. A hold running out sends nothing more, and a joiner is not told about the players already there (read the sim's seats). Use the sim event for anything that changes the game.
-- **A lobby list:** `multiplayer.rooms({ server })` lists the open rooms running on one match server: `null` until it answers, then `{ server, rooms: [{ room, seats, taken, free }], ageMs }`, at most 64 rooms with a free seat first, then the fullest. Call it every frame the lobby shows (it asks once a second and stops 10 s after the last call or on `join`), and join a row with `join({ server: listing.server, room: row.room })`; a full room answers `E_FULL`. Its error is thrown, and thrown again for 5 s before it reconnects. The list is **per match server**: a balancer refuses it (`E_BALANCER`), so a lobby across servers asks each one (every frame is fine: one connection a server, up to 8). It shows room names and seat counts only, never players or seat tokens.
-- Test: `gameengine mp test --authority server --players 4 --initial 1 --frames 2400 --churn join@300,join@600,drop:1@1200,back:1@1500,leave:2@1800` (hash agreement for every peer that joined, empty-seat input, `--grace-secs`, `--replay-join` to measure the replay it avoids; such a room keeps its whole log and ends at the 64 MiB limit). A server from before this release answers an open hello `E_VERSION`: ship the server and the clients from one engine release.
-
-
-### Always-open worlds instead of fixed matches
-
-For a continuously available world, use `multiplayer.world` (ADR 0311). This runs the cooked game in the real authoritative server export, without a separate Node simulation:
-
-```json
-"multiplayer": {
-  "authority": "server",
-  "world": { "inputEvent": "WorldInput", "document": "SharedState", "sendEvery": 6 }
-}
-```
-
-Declare `WorldInput` as an empty `sim: true` event and `SharedState` with `defineDoc`. Import `WorldInputFrame` from the runtime and consume `ctx.inputData<WorldInputFrame>(WorldInput)` in the server's sim system. Each frame envelope contains ordered events: `{kind:'start'}`, `{kind:'join',player,name}`, `{kind:'input',player,data}`, or `{kind:'leave',player}`. `player` is a server-assigned 32-bit identity; validate `data` as player intent, never accept client-provided authority or another actor id. The start event initializes the world. Update the document from sim with `ctx.rng`/`ctx.dt`, not time or presentation. The initial step must create the configured document.
-
-In presentation, `await multiplayer.world.connect({server: 'wss://host/game/socket', name})` returns a connection. `send(data)` sends intent. `subscribe(handler)` delivers `{kind:'welcome',player,version}`, `{kind:'snapshot',tick,document}`, `{kind:'error',error}`, and `{kind:'closed',reason}`. Validate the document and feed it to a local sim consumer using `emitInputData` on a separate empty marker. `poll()` is an alternative to subscription. Close the connection on view/session disposal. Implement reconnect and alias UI in the game; the connection supplies heartbeat replies. Rejoining obtains an available identity, so reset connection-local input and presentation state.
-
-Build web and `build server --target linux-x64 --authority server` from matching source/engine/config. The engine enforces game/build identity. Use the public WSS URL; no game-owned wire protocol or Node gameplay server is needed. The Linux export includes its cooked `game/` and the WebGPU wrapper; from macOS or Windows it packages the release's published Linux server. `--dry-run` is not runnable.
-
-A world starts immediately, accepts late joins, reuses disconnected identities and waits while empty without resetting. It ignores fixed-match `players`; actual capacity remains bounded by resources and operator connection guards. A process restart resets it. One changed full document is sent at most every `sendEvery` fixed steps, with fresh state for new joins and pacing for slow sockets. Input is limited to 4 KiB and full state to 256 KiB. Oversize state or sim failure stops the server explicitly for supervisor restart. This mode has no interest filtering, client prediction, accounts, database or multiple-world sharding. Fixed matches continue to use `multiplayer.join` and `PlayerInputs` below.
-
-In a browser, a hidden page runs no frames; the web player keeps a world connection alive by itself meanwhile (it answers pings and keeps only the newest snapshot, which `subscribe` delivers on resume), so switching windows is not a departure. A frozen or discarded page still disconnects; treat that as a leave.
-
-An authoritative server accepts only clients of its exact build (`<version>-<script hash>`); a browser build and a server build of one commit can still differ (a build step's define, one machine transpiling and the other not). Build the server from the browser build's script and check the pair before shipping:
-
-```bash
-gameengine build web --config release --out build/web
-gameengine build server --target linux-x64 --script-from build/web
-gameengine mp identity build/web .gameengine/build/server/linux-x64   # ok, or what differs and why
-```
-
-A refused hello says `E_MISMATCH: this server runs <game> build <id> (client: <game> build <id>)`.
-
-Run `GAMEENGINE_E2E_DIR=<isolated scratch> GAMEENGINE_WORLD_HOST=<native host> pnpm test:world:server` for the explicit real-server E2E. Test two actual compiled clients against the published cooked server as well; a healthy socket alone does not prove gameplay.
 
 Sim systems read `PlayerInputs` with `playerInput(inputs, index)` and `defineButtons` exactly as
 in `rollback-multiplayer`. Seats 4 and up live in `MorePlayerInputs`: a game for more than four
@@ -203,6 +141,9 @@ players reads them with `playerInput(inputs, index, ctx.get(MorePlayerInputs))` 
 `rollback-multiplayer` lists the rules (all state in the world, `math.*`, no physics
 bodies: a real-time match on a physics game leaves with `E_ROLLBACK`). Keep a step well under
 2 ms: a rollback re-simulates several frames at once.
+
+- **Open rooms** (an arena people drop into: `lateJoin`, seats that exist always, a lobby list with `multiplayer.rooms`): `references/open-rooms.md`.
+- **Always-open worlds** (`multiplayer.world`, one shared world instead of fixed matches): `references/worlds.md`.
 
 ## 4. Turn games
 
@@ -226,7 +167,7 @@ player saw: expect up to a tick more per turn (the write itself is well under a 
 a local disk). While the store falls
 behind (its queue three quarters full, or its heartbeat late) turns and joins get `E_BUSY`: retry.
 
-**Async turn games** (matches that last days; ADR 0128). With a store, a match nobody is
+**Async turn games** (matches that last days). With a store, a match nobody is
 connected to leaves the server's memory after a minute and comes back when a player rejoins, so
 one server holds about 100,000 matches. Keep the `seat` token (save it with the player's data)
 and join with it to come back. Servers behind one balancer may share the store folder; a match is
@@ -470,155 +411,17 @@ the game uses).
 
 In the editor: **Build → Multiplayer…** runs the match test and starts a local server.
 
-## 8. Run a server
+## 8. Servers
 
-```bash
-gameengine mp serve                                    # from this checkout, port 7600
-gameengine mp serve --authority server --store matches --listen 0.0.0.0:7600
-```
+`gameengine mp serve` runs a server from this project, and `gameengine build server` (or **Build → Build Multiplayer Server…**) makes the folder to deploy. Rebuild and redeploy an authoritative server with every game release: it accepts only clients of its exact build. Always `wss://` on the internet. Status lines, deployment, TLS, flood limits and the load balancer (`gameengine mp balance`): `references/servers.md`.
 
-It prints one JSON status line every `--status-sec` (rooms, players, bytes in and out, refused,
-rate-limited and timed-out connections, `slowClosed` for those closed for not reading, `memory`
-against its budget, `capacity` for an authoritative server, `turnStore` with what is queued). Play in the editor and devices on the same network join
-with `server: 'ws://<this machine>:7600'`.
+## 9. Matchmaking the game writes
 
-## 9. Build and deploy a server
+Quick match is enough for casual play. For skill, region, parties or modes the game writes a `defineMatchmaker` that the balancer runs: `references/matchmaking.md`.
 
-```bash
-gameengine build server                                # this machine's OS, authority from the project
-gameengine build server --target linux-x64 --authority server --port 7600
-gameengine build server --target windows-x64 --authority relay
-gameengine build server --target macos-arm64 --dry-run # the folder without the binary (finish it on a Mac or CI)
-```
+## 10. Hosted on a player's PC (no server)
 
-Or **Build → Build Multiplayer Server…** in the editor. The folder (default
-`.gameengine/build/server/<target>/`) holds `gameengine-server[.exe]` (for a relay the
-`gameengine-relay` binary, about 5 MB with no engine in it; for an authoritative server the engine
-host, which runs the cooked game), `run.sh` / `run.cmd`,
-`server.json`, a `README.md`, a `Dockerfile` on Linux and, for an authoritative server, the
-cooked game in `game/`, plus `run-balancer.sh` / `.cmd`. Copy it to the machine and run the script
-(`PORT`, `STORE`, `TLS_CERT`/`TLS_KEY`, `BALANCER`/`PUBLIC_URL`, `GAMEENGINE_MP_KEY` from the
-environment), or `docker build -t my-game-server . && docker run -p 7600:7600 my-game-server`. A
-Linux x64 server (relay or authoritative) or a Windows x64 relay builds on any OS: from another
-OS, or in an installed editor, the build downloads the release's published binary once and packages
-it. A checkout between releases names that release with `--player X.Y.Z` (the game cooked by a newer
-engine may not run on it). Other targets build on their own OS (`E_CROSS` otherwise). `--out` must be empty or an earlier server build.
-
-Rebuild and redeploy an authoritative server with every game release: it accepts only its own
-build.
-
-Each connection holds an open file: a server raises its soft limit (`ulimit -n`) to the hard one
-at start and warns when `--max-conns` needs more. In Docker pass `--ulimit nofile=65536:65536`.
-
-## 10. Encryption and flood protection
-
-- **Always `wss://` on the internet.** `--tls-cert <pem> --tls-key <pem>` (or `TLS_CERT`/`TLS_KEY`
-  for the run script) makes the server speak TLS itself; or put Caddy, nginx or a cloud load
-  balancer in front and keep the server on plain `ws://` behind it. A client never follows a
-  redirect from `wss://` to `ws://`.
-- Seat tokens and room codes come from the OS random source: knowing one player's token or a
-  room's seed tells you nothing about another's.
-- Every server and balancer refuses connections over `--max-conns` (10000), over `--max-per-ip`
-  (256) or `--connects-per-min` (600) per address, closes one that has not said hello in 5 s or
-  is silent for 30 s, and closes one sending more than 240 messages or 32 KiB a second
-  (`E_RATE`). A client sends 30 packets a second, so the limits sit far above real play. Behind a
-  proxy every player has the proxy's address: set `--max-per-ip 0 --connects-per-min 0` and
-  limit at the proxy.
-- A connection that stops reading what it is sent is closed once 2 MiB wait for it (`slowClosed`
-  in the status line); a turn match's catch-up for a rejoining player waits for a slow link
-  instead, and closes it (`E_SLOW`) only after 10 s of taking nothing.
-- New rooms and stored matches are refused with `E_BUSY` (try again) while the rooms in memory
-  hold `--max-memory-mib` (2048) between them. Sockets live on `--reactors` threads (default half
-  the cores, 1–4), not a thread each.
-- Anything a client sends is hostile input: the server bounds every decoded message, ignores
-  hashes for frames it has not confirmed, and refuses a turn out of order or over 4 KB. Validate
-  moves in sim systems too, since a relay runs no game code.
-
-## 11. Many servers: the load balancer
-
-```bash
-export GAMEENGINE_MP_KEY=<16+ random characters>         # the same on the balancer and every server
-gameengine mp balance --listen 0.0.0.0:7700              # or ./run-balancer.sh in a server build
-gameengine mp serve --balancer ws://balancer:7700 --public-url wss://game-1.example.com:7600
-```
-
-Players join the balancer's address (`server: 'wss://play.example.com'`). It answers each hello
-with a redirect: a quick match (`join({})`) fills one room on the least-loaded server; a named
-room always lands on the same server, so friends meet. Servers report rooms and players every
-2 s and drop out after 6 s of silence; add a server by starting it, remove one by stopping it
-(its rooms end). The key never goes on the command line (it would show in the process list).
-
-Servers describe themselves so quick match and the game's matchmaker can pick: `mp serve
---balancer … --region eu-west --tags ranked,beta --seats 4000` (at most 8 tags; `--seats` is
-players at once, 0 for no limit). An authoritative server also registers its sim rate, and a
-player is only sent to a server of its rate (a relay takes any).
-
-Measure before sizing: `mp test --players 4 --authority server` gives ms per server tick. A relay
-ticks at 60 Hz unless `mp serve --tick-hz 120` (rooms at 120 Hz then get one frame a tick instead
-of two); an authoritative server ticks at its game's rate.
-
-## 12. Matchmaking the game writes
-
-Quick match is enough for casual play. For skill, region, parties or modes that fill differently,
-write the rule in the game's TypeScript and export it from `main.ts` (ADR 0125):
-
-```ts
-import { defineMatchmaker, type MatchGroup, type MatchTicket } from '@gameengine/runtime';
-
-export const ranked = defineMatchmaker({
-  queue: 'ranked',       // a room name's rules; at most 16 queues a game
-  every: 1,              // seconds between rounds, 0.1 or more
-  match(tickets: readonly MatchTicket[], servers, round): MatchGroup[] {
-    // tickets: { id, players, waitSec, attributes, verified, party? }, at most 4,096 a round
-    // servers: { url, region, tags, rate, rooms, capacity, players, freeSeats, load }
-    return [{ tickets: [tickets[0]!.id, tickets[1]!.id], server: { region: 'eu' } }];
-  },
-  bot: (i) => ({ attributes: { region: 'eu' }, verified: { rating: 800 + i } }), // for mp match
-});
-```
-
-```ts
-// presentation, against the balancer's address
-multiplayer.join({ queue: 'ranked', attributes: { region: 'eu' }, token, party: { id: partyId, size: 2 } });
-// events(): { type: 'queued', queue, waiting } while it waits, then the usual welcome
-```
-
-- **No secrets in it:** `defineMatchmaker` (like `defineServerTask`) is in the device bundle too,
-  where it does nothing; the token key lives only in your backend and in `GAMEENGINE_MM_KEY`.
-- **Run it:** `gameengine mp balance samples/my-game` (`--match-budget-ms`, default 250). Without a
-  project, or for a queue no matchmaker defines, the balancer quick-matches as before.
-- **Rounds:** each pool (one queue for one build, rate, mode, sync and room size) is offered every
-  `every` seconds: the oldest 2,048 tickets, then 2,048 from a cursor through the rest, so a long
-  queue is seen over several rounds. Return groups of ticket ids. `server` is a url, `{ region,
-  tags }` (that region first, most tags, least loaded) or nothing (least loaded). The balancer names
-  the room and redirects every player with its size. A group naming a gone ticket, a ticket twice,
-  half a party, more players than a match holds or a full server is dropped; its tickets wait.
-- **Keep `match` cheap and pure:** one round is in flight at a time, on a thread of its own. Past
-  the budget a round is skipped and logged; a throw or malformed answer too. Stuck 10 s on one round,
-  the matchmaker is stalled and its players get `E_MATCHMAKER` until it answers or, after 30 s, a
-  fresh session takes over (at most 3 times; then restart the balancer). `match` is a plain function: test it
-  in a `worldTest` on both engines (`rollback-arena/tests/game.test.ts`).
-- **Parties:** every member joins with the same `party.id` and `size` (2–8); they wait as one ticket
-  (`players` = size), offered once all are there, and are dropped with `E_PARTY` if not all there
-  within 60 s. An unsigned party id can be guessed and joined: sign `"party"` into each member's
-  token, and it wins over the id the client sends.
-- **Trust:** `attributes` (a JSON object, at most 512 bytes) are hints a modified client can fake.
-  Ratings, ranks and entitlements come in a token the game's backend signs:
-  `v1.<base64url payload>.<base64url HMAC-SHA256 of "v1.<payload>">`, payload
-  `{ "game": "<name>", "exp": <unix seconds>, "values": { "rating": 1520 } }` (optionally
-  `"queue": "ranked"` to bind it to one queue and `"party": "<id>"`; `exp` at most 24 h away), key in
-  `GAMEENGINE_MM_KEY` on the balancer (16+ characters, not the server key). `match` reads checked
-  values from `ticket.verified` (null without a token); a bad or expired token gets `E_TOKEN`. Tokens
-  are not bound to a player: keep `exp` to minutes.
-- **Prove it:** `gameengine mp match samples/my-game --bots 2000 [--arrive-sec 10] [--regions eu,us]
-  --json` (MCP `mp_match`) builds bots from `bot(i)`, signs real tokens, registers one server per
-  region and reports matched players, room sizes, waits (p50, p95), the largest queue and round cost.
-  `--bots 100000 --arrive-sec 0` is the scale case: a round of 4,096 tickets should stay well under
-  the budget.
-
-## 13. Hosted on a player's PC (no server)
-
-On PC one player's game can be the match server (ADR 0131): a relay on a thread inside the game.
+On PC one player's game can be the match server: a relay on a thread inside the game.
 Phones cannot host (`E_UNAVAILABLE`); they join servers.
 
 ```ts
@@ -640,7 +443,7 @@ if (h) multiplayer.joinHost(h);                               // or multiplayer.
   (or `--join ws://<ip>:7600`) on the others. `gameengine doctor` checks the ports and, on Windows,
   the network profile and the firewall rules for the game.
 
-## Limits (today)
+## Limits
 
 - A server steps every authoritative room in turn on one thread and one JS VM; it measures its
   rooms per tick at start and tells its balancer that (`capacity` in the status line). Measure with

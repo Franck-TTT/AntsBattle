@@ -3,55 +3,55 @@
   "selected": [],
   "skills": {
     "animation-2d-agent": {
-      "version": "2.1.3",
+      "version": "2.2.0",
       "source": "engine"
     },
     "animation-3d-agent": {
-      "version": "1.7.0",
+      "version": "1.8.0",
       "source": "engine"
     },
     "architecture-review": {
-      "version": "1.5.0",
+      "version": "1.6.0",
       "source": "engine"
     },
     "asset-memory": {
-      "version": "1.26.1",
+      "version": "1.29.0",
       "source": "engine"
     },
     "atlasing": {
-      "version": "1.18.1",
+      "version": "1.19.0",
       "source": "engine"
     },
     "audio": {
-      "version": "1.6.1",
-      "source": "engine"
-    },
-    "camera": {
-      "version": "1.7.1",
-      "source": "engine"
-    },
-    "cheats": {
-      "version": "1.11.0",
-      "source": "engine"
-    },
-    "compute-shaders": {
-      "version": "1.0.1",
-      "source": "engine"
-    },
-    "content-database": {
-      "version": "1.22.0",
-      "source": "engine"
-    },
-    "create-engine-package": {
       "version": "1.7.0",
       "source": "engine"
     },
+    "camera": {
+      "version": "1.8.0",
+      "source": "engine"
+    },
+    "cheats": {
+      "version": "1.14.0",
+      "source": "engine"
+    },
+    "compute-shaders": {
+      "version": "1.1.0",
+      "source": "engine"
+    },
+    "content-database": {
+      "version": "1.23.0",
+      "source": "engine"
+    },
+    "create-engine-package": {
+      "version": "1.10.0",
+      "source": "engine"
+    },
     "culling": {
-      "version": "1.2.0",
+      "version": "1.3.0",
       "source": "engine"
     },
     "dependency-injection": {
-      "version": "1.0.1",
+      "version": "1.1.0",
       "source": "engine"
     },
     "determinism": {
@@ -59,43 +59,43 @@
       "source": "engine"
     },
     "device-tiers": {
-      "version": "1.25.0",
+      "version": "1.29.0",
       "source": "engine"
     },
     "ecs-systems": {
-      "version": "1.16.0",
+      "version": "1.17.0",
       "source": "engine"
     },
     "editor-modes": {
-      "version": "1.14.0",
+      "version": "1.15.0",
       "source": "engine"
     },
     "editor-widgets": {
-      "version": "1.2.0",
-      "source": "engine"
-    },
-    "editor-windows": {
-      "version": "1.4.0",
-      "source": "engine"
-    },
-    "engine-tutorial": {
       "version": "1.3.0",
       "source": "engine"
     },
-    "extension-points": {
-      "version": "1.0.0",
-      "source": "engine"
-    },
-    "flipbook-2d": {
+    "editor-windows": {
       "version": "1.5.0",
       "source": "engine"
     },
+    "engine-tutorial": {
+      "version": "1.4.0",
+      "source": "engine"
+    },
+    "extension-points": {
+      "version": "1.1.0",
+      "source": "engine"
+    },
+    "flipbook-2d": {
+      "version": "1.6.0",
+      "source": "engine"
+    },
     "haptics": {
-      "version": "1.1.2",
+      "version": "1.2.0",
       "source": "engine"
     },
     "keyframe-animation": {
-      "version": "1.0.1",
+      "version": "1.1.0",
       "source": "engine"
     },
     "mcp-tools": {
@@ -103,151 +103,159 @@
       "source": "engine"
     },
     "mcp-widgets": {
-      "version": "1.2.1",
-      "source": "engine"
-    },
-    "meta-economy": {
-      "version": "1.5.2",
-      "source": "engine"
-    },
-    "mobile-performance-review": {
-      "version": "1.25.2",
-      "source": "engine"
-    },
-    "models-3d": {
-      "version": "1.26.0",
-      "source": "engine"
-    },
-    "multiplayer": {
-      "version": "1.16.1",
-      "source": "engine"
-    },
-    "navigation-3d": {
-      "version": "1.0.3",
-      "source": "engine"
-    },
-    "open-world-streaming": {
-      "version": "1.6.0",
-      "source": "engine"
-    },
-    "overlap-queries": {
-      "version": "1.1.0",
-      "source": "engine"
-    },
-    "packages": {
-      "version": "1.20.0",
-      "source": "engine"
-    },
-    "perf-to-rust": {
-      "version": "1.10.0",
-      "source": "engine"
-    },
-    "physics": {
-      "version": "1.1.0",
-      "source": "engine"
-    },
-    "platform-services": {
-      "version": "1.22.0",
-      "source": "engine"
-    },
-    "playable-ad-porting": {
-      "version": "1.16.0",
-      "source": "engine"
-    },
-    "playable-ads": {
-      "version": "1.8.0",
-      "source": "engine"
-    },
-    "post-effects": {
-      "version": "1.1.0",
-      "source": "engine"
-    },
-    "project-tools": {
-      "version": "1.2.1",
-      "source": "engine"
-    },
-    "rollback-multiplayer": {
       "version": "1.3.0",
       "source": "engine"
     },
-    "save-slots": {
-      "version": "1.1.1",
+    "meta-economy": {
+      "version": "1.6.0",
       "source": "engine"
     },
-    "screen-fit": {
-      "version": "1.7.0",
+    "mobile-performance-review": {
+      "version": "1.30.0",
       "source": "engine"
     },
-    "ship-mobile": {
-      "version": "1.41.0",
+    "models-3d": {
+      "version": "1.27.0",
       "source": "engine"
     },
-    "ship-web": {
-      "version": "1.8.1",
+    "multiplayer": {
+      "version": "1.17.0",
       "source": "engine"
     },
-    "signals": {
-      "version": "1.0.1",
-      "source": "engine"
-    },
-    "sim-boundaries": {
-      "version": "1.18.0",
-      "source": "engine"
-    },
-    "skeleton-2d": {
-      "version": "1.13.0",
-      "source": "engine"
-    },
-    "spine-import": {
-      "version": "1.8.1",
-      "source": "engine"
-    },
-    "surface-paint": {
-      "version": "1.0.0",
-      "source": "engine"
-    },
-    "testing": {
-      "version": "1.29.0",
-      "source": "engine"
-    },
-    "tilemaps-nav": {
-      "version": "1.1.3",
-      "source": "engine"
-    },
-    "touch-input": {
+    "navigation-3d": {
       "version": "1.1.0",
       "source": "engine"
     },
-    "ui-documents": {
-      "version": "1.11.0",
+    "open-world-streaming": {
+      "version": "1.7.0",
       "source": "engine"
     },
-    "ui-mvc-views": {
-      "version": "1.46.0",
-      "source": "engine"
-    },
-    "ui-views-to-documents": {
-      "version": "1.4.0",
-      "source": "engine"
-    },
-    "upgrade-to-guid-references": {
-      "version": "1.0.0",
-      "source": "engine"
-    },
-    "vfx": {
-      "version": "1.22.0",
-      "source": "engine"
-    },
-    "vfx-materials": {
-      "version": "1.29.0",
-      "source": "engine"
-    },
-    "video": {
+    "overlap-queries": {
       "version": "1.2.0",
       "source": "engine"
     },
+    "packages": {
+      "version": "1.21.0",
+      "source": "engine"
+    },
+    "perf-to-rust": {
+      "version": "1.18.0",
+      "source": "engine"
+    },
+    "physics": {
+      "version": "1.2.0",
+      "source": "engine"
+    },
+    "platform-services": {
+      "version": "1.25.0",
+      "source": "engine"
+    },
+    "playable-ad-porting": {
+      "version": "1.18.0",
+      "source": "engine"
+    },
+    "playable-ads": {
+      "version": "1.9.0",
+      "source": "engine"
+    },
+    "post-effects": {
+      "version": "1.3.0",
+      "source": "engine"
+    },
+    "project-tools": {
+      "version": "1.4.0",
+      "source": "engine"
+    },
+    "releases": {
+      "version": "1.0.0",
+      "source": "engine"
+    },
+    "rollback-multiplayer": {
+      "version": "1.4.0",
+      "source": "engine"
+    },
+    "save-slots": {
+      "version": "1.2.0",
+      "source": "engine"
+    },
+    "screen-fit": {
+      "version": "1.8.0",
+      "source": "engine"
+    },
+    "ship-mobile": {
+      "version": "1.44.0",
+      "source": "engine"
+    },
+    "ship-web": {
+      "version": "1.10.0",
+      "source": "engine"
+    },
+    "signals": {
+      "version": "1.1.0",
+      "source": "engine"
+    },
+    "sim-boundaries": {
+      "version": "1.19.0",
+      "source": "engine"
+    },
+    "skeleton-2d": {
+      "version": "1.15.0",
+      "source": "engine"
+    },
+    "spine-import": {
+      "version": "1.9.0",
+      "source": "engine"
+    },
+    "surface-paint": {
+      "version": "1.1.0",
+      "source": "engine"
+    },
+    "testing": {
+      "version": "1.34.0",
+      "source": "engine"
+    },
+    "text-fields": {
+      "version": "1.2.0",
+      "source": "engine"
+    },
+    "tilemaps-nav": {
+      "version": "1.2.0",
+      "source": "engine"
+    },
+    "touch-input": {
+      "version": "1.2.0",
+      "source": "engine"
+    },
+    "ui-documents": {
+      "version": "1.15.0",
+      "source": "engine"
+    },
+    "ui-mvc-views": {
+      "version": "1.50.0",
+      "source": "engine"
+    },
+    "ui-views-to-documents": {
+      "version": "1.5.0",
+      "source": "engine"
+    },
+    "upgrade-to-guid-references": {
+      "version": "1.1.0",
+      "source": "engine"
+    },
+    "vfx": {
+      "version": "1.25.0",
+      "source": "engine"
+    },
+    "vfx-materials": {
+      "version": "1.31.0",
+      "source": "engine"
+    },
+    "video": {
+      "version": "1.3.0",
+      "source": "engine"
+    },
     "work-loop": {
-      "version": "1.17.0",
+      "version": "1.19.0",
       "source": "engine"
     },
     "branch-profile": {
@@ -277,10 +285,10 @@
   },
   "files": {
     ".claude/agents/architecture-reviewer.md": "f6cae32bab65891e",
-    ".claude/agents/mobile-performance-reviewer.md": "672a2e9688add3cb",
+    ".claude/agents/mobile-performance-reviewer.md": "243a181f4346d670",
     ".claude/settings.json": "6d62e8bbb59df743",
     ".codex/agents/architecture-reviewer.toml": "0a50919d4283fe32",
-    ".codex/agents/mobile-performance-reviewer.toml": "7c081d4d4e9b442b",
+    ".codex/agents/mobile-performance-reviewer.toml": "adf9cedb0f09c1d4",
     ".codex/config.toml": "6435acfe4e7c7cc0",
     ".mcp.json": "921c2e9b14931ceb",
     "CLAUDE.md": "bcdbd7f464d79af4",
@@ -288,10 +296,10 @@
     ".agents/skills/animation-2d-agent/references/editor.md": "6fe43854d258a671",
     ".claude/skills/animation-2d-agent/references/ops.md": "c837db487482f9ab",
     ".agents/skills/animation-2d-agent/references/ops.md": "c837db487482f9ab",
-    ".claude/skills/animation-2d-agent/references/performance.md": "1ee3f7044289f4c1",
-    ".agents/skills/animation-2d-agent/references/performance.md": "1ee3f7044289f4c1",
-    ".claude/skills/animation-2d-agent/SKILL.md": "4eb45161e0050ad8",
-    ".agents/skills/animation-2d-agent/SKILL.md": "4eb45161e0050ad8",
+    ".claude/skills/animation-2d-agent/references/performance.md": "0c601d59d2d85102",
+    ".agents/skills/animation-2d-agent/references/performance.md": "0c601d59d2d85102",
+    ".claude/skills/animation-2d-agent/SKILL.md": "1559cd155fb60dfa",
+    ".agents/skills/animation-2d-agent/SKILL.md": "1559cd155fb60dfa",
     ".claude/skills/animation-3d-agent/references/humanoid/fall.anim3d.json": "fe5151bd00110675",
     ".agents/skills/animation-3d-agent/references/humanoid/fall.anim3d.json": "fe5151bd00110675",
     ".claude/skills/animation-3d-agent/references/humanoid/hit.anim3d.json": "0b9358d6078e932f",
@@ -314,142 +322,206 @@
     ".agents/skills/animation-3d-agent/references/humanoid/walk.anim3d.json": "040616db06bca915",
     ".claude/skills/animation-3d-agent/references/humanoid.md": "63537a175bc3af1b",
     ".agents/skills/animation-3d-agent/references/humanoid.md": "63537a175bc3af1b",
-    ".claude/skills/animation-3d-agent/SKILL.md": "efd56f9215773df7",
-    ".agents/skills/animation-3d-agent/SKILL.md": "efd56f9215773df7",
-    ".claude/skills/architecture-review/SKILL.md": "983b341559ea49de",
-    ".agents/skills/architecture-review/SKILL.md": "983b341559ea49de",
-    ".claude/skills/asset-memory/SKILL.md": "79c94428116ceb7e",
-    ".agents/skills/asset-memory/SKILL.md": "79c94428116ceb7e",
-    ".claude/skills/atlasing/SKILL.md": "7f53fa847d381e84",
-    ".agents/skills/atlasing/SKILL.md": "7f53fa847d381e84",
-    ".claude/skills/audio/SKILL.md": "1bbed5aede36db9b",
-    ".agents/skills/audio/SKILL.md": "1bbed5aede36db9b",
-    ".claude/skills/camera/SKILL.md": "0f49fe8bd057fcba",
-    ".agents/skills/camera/SKILL.md": "0f49fe8bd057fcba",
-    ".claude/skills/cheats/SKILL.md": "be64de483ce892bd",
-    ".agents/skills/cheats/SKILL.md": "be64de483ce892bd",
-    ".claude/skills/compute-shaders/SKILL.md": "ccfa55243953c0f3",
-    ".agents/skills/compute-shaders/SKILL.md": "ccfa55243953c0f3",
-    ".claude/skills/content-database/SKILL.md": "b592a08054b6ada9",
-    ".agents/skills/content-database/SKILL.md": "b592a08054b6ada9",
-    ".claude/skills/create-engine-package/references/build-steps.md": "cdbc4548d07dc405",
-    ".agents/skills/create-engine-package/references/build-steps.md": "cdbc4548d07dc405",
-    ".claude/skills/create-engine-package/references/native-and-mobile.md": "35a7c6ebf213cf21",
-    ".agents/skills/create-engine-package/references/native-and-mobile.md": "35a7c6ebf213cf21",
-    ".claude/skills/create-engine-package/references/package-layout.md": "ed4a33a3a90c92ab",
-    ".agents/skills/create-engine-package/references/package-layout.md": "ed4a33a3a90c92ab",
-    ".claude/skills/create-engine-package/references/validation-and-release.md": "3ac983945803f4a5",
-    ".agents/skills/create-engine-package/references/validation-and-release.md": "3ac983945803f4a5",
-    ".claude/skills/create-engine-package/SKILL.md": "83efc7c0efe77abf",
-    ".agents/skills/create-engine-package/SKILL.md": "83efc7c0efe77abf",
-    ".claude/skills/culling/SKILL.md": "409db9e28275005c",
-    ".agents/skills/culling/SKILL.md": "409db9e28275005c",
-    ".claude/skills/dependency-injection/SKILL.md": "e564e19b4761a667",
-    ".agents/skills/dependency-injection/SKILL.md": "e564e19b4761a667",
+    ".claude/skills/animation-3d-agent/references/rigging.md": "e4d833f17e0a4431",
+    ".agents/skills/animation-3d-agent/references/rigging.md": "e4d833f17e0a4431",
+    ".claude/skills/animation-3d-agent/SKILL.md": "12f174977ea95e9c",
+    ".agents/skills/animation-3d-agent/SKILL.md": "12f174977ea95e9c",
+    ".claude/skills/architecture-review/SKILL.md": "dffb1111afa39d06",
+    ".agents/skills/architecture-review/SKILL.md": "dffb1111afa39d06",
+    ".claude/skills/asset-memory/references/memory-pressure.md": "6c4ec6a5f4709d7b",
+    ".agents/skills/asset-memory/references/memory-pressure.md": "6c4ec6a5f4709d7b",
+    ".claude/skills/asset-memory/references/runtime-images.md": "097e0160d170feb4",
+    ".agents/skills/asset-memory/references/runtime-images.md": "097e0160d170feb4",
+    ".claude/skills/asset-memory/references/warm-up.md": "48d27407a15194c6",
+    ".agents/skills/asset-memory/references/warm-up.md": "48d27407a15194c6",
+    ".claude/skills/asset-memory/SKILL.md": "bcddff9720e0e554",
+    ".agents/skills/asset-memory/SKILL.md": "bcddff9720e0e554",
+    ".claude/skills/atlasing/SKILL.md": "6117a6ca068231e8",
+    ".agents/skills/atlasing/SKILL.md": "6117a6ca068231e8",
+    ".claude/skills/audio/SKILL.md": "e8c93dd7834357ea",
+    ".agents/skills/audio/SKILL.md": "e8c93dd7834357ea",
+    ".claude/skills/camera/references/ui-layer-cameras.md": "ffabf44405d766d9",
+    ".agents/skills/camera/references/ui-layer-cameras.md": "ffabf44405d766d9",
+    ".claude/skills/camera/SKILL.md": "535a716dddeb45e4",
+    ".agents/skills/camera/SKILL.md": "535a716dddeb45e4",
+    ".claude/skills/cheats/references/store-screenshots.md": "3add8ccb2a921483",
+    ".agents/skills/cheats/references/store-screenshots.md": "3add8ccb2a921483",
+    ".claude/skills/cheats/SKILL.md": "5bfb749910f1a38d",
+    ".agents/skills/cheats/SKILL.md": "5bfb749910f1a38d",
+    ".claude/skills/compute-shaders/SKILL.md": "8e8ccb6c50a43ec0",
+    ".agents/skills/compute-shaders/SKILL.md": "8e8ccb6c50a43ec0",
+    ".claude/skills/content-database/SKILL.md": "ed4399385f8bf5e5",
+    ".agents/skills/content-database/SKILL.md": "ed4399385f8bf5e5",
+    ".claude/skills/create-engine-package/references/build-steps.md": "eab361233b8c4fc2",
+    ".agents/skills/create-engine-package/references/build-steps.md": "eab361233b8c4fc2",
+    ".claude/skills/create-engine-package/references/native-and-mobile.md": "bc59d4c9980a4da4",
+    ".agents/skills/create-engine-package/references/native-and-mobile.md": "bc59d4c9980a4da4",
+    ".claude/skills/create-engine-package/references/package-layout.md": "2ff1dc37f28f1439",
+    ".agents/skills/create-engine-package/references/package-layout.md": "2ff1dc37f28f1439",
+    ".claude/skills/create-engine-package/references/validation-and-release.md": "4ea4e2458330d2e5",
+    ".agents/skills/create-engine-package/references/validation-and-release.md": "4ea4e2458330d2e5",
+    ".claude/skills/create-engine-package/SKILL.md": "00a91984fde06e0f",
+    ".agents/skills/create-engine-package/SKILL.md": "00a91984fde06e0f",
+    ".claude/skills/culling/SKILL.md": "e34d4a78f22cf0c7",
+    ".agents/skills/culling/SKILL.md": "e34d4a78f22cf0c7",
+    ".claude/skills/dependency-injection/SKILL.md": "205990122c5cfd4c",
+    ".agents/skills/dependency-injection/SKILL.md": "205990122c5cfd4c",
     ".claude/skills/determinism/SKILL.md": "d4b978512c6bd19b",
     ".agents/skills/determinism/SKILL.md": "d4b978512c6bd19b",
-    ".claude/skills/device-tiers/SKILL.md": "95a4a333a347446d",
-    ".agents/skills/device-tiers/SKILL.md": "95a4a333a347446d",
-    ".claude/skills/ecs-systems/SKILL.md": "e70a885c88d76a0a",
-    ".agents/skills/ecs-systems/SKILL.md": "e70a885c88d76a0a",
-    ".claude/skills/editor-modes/SKILL.md": "db5d7d5f96b6eb2c",
-    ".agents/skills/editor-modes/SKILL.md": "db5d7d5f96b6eb2c",
-    ".claude/skills/editor-widgets/SKILL.md": "39f8999ffc878930",
-    ".agents/skills/editor-widgets/SKILL.md": "39f8999ffc878930",
-    ".claude/skills/editor-windows/SKILL.md": "1e2630ca5f63dd6b",
-    ".agents/skills/editor-windows/SKILL.md": "1e2630ca5f63dd6b",
-    ".claude/skills/engine-tutorial/SKILL.md": "9fdf7b1382aa7251",
-    ".agents/skills/engine-tutorial/SKILL.md": "9fdf7b1382aa7251",
-    ".claude/skills/extension-points/SKILL.md": "d654a90b06b99db0",
-    ".agents/skills/extension-points/SKILL.md": "d654a90b06b99db0",
-    ".claude/skills/flipbook-2d/SKILL.md": "52835db571ac8b16",
-    ".agents/skills/flipbook-2d/SKILL.md": "52835db571ac8b16",
-    ".claude/skills/haptics/SKILL.md": "328f6210bdcbd2b4",
-    ".agents/skills/haptics/SKILL.md": "328f6210bdcbd2b4",
-    ".claude/skills/keyframe-animation/SKILL.md": "40c9e9fae9823c8a",
-    ".agents/skills/keyframe-animation/SKILL.md": "40c9e9fae9823c8a",
+    ".claude/skills/device-tiers/references/tuning.md": "f2c232c358e451dc",
+    ".agents/skills/device-tiers/references/tuning.md": "f2c232c358e451dc",
+    ".claude/skills/device-tiers/SKILL.md": "efa5abb739cafa1e",
+    ".agents/skills/device-tiers/SKILL.md": "efa5abb739cafa1e",
+    ".claude/skills/ecs-systems/references/input.md": "2ca746b70a4ce017",
+    ".agents/skills/ecs-systems/references/input.md": "2ca746b70a4ce017",
+    ".claude/skills/ecs-systems/SKILL.md": "1b7555d75b002efd",
+    ".agents/skills/ecs-systems/SKILL.md": "1b7555d75b002efd",
+    ".claude/skills/editor-modes/SKILL.md": "4a06585dd65bce56",
+    ".agents/skills/editor-modes/SKILL.md": "4a06585dd65bce56",
+    ".claude/skills/editor-widgets/SKILL.md": "108f4f6a28407325",
+    ".agents/skills/editor-widgets/SKILL.md": "108f4f6a28407325",
+    ".claude/skills/editor-windows/SKILL.md": "46365f0819ba7389",
+    ".agents/skills/editor-windows/SKILL.md": "46365f0819ba7389",
+    ".claude/skills/engine-tutorial/SKILL.md": "091e57385ac2765c",
+    ".agents/skills/engine-tutorial/SKILL.md": "091e57385ac2765c",
+    ".claude/skills/extension-points/SKILL.md": "e627b6ac3934f0a0",
+    ".agents/skills/extension-points/SKILL.md": "e627b6ac3934f0a0",
+    ".claude/skills/flipbook-2d/SKILL.md": "7258b0ba514c432a",
+    ".agents/skills/flipbook-2d/SKILL.md": "7258b0ba514c432a",
+    ".claude/skills/haptics/references/platforms.md": "de41f8d3259d98b7",
+    ".agents/skills/haptics/references/platforms.md": "de41f8d3259d98b7",
+    ".claude/skills/haptics/SKILL.md": "05a8d2e3016fe92b",
+    ".agents/skills/haptics/SKILL.md": "05a8d2e3016fe92b",
+    ".claude/skills/keyframe-animation/SKILL.md": "efffbe6f85fb9743",
+    ".agents/skills/keyframe-animation/SKILL.md": "efffbe6f85fb9743",
     ".claude/skills/mcp-tools/SKILL.md": "83786f2fa6c9dbd8",
     ".agents/skills/mcp-tools/SKILL.md": "83786f2fa6c9dbd8",
-    ".claude/skills/mcp-widgets/SKILL.md": "0c3178aa998deba7",
-    ".agents/skills/mcp-widgets/SKILL.md": "0c3178aa998deba7",
-    ".claude/skills/meta-economy/SKILL.md": "bc7cd00f9549977b",
-    ".agents/skills/meta-economy/SKILL.md": "bc7cd00f9549977b",
-    ".claude/skills/mobile-performance-review/budgets.md": "cfd8367c48fbb76d",
-    ".agents/skills/mobile-performance-review/budgets.md": "cfd8367c48fbb76d",
-    ".claude/skills/mobile-performance-review/SKILL.md": "a40e03c8165853d8",
-    ".agents/skills/mobile-performance-review/SKILL.md": "a40e03c8165853d8",
-    ".claude/skills/models-3d/SKILL.md": "79d899273a03e758",
-    ".agents/skills/models-3d/SKILL.md": "79d899273a03e758",
-    ".claude/skills/multiplayer/SKILL.md": "94ba663b3ded12b9",
-    ".agents/skills/multiplayer/SKILL.md": "94ba663b3ded12b9",
-    ".claude/skills/navigation-3d/SKILL.md": "9afaa3cdbe969d50",
-    ".agents/skills/navigation-3d/SKILL.md": "9afaa3cdbe969d50",
-    ".claude/skills/open-world-streaming/SKILL.md": "0a5d76e98905bf31",
-    ".agents/skills/open-world-streaming/SKILL.md": "0a5d76e98905bf31",
-    ".claude/skills/overlap-queries/SKILL.md": "04e9c36c4fba418a",
-    ".agents/skills/overlap-queries/SKILL.md": "04e9c36c4fba418a",
+    ".claude/skills/mcp-widgets/references/package-previews.md": "fd245633a95da8f2",
+    ".agents/skills/mcp-widgets/references/package-previews.md": "fd245633a95da8f2",
+    ".claude/skills/mcp-widgets/SKILL.md": "e8ae1570eb793fbf",
+    ".agents/skills/mcp-widgets/SKILL.md": "e8ae1570eb793fbf",
+    ".claude/skills/meta-economy/SKILL.md": "d985b1a4be1a53ba",
+    ".agents/skills/meta-economy/SKILL.md": "d985b1a4be1a53ba",
+    ".claude/skills/mobile-performance-review/budgets.md": "7c77fe8acc33f93a",
+    ".agents/skills/mobile-performance-review/budgets.md": "7c77fe8acc33f93a",
+    ".claude/skills/mobile-performance-review/references/capacity-sweep.md": "ad00ed6b728c4065",
+    ".agents/skills/mobile-performance-review/references/capacity-sweep.md": "ad00ed6b728c4065",
+    ".claude/skills/mobile-performance-review/references/device-profiling.md": "b104fa504e23ab59",
+    ".agents/skills/mobile-performance-review/references/device-profiling.md": "b104fa504e23ab59",
+    ".claude/skills/mobile-performance-review/SKILL.md": "e9322775e0cbcaf2",
+    ".agents/skills/mobile-performance-review/SKILL.md": "e9322775e0cbcaf2",
+    ".claude/skills/models-3d/SKILL.md": "31d574d9bf727781",
+    ".agents/skills/models-3d/SKILL.md": "31d574d9bf727781",
+    ".claude/skills/multiplayer/references/matchmaking.md": "08e386ffd69c8421",
+    ".agents/skills/multiplayer/references/matchmaking.md": "08e386ffd69c8421",
+    ".claude/skills/multiplayer/references/open-rooms.md": "7b34ccf98680da6a",
+    ".agents/skills/multiplayer/references/open-rooms.md": "7b34ccf98680da6a",
+    ".claude/skills/multiplayer/references/servers.md": "0349040e4009413b",
+    ".agents/skills/multiplayer/references/servers.md": "0349040e4009413b",
+    ".claude/skills/multiplayer/references/worlds.md": "269d2f8b39c8902b",
+    ".agents/skills/multiplayer/references/worlds.md": "269d2f8b39c8902b",
+    ".claude/skills/multiplayer/SKILL.md": "e7bc45e3c07ea961",
+    ".agents/skills/multiplayer/SKILL.md": "e7bc45e3c07ea961",
+    ".claude/skills/navigation-3d/SKILL.md": "9968a91bb318ae33",
+    ".agents/skills/navigation-3d/SKILL.md": "9968a91bb318ae33",
+    ".claude/skills/open-world-streaming/SKILL.md": "67f4d755a80d4e4c",
+    ".agents/skills/open-world-streaming/SKILL.md": "67f4d755a80d4e4c",
+    ".claude/skills/overlap-queries/SKILL.md": "14815b817f110eeb",
+    ".agents/skills/overlap-queries/SKILL.md": "14815b817f110eeb",
     ".claude/skills/packages/references/built-ins-and-settings.md": "f4aec3b8d7eecbbc",
     ".agents/skills/packages/references/built-ins-and-settings.md": "f4aec3b8d7eecbbc",
-    ".claude/skills/packages/references/install-and-access.md": "1744359815190380",
-    ".agents/skills/packages/references/install-and-access.md": "1744359815190380",
-    ".claude/skills/packages/SKILL.md": "1f243c70f693551b",
-    ".agents/skills/packages/SKILL.md": "1f243c70f693551b",
-    ".claude/skills/perf-to-rust/SKILL.md": "53a119783dcd21ff",
-    ".agents/skills/perf-to-rust/SKILL.md": "53a119783dcd21ff",
-    ".claude/skills/physics/SKILL.md": "612b37e1d4b2e9d1",
-    ".agents/skills/physics/SKILL.md": "612b37e1d4b2e9d1",
-    ".claude/skills/platform-services/SKILL.md": "4e52830401e9fdfd",
-    ".agents/skills/platform-services/SKILL.md": "4e52830401e9fdfd",
-    ".claude/skills/playable-ad-porting/SKILL.md": "9c1296d3f001e4aa",
-    ".agents/skills/playable-ad-porting/SKILL.md": "9c1296d3f001e4aa",
-    ".claude/skills/playable-ads/SKILL.md": "1d642ed7fbeb2d1b",
-    ".agents/skills/playable-ads/SKILL.md": "1d642ed7fbeb2d1b",
-    ".claude/skills/post-effects/SKILL.md": "5ded941f6ecda356",
-    ".agents/skills/post-effects/SKILL.md": "5ded941f6ecda356",
-    ".claude/skills/project-tools/SKILL.md": "60ff8b9166a92a31",
-    ".agents/skills/project-tools/SKILL.md": "60ff8b9166a92a31",
-    ".claude/skills/rollback-multiplayer/SKILL.md": "cb11d48c8f21807d",
-    ".agents/skills/rollback-multiplayer/SKILL.md": "cb11d48c8f21807d",
-    ".claude/skills/save-slots/SKILL.md": "62a5d6a5a09adefa",
-    ".agents/skills/save-slots/SKILL.md": "62a5d6a5a09adefa",
-    ".claude/skills/screen-fit/SKILL.md": "41845ffbbb6dc0ca",
-    ".agents/skills/screen-fit/SKILL.md": "41845ffbbb6dc0ca",
-    ".claude/skills/ship-mobile/SKILL.md": "e39b9604324e58f8",
-    ".agents/skills/ship-mobile/SKILL.md": "e39b9604324e58f8",
-    ".claude/skills/ship-web/SKILL.md": "2a1fd7f84ee1f2b2",
-    ".agents/skills/ship-web/SKILL.md": "2a1fd7f84ee1f2b2",
-    ".claude/skills/signals/SKILL.md": "a2d6d806112e077a",
-    ".agents/skills/signals/SKILL.md": "a2d6d806112e077a",
-    ".claude/skills/sim-boundaries/SKILL.md": "3c044354f10e75fa",
-    ".agents/skills/sim-boundaries/SKILL.md": "3c044354f10e75fa",
-    ".claude/skills/skeleton-2d/SKILL.md": "92ffa00205f2f523",
-    ".agents/skills/skeleton-2d/SKILL.md": "92ffa00205f2f523",
-    ".claude/skills/spine-import/SKILL.md": "a7a887c74b46f3fb",
-    ".agents/skills/spine-import/SKILL.md": "a7a887c74b46f3fb",
-    ".claude/skills/surface-paint/SKILL.md": "71755616815f97bd",
-    ".agents/skills/surface-paint/SKILL.md": "71755616815f97bd",
-    ".claude/skills/testing/SKILL.md": "71b2e2811ba74d7f",
-    ".agents/skills/testing/SKILL.md": "71b2e2811ba74d7f",
-    ".claude/skills/tilemaps-nav/SKILL.md": "2d8cd9b993b402fb",
-    ".agents/skills/tilemaps-nav/SKILL.md": "2d8cd9b993b402fb",
-    ".claude/skills/touch-input/SKILL.md": "f8302adf9832b3c7",
-    ".agents/skills/touch-input/SKILL.md": "f8302adf9832b3c7",
-    ".claude/skills/ui-documents/SKILL.md": "0aa8928ba4be01fe",
-    ".agents/skills/ui-documents/SKILL.md": "0aa8928ba4be01fe",
-    ".claude/skills/ui-mvc-views/SKILL.md": "7518c4cb0b7852e4",
-    ".agents/skills/ui-mvc-views/SKILL.md": "7518c4cb0b7852e4",
-    ".claude/skills/ui-views-to-documents/SKILL.md": "00efd75345dd2dfa",
-    ".agents/skills/ui-views-to-documents/SKILL.md": "00efd75345dd2dfa",
-    ".claude/skills/upgrade-to-guid-references/SKILL.md": "b41869d2a4f03541",
-    ".agents/skills/upgrade-to-guid-references/SKILL.md": "b41869d2a4f03541",
-    ".claude/skills/vfx/SKILL.md": "33698222d84d08de",
-    ".agents/skills/vfx/SKILL.md": "33698222d84d08de",
-    ".claude/skills/vfx-materials/SKILL.md": "6d8c89e0b251bb34",
-    ".agents/skills/vfx-materials/SKILL.md": "6d8c89e0b251bb34",
-    ".claude/skills/video/SKILL.md": "fdc04b22e68df865",
-    ".agents/skills/video/SKILL.md": "fdc04b22e68df865",
-    ".claude/skills/work-loop/SKILL.md": "11adfd03ed56ac13",
-    ".agents/skills/work-loop/SKILL.md": "11adfd03ed56ac13",
+    ".claude/skills/packages/references/install-and-access.md": "fcb0ce213912ad87",
+    ".agents/skills/packages/references/install-and-access.md": "fcb0ce213912ad87",
+    ".claude/skills/packages/SKILL.md": "86dacdf444e86cc7",
+    ".agents/skills/packages/SKILL.md": "86dacdf444e86cc7",
+    ".claude/skills/perf-to-rust/SKILL.md": "b58d5e2554a4275a",
+    ".agents/skills/perf-to-rust/SKILL.md": "b58d5e2554a4275a",
+    ".claude/skills/physics/SKILL.md": "8d5dc084d9531c03",
+    ".agents/skills/physics/SKILL.md": "8d5dc084d9531c03",
+    ".claude/skills/platform-services/references/lifecycle.md": "7aa56eb8f1903f41",
+    ".agents/skills/platform-services/references/lifecycle.md": "7aa56eb8f1903f41",
+    ".claude/skills/platform-services/references/manifest.md": "cedd606e35af71fe",
+    ".agents/skills/platform-services/references/manifest.md": "cedd606e35af71fe",
+    ".claude/skills/platform-services/SKILL.md": "9cdb90338719d6c6",
+    ".agents/skills/platform-services/SKILL.md": "9cdb90338719d6c6",
+    ".claude/skills/playable-ad-porting/references/meshes-3d.md": "9ab0d25c37c415c9",
+    ".agents/skills/playable-ad-porting/references/meshes-3d.md": "9ab0d25c37c415c9",
+    ".claude/skills/playable-ad-porting/references/physics-3d.md": "9c73d22f75714ad2",
+    ".agents/skills/playable-ad-porting/references/physics-3d.md": "9c73d22f75714ad2",
+    ".claude/skills/playable-ad-porting/references/profile.md": "fa8a2c36feeef7ab",
+    ".agents/skills/playable-ad-porting/references/profile.md": "fa8a2c36feeef7ab",
+    ".claude/skills/playable-ad-porting/SKILL.md": "c8932cc1d3175472",
+    ".agents/skills/playable-ad-porting/SKILL.md": "c8932cc1d3175472",
+    ".claude/skills/playable-ads/SKILL.md": "be5d2f84277da337",
+    ".agents/skills/playable-ads/SKILL.md": "be5d2f84277da337",
+    ".claude/skills/post-effects/SKILL.md": "8a8c5572639f5c4e",
+    ".agents/skills/post-effects/SKILL.md": "8a8c5572639f5c4e",
+    ".claude/skills/project-tools/SKILL.md": "dc818a8e6e0139ce",
+    ".agents/skills/project-tools/SKILL.md": "dc818a8e6e0139ce",
+    ".claude/skills/releases/SKILL.md": "e0f469acda057ce5",
+    ".agents/skills/releases/SKILL.md": "e0f469acda057ce5",
+    ".claude/skills/rollback-multiplayer/SKILL.md": "507be6657bc90f79",
+    ".agents/skills/rollback-multiplayer/SKILL.md": "507be6657bc90f79",
+    ".claude/skills/save-slots/SKILL.md": "373089233d95f21f",
+    ".agents/skills/save-slots/SKILL.md": "373089233d95f21f",
+    ".claude/skills/screen-fit/SKILL.md": "2f3972bb54b0d8ed",
+    ".agents/skills/screen-fit/SKILL.md": "2f3972bb54b0d8ed",
+    ".claude/skills/ship-mobile/SKILL.md": "96b615c12a40f88f",
+    ".agents/skills/ship-mobile/SKILL.md": "96b615c12a40f88f",
+    ".claude/skills/ship-web/references/sandboxed-previews.md": "bf8287b32c48b74e",
+    ".agents/skills/ship-web/references/sandboxed-previews.md": "bf8287b32c48b74e",
+    ".claude/skills/ship-web/SKILL.md": "596b75af9812a954",
+    ".agents/skills/ship-web/SKILL.md": "596b75af9812a954",
+    ".claude/skills/signals/SKILL.md": "e8b24c297b8d6fcd",
+    ".agents/skills/signals/SKILL.md": "e8b24c297b8d6fcd",
+    ".claude/skills/sim-boundaries/references/recipes.md": "0834698c7c47b095",
+    ".agents/skills/sim-boundaries/references/recipes.md": "0834698c7c47b095",
+    ".claude/skills/sim-boundaries/SKILL.md": "98a8910c9f2739e4",
+    ".agents/skills/sim-boundaries/SKILL.md": "98a8910c9f2739e4",
+    ".claude/skills/skeleton-2d/SKILL.md": "713201e0623945ca",
+    ".agents/skills/skeleton-2d/SKILL.md": "713201e0623945ca",
+    ".claude/skills/spine-import/references/psd-import.md": "ac55840cf9be8613",
+    ".agents/skills/spine-import/references/psd-import.md": "ac55840cf9be8613",
+    ".claude/skills/spine-import/SKILL.md": "3c92cd66ebe6bf75",
+    ".agents/skills/spine-import/SKILL.md": "3c92cd66ebe6bf75",
+    ".claude/skills/surface-paint/SKILL.md": "fee374494e1be475",
+    ".agents/skills/surface-paint/SKILL.md": "fee374494e1be475",
+    ".claude/skills/testing/references/budgets.md": "57906cf9a65cfa8a",
+    ".agents/skills/testing/references/budgets.md": "57906cf9a65cfa8a",
+    ".claude/skills/testing/SKILL.md": "1afca02971e0daca",
+    ".agents/skills/testing/SKILL.md": "1afca02971e0daca",
+    ".claude/skills/text-fields/SKILL.md": "34cf17f1a7fea53c",
+    ".agents/skills/text-fields/SKILL.md": "34cf17f1a7fea53c",
+    ".claude/skills/tilemaps-nav/SKILL.md": "80bb8d55ae5ff1c7",
+    ".agents/skills/tilemaps-nav/SKILL.md": "80bb8d55ae5ff1c7",
+    ".claude/skills/touch-input/SKILL.md": "987afdb5691e20db",
+    ".agents/skills/touch-input/SKILL.md": "987afdb5691e20db",
+    ".claude/skills/ui-documents/references/enter-exit.md": "4b2894b924b191c9",
+    ".agents/skills/ui-documents/references/enter-exit.md": "4b2894b924b191c9",
+    ".claude/skills/ui-documents/references/style-fields.md": "5512570d6f35a896",
+    ".agents/skills/ui-documents/references/style-fields.md": "5512570d6f35a896",
+    ".claude/skills/ui-documents/SKILL.md": "545945cd29ddb4ca",
+    ".agents/skills/ui-documents/SKILL.md": "545945cd29ddb4ca",
+    ".claude/skills/ui-mvc-views/references/css-animation.md": "a6b7e52c816d15c5",
+    ".agents/skills/ui-mvc-views/references/css-animation.md": "a6b7e52c816d15c5",
+    ".claude/skills/ui-mvc-views/references/tsx-elements.md": "880bac0fa93b47cb",
+    ".agents/skills/ui-mvc-views/references/tsx-elements.md": "880bac0fa93b47cb",
+    ".claude/skills/ui-mvc-views/references/unity-ui.md": "8cba445850d741b4",
+    ".agents/skills/ui-mvc-views/references/unity-ui.md": "8cba445850d741b4",
+    ".claude/skills/ui-mvc-views/SKILL.md": "7511afce841fb905",
+    ".agents/skills/ui-mvc-views/SKILL.md": "7511afce841fb905",
+    ".claude/skills/ui-views-to-documents/SKILL.md": "422c287620c03637",
+    ".agents/skills/ui-views-to-documents/SKILL.md": "422c287620c03637",
+    ".claude/skills/upgrade-to-guid-references/SKILL.md": "9f78f28dc4406096",
+    ".agents/skills/upgrade-to-guid-references/SKILL.md": "9f78f28dc4406096",
+    ".claude/skills/vfx/SKILL.md": "fcc6a96e98b9d79f",
+    ".agents/skills/vfx/SKILL.md": "fcc6a96e98b9d79f",
+    ".claude/skills/vfx-materials/SKILL.md": "2ed27831becf1648",
+    ".agents/skills/vfx-materials/SKILL.md": "2ed27831becf1648",
+    ".claude/skills/video/SKILL.md": "601d9e93f3f267b4",
+    ".agents/skills/video/SKILL.md": "601d9e93f3f267b4",
+    ".claude/skills/work-loop/SKILL.md": "c3bd3d5af9b46613",
+    ".agents/skills/work-loop/SKILL.md": "c3bd3d5af9b46613",
     ".claude/skills/branch-profile/SKILL.md": "6fe4058157f248cd",
     ".agents/skills/branch-profile/SKILL.md": "6fe4058157f248cd",
     ".claude/skills/cache-profile/SKILL.md": "d84ab56edf0899ad",

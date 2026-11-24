@@ -1,13 +1,11 @@
 ---
 name: meta-economy
-version: 1.5.2
+version: 1.6.0
 tier: optional
 description: Meta game state with @gameengine/meta (defineMeta) and world documents (defineDoc) — progression, currencies, inventory, upgrades, quests, daily rewards, the recorded WallClock, persisted meta and migrations. Use for anything a player keeps between levels or sessions.
 ---
 
 # Meta state and economy
-
-**Covers:** Meta game state — progression, currencies, inventory, upgrades, quests, daily rewards — with @gameengine/meta (defineMeta, actions, invariants, migrations, simulateMeta) and world documents (defineDoc), plus the recorded WallClock, persisted meta (MetaLoaded), tunables and visual pools (ADR 0091, samples/meta-hub). Use for anything a player keeps between levels or sessions.
 
 Meta is **one plain-JSON document per concern**, changed only by **named pure actions**.
 Not entities, not ad-hoc resources, not module variables.
@@ -38,7 +36,9 @@ export const shop = defineMeta({
 
 - **Actions are pure:** return a new state or `refuse(reason)`. No host calls, no randomness,
   no `Date.now()`. Random rewards: roll with `ctx.rng` in the system and pass the result in the
-  payload. Wall-clock time (daily rewards, production): pass `WallClock.ms` as `now` (below).
+  payload. `now` is the clock you pass to `dispatch`, in one unit per meta: the daily action above
+  counts seconds, so it gets `ctx.time` or `Math.floor(WallClock.ms / 1000)`; the farm below counts
+  milliseconds and gets `WallClock.ms`.
 - **Invariants** catch bugs where they happen: an action that breaks one (or returns a state that
   is not plain JSON) throws with the action and payload in the message. Refusals are for the
   player; invariants are for you.
@@ -51,7 +51,7 @@ export const shop = defineMeta({
 import { metaInWorld } from '@gameengine/meta/world';
 export const shopState = metaInWorld(shop, { persist: true });   // or { persist: { slot, throttleMs } }
 
-// in a sim system; `now` is required (ctx.time, or WallClock.ms)
+// in a sim system; `now` is required (here seconds: ctx.time)
 const r = shopState.dispatch('upgrade', null, ctx.time);
 if (!r.ok) toast(r.reason);
 // anywhere (views, LateUpdate)
@@ -98,7 +98,8 @@ is refused at its first load or write.
 - Replays and `--js both` see only the recorded `MetaLoaded`, never storage.
 - **Anything the screen shows from the save** (first launch, onboarding done, "welcome back",
   best score) lives in a persisted meta, and the view decides once `loaded()` is true, from
-  `useDoc(state)`. Never from `defineSave(...).load()` in UI: during replay playback storage
+  `useDoc(state)`. Never from `defineSave(...).load()` in UI (a save slot is for data only
+  presentation owns, such as settings or a slot the player picks; skill `save-slots`): during replay playback storage
   answers with its mock (`fresh: true`), so `replay play` would show a first launch the recorded
   player never saw.
 
@@ -143,7 +144,7 @@ export const Produce = defineSystem({
 - **Visuals the presentation adds and removes** (a coin pile that follows the balance, a carried
   stack): a `visualPool({ name, prefab, size, draws })` the sim fills once; a LateUpdate system
   places them (`pool.begin(q)`, `f.show(x, y, z, scale)`, `f.end()`), and unused items get
-  `visible: false` (skill `sim-boundaries`, ADR 0091).
+  `visible: false` (skill `sim-boundaries`).
 - **In a view:** `useDoc(shopState)` (skill `ui-mvc-views`); never read the device clock or storage
   in UI to emit it to the sim.
 

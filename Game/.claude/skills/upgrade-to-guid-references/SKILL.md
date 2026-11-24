@@ -1,14 +1,14 @@
 ---
 name: upgrade-to-guid-references
-version: 1.0.0
-tier: required
+version: 1.1.0
+tier: optional
 description: One-time upgrade of a project made before scenes and prefabs moved under assets/ and references became GUIDs — documents move, refs migrate, refs fix, re-pinning hashes and replays, code comparing paths. Use when the project has root scenes/ or prefabs/ folders, or validate reports I_ASSET_REF_PATH, E_ASSET no .gmeta or E_DOCUMENT_GUID.
 ---
 
 # Upgrade to GUID references
 
 A one-time migration for projects made with an engine from before scenes and prefabs moved under
-`assets/` and references became `{ "guid" }` (ADR 0770). It applies only when one of these holds:
+`assets/` and references became `{ "guid" }`. It applies only when one of these holds:
 the project has `scenes/` or `prefabs/` folders at its root; `gameengine validate` prints
 `I_ASSET_REF_PATH` info lines, `E_ASSET: … no .gmeta sidecar` or `E_DOCUMENT_GUID`. A project
 without them is already migrated: this skill has nothing for it, whatever the engine version.

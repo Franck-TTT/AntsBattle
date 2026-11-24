@@ -1,13 +1,11 @@
 ---
 name: screen-fit
-version: 1.7.0
+version: 1.8.0
 tier: required
 description: Screen fit on every phone and tablet shape (9:22 to 3:4, folds, portrait and landscape) — the board whole and clear of HUD and safe area, views that never clip, WorldView fit, @media (aspect), `view render --devices`. Use when building a board, camera, HUD or view, or when something is cut off on a device.
 ---
 
 # Fit every screen
-
-**Covers:** Making a mobile game fit every screen shape, from very narrow phones (9:22, fold cover screens) to tablets (3:4) and fold inner screens, in portrait and landscape — the board or play area always whole and clear of the HUD, notch and home indicator, views that never clip or overlap, backgrounds that bleed instead of letterboxing. Covers WorldView fit (designAspect, Contain/Cover), fitWorldView/worldFit (the board fitted into the area the HUD and safe area leave free), ui.referenceResolution/match, @media (aspect) breakpoints, text-fit, and the device matrix to prove it with (view render --size/--devices, input.view in renderTests, screenshots). Use whenever you build or change a board, camera, level layout, HUD or any view for a game that runs on phones, and when something "goes off screen" or "is cut off" on some device.
 
 A game that works on the phone in front of you is not done: phones go from **9:22** (fold cover
 screens, 21:9 phones) through 9:19.5 and 9:16 to **3:4 tablets** and almost-square fold inner
@@ -82,8 +80,8 @@ skill `sim-boundaries`; adding, following or shaking a camera is skill `camera`)
   fit its width (more world above and below), wider ones fit its height (more at the sides).
 - `'Cover'` fills the screen with the rect and cuts the overflow. Use it only for backgrounds or
   free-scrolling worlds, never for a board that must be whole.
-- `'Height'` and `'Width'` lock one axis. `'Height'` is what goes wrong on narrow phones: the
-  sides fall off screen.
+- `'Height'` and `'Width'` lock one axis. `'Height'` with a fixed size is what goes wrong on narrow phones: the
+  sides fall off screen (`fitWorldView` below also uses `'Height'`, but recomputes the size for each screen).
 
 **Rule 1: `designAspect` is the aspect of the content that must be seen, not 9/16.** An 8×10
 board with a 0.5-unit margin is 9×11: `designAspect: 9 / 11, orthoSize: 5.5, fit: 'Contain'`.

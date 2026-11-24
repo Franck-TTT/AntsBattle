@@ -1,0 +1,133 @@
+{
+  "$schemaVersion": 1,
+  "guid": "53892880-8978-4fc2-8ee0-660f41abe0a6",
+  "name": "hud",
+  "title": "Hud",
+  "kind": "view",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Hud",
+      "style": {
+        "w": "100%",
+        "h": "100%",
+        "pad": 0,
+        "dir": "column"
+      },
+      "children": [
+        "h_bar"
+      ]
+    },
+    "h_bar": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "hud_statchip",
+        "hud_statchip2",
+        "hud_statchip3",
+        "hud_statchip4"
+      ],
+      "style": {
+        "pad": [
+          20,
+          18,
+          34,
+          18
+        ],
+        "dir": "row",
+        "h": 190,
+        "gap": 12,
+        "align": "center"
+      }
+    },
+    "hud_statchip": {
+      "type": "use",
+      "doc": "stat-chip",
+      "key": "wave",
+      "props": {
+        "caption": "WAVE",
+        "amount": {
+          "property": "wave"
+        },
+        "suffix": "/10",
+        "tone": "wave"
+      }
+    },
+    "hud_statchip2": {
+      "type": "use",
+      "doc": "stat-chip",
+      "key": "gold",
+      "props": {
+        "caption": "GOLD",
+        "amount": {
+          "property": "gold"
+        },
+        "tone": "gold"
+      }
+    },
+    "hud_statchip3": {
+      "type": "use",
+      "doc": "stat-chip",
+      "key": "lives",
+      "props": {
+        "caption": "LIVES",
+        "amount": {
+          "property": "lives"
+        },
+        "tone": "lives"
+      }
+    },
+    "hud_statchip4": {
+      "type": "use",
+      "doc": "stat-chip",
+      "key": "walls",
+      "props": {
+        "caption": "FREE WALLS",
+        "amount": {
+          "property": "walls"
+        },
+        "tone": "walls"
+      }
+    }
+  },
+  "view": {
+    "behaviour": "none"
+  },
+  "properties": {
+    "wave": {
+      "type": "number",
+      "default": 1,
+      "format": "value"
+    },
+    "gold": {
+      "type": "number",
+      "default": 60,
+      "format": "value"
+    },
+    "lives": {
+      "type": "number",
+      "default": 10,
+      "format": "value"
+    },
+    "walls": {
+      "type": "number",
+      "default": 8,
+      "format": "value"
+    }
+  },
+  "samples": {
+    "start": {
+      "wave": 1,
+      "gold": 60,
+      "lives": 10,
+      "walls": 8
+    },
+    "late": {
+      "wave": 9,
+      "gold": 1250,
+      "lives": 3,
+      "walls": 0
+    }
+  }
+}

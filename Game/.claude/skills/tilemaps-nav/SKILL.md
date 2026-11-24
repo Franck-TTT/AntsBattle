@@ -1,6 +1,6 @@
 ---
 name: tilemaps-nav
-version: 1.1.3
+version: 1.2.0
 tier: optional
 description: Tile layers and grid pathfinding in Game Engine — *.tilemap.json levels, the Tilemap component and editor panel, NavGrid.fromTilemap, findPath and smoothPath (sim-safe, integer costs). Use for levels made of tiles, mazes, grid boards, or anything that walks around walls on a 2D grid (3D obstacles are navigation-3d).
 ---
@@ -13,7 +13,7 @@ component draws it; navigation reads the same file, so what you see is what the 
 
 **Edit it** in the editor's Tilemap panel (pick a layer, click or drag to paint, Enter/Space
 from the keyboard) or as JSON. Both save the same file; a running session picks it up at once.
-A new tilemap file needs its `.gmeta`: write it with `gameengine cmd asset.setText` (it writes a new file under `assets/` with its sidecar) or run `gameengine cook` once after adding files, and commit the `.gmeta`; until then `validate` fails with `E_ASSET: no .gmeta sidecar`. The `Tilemap` component's
+A new tilemap file needs its `.gmeta` sidecar (skill `work-loop`, § New files, scenes and prefabs). The `Tilemap` component's
 `sortingLayer` defaults to `Background`, which a new project's `render.sortingLayers` (`["Default"]`) lacks:
 add the layer there or set `sortingLayer` to one the project declares.
 
@@ -36,7 +36,7 @@ const waypoints = smoothPath(g, path ?? []).map((c) => g.centerOf(c));
   returns a fresh grid (a host call plus a copy), so hoist it out of per-entity loops.
 - A cooked game reads tilemaps into memory at start with the data assets (up to 4 MB together);
   past that, list each level's `*.tilemap.json` in its asset group, or `fromTilemap` reads storage
-  mid-frame (a logged hitch that `gameengine check` reports; skill `asset-memory`, ADR 0089).
+  mid-frame (a logged hitch that `gameengine check` reports; skill `asset-memory`).
 - Dynamic blockers: every `fromTilemap` grid is your own, so `setWalkable` and `cost` edits never
   leak into other callers or the next run; weights go in `cost` (0–255, a straight step is 10).
 - `lineOfSight` is a full supercover: every cell the segment touches must be walkable, and a

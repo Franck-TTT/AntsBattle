@@ -1,16 +1,11 @@
 ---
 name: keyframe-animation
-version: 1.0.1
+version: 1.1.0
 tier: optional
 description: Keyframe animation of scene entities — *.timeline.json v2 (path tracks, lane keys, step, tangents), TimelinePlayer, playTimeline, TimelineEvent, `gameengine timeline` and MCP timeline_*, the editor's Animation dock and Rec. Use to animate doors, chests, UI props, banners or cutscenes in games and playable ads.
 ---
 
 # Keyframe animation of entities (`*.timeline.json`)
-
-**Covers:** keyframe animation of scene entities and their children in games and playable ads:
-the timeline file (v2), the `TimelinePlayer` component and `playTimeline`/`stopTimeline`, events,
-the `gameengine timeline` commands (MCP `timeline_*`) and the editor's Animation dock. Use to
-animate doors, chests, pickups, banners, intros and cutscenes without code per value.
 
 For frame-by-frame sprites use skill `flipbook-2d`; for rigs, `skeleton-2d` or
 `animation-3d-agent`; for a one-off value change from code, `tween()`.

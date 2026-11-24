@@ -1,13 +1,13 @@
 ---
 name: extension-points
-version: 1.0.0
+version: 1.1.0
 tier: optional
 description: Extension points instead of reflection - gameengine.extensionPoints and contributes in package.json, src/extensions.gen.ts, kinds as values (defineXKind), _type_-tagged data and editor forms from one list. Use when porting Unity code that finds subclasses or [Attribute] classes, or when packages add kinds to a registry.
 ---
 
 # Extension points: kinds without reflection
 
-Unity code often finds its parts by reflection: every subclass of `TaskStepAction`, every class with an
+Unity code often finds its parts by reflection: every subclass of `QuestStep`, every class with an
 `[ActionType]` attribute, `TypeCache.GetTypesDerivedFrom<T>()`, polymorphic JSON tagged with a type name. A new
 package adds a kind just by being in the project. Game Engine has no reflection, and sim code must not depend on
 what happens to be imported. Do the same with an **extension point**: a typed list one package declares, that other
@@ -113,11 +113,11 @@ author. `gameengine package list` shows each package's points and contributions.
 
 | Unity | Game Engine |
 |---|---|
-| `abstract class TaskStepAction` + subclasses | `defineXKind({...})` values of one exported type |
+| `abstract class QuestStep` + subclasses | `defineXKind({...})` values of one exported type |
 | `[ActionType]`, `TypeCache.GetTypesDerivedFrom<T>()` | `gameengine.contributes` + `src/extensions.gen.ts` |
 | `[JsonSerializable("si")] int stageIndex` | a field `si: f.int({ as: 'stageIndex', default: 0 })` on the kind |
 | polymorphic JSON `_type_` | the same tag, decoded with the kind from the list |
-| `ITaskStepActionHandler` per type | a method on the kind, looked up by `type` |
+| `IQuestStepHandler` per type | a method on the kind, looked up by `type` |
 | editor `IActionType` per class | editor metadata on the kind; a custom card only where a form cannot show it |
 
 ## Checks before handing back

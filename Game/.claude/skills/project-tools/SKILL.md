@@ -1,13 +1,11 @@
 ---
 name: project-tools
-version: 1.2.1
+version: 1.4.0
 tier: optional
-description: Project commands for the CLI and MCP with defineTool (tools/*.tool.ts) — level reports, balance tables, content checks, batch edits. Use when a task repeats, when an agent keeps doing the same multi-step inspection, or when a package should ship a tool.
+description: Project commands and checks — defineTool (tools/*.tool.ts) for the CLI and MCP (level reports, balance tables, batch edits) and defineCheck (tools/*.check.ts), which gameengine check, the Stop hook and builds run. Use when a task repeats, when a correctness check should gate every hand-back and build, or when a package ships either.
 ---
 
 # Project tools
-
-**Covers:** Adding the project's own commands to the gameengine CLI and MCP server with defineTool (tools/*.tool.ts) — level reports, balance tables, content checks, batch edits — so agents and people run one command instead of many steps. Use when a task repeats, when an agent keeps doing the same multi-step inspection, or when a package should ship a tool.
 
 A file in `tools/` that exports `defineTool(...)` becomes both a CLI command and an MCP tool:
 
@@ -62,7 +60,48 @@ reads tools when it starts: restart it (reconnect the client) after adding one.
 - A `tools/*.build.ts` file exporting `defineBuildStep` or `defineBuildCheck` (same
   `@gameengine/tools`) is not a tool but a build step or check: it runs when the game is built
   ([build steps and checks](../create-engine-package/references/build-steps.md)).
+- A tool that only judges the project (pass or fail) is a check, not a tool: see below.
 - Test a tool like any code: a vitest that loads it and calls `run`, or `gameengine tool` in CI.
+
+## Project checks
+
+A correctness check (an image drawn out of shape, a missing key, a wrong dependency direction) is
+one `tools/<name>.check.ts` file. `gameengine check` runs it after its own steps, and so do the
+Stop hook, a CI job that runs `gameengine check`, and every `gameengine build android|ios` (pre-build).
+Never write the same check again as a tool or list it by hand in a gate.
+
+```ts
+// tools/sprite-aspect.check.ts: id game/sprite-aspect
+import { defineCheck } from '@gameengine/tools';
+
+export const spriteAspect = defineCheck({
+  name: 'sprite-aspect',
+  description: 'UI images keep the aspect ratio of their art',
+  run(ctx) {
+    for (const file of ctx.glob('ui/**/*.ui.json')) {
+      // ...read it with ctx.read(file)
+      ctx.fail('hud/coin: 64x64 art drawn 128x80, out of shape', { file });
+    }
+  },
+});
+```
+
+- `ctx.fail(text, { file })` fails the check (a throw does too), `ctx.warn` only reports. The
+  context reads, globs and type-checks (`ctx.types()`) the project and never writes it.
+- `ctx.exec(command, args)` runs a command and resolves with `{ code, stdout, stderr, timedOut }`
+  to wrap an existing test or engine command, such as `ctx.exec('node', ['--test', 'tools/'])`.
+  Fail on its exit code. The engine's CLI (`join` from `node:path`):
+  `ctx.exec(process.execPath, [join(ctx.engine, 'tools/cli/bin/gameengine.mjs'), 'collection', 'check'])`.
+- `platforms: ['android', 'ios']` limits it: `gameengine check` runs it once per listed platform
+  (`ctx.build.platform`, always the release config), a build only for the platform it builds.
+- `slow: true` keeps it out of the Stop hook (`gameengine check --hook`); everything else runs it.
+- `gameengine checks list` lists the game's and its packages' checks; `gameengine check --only
+  game/sprite-aspect` runs one alone (no built-in steps), `--skip <glob>` leaves some out, and
+  `--checks warn|off` reports failures as warnings or runs none. Over MCP: `checks_list`, and
+  `check` with `only`.
+- A package ships checks as `build/*.check.ts`; every game that uses the package runs them.
+
+Example: `tools/source-size.check.ts` in a new project.
 
 ## In packages
 

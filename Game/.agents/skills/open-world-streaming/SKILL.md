@@ -1,13 +1,11 @@
 ---
 name: open-world-streaming
-version: 1.6.0
+version: 1.7.0
 tier: optional
 description: Big worlds streamed in cells with @gameengine/stream — StreamFocus, StreamCell, Dormant, per-cell saves, recycled slot rings for procedural worlds, floating origin, SpatialHash. Use for levels larger than a screen or two, endless runners, open world, chunks, regions or LOD.
 ---
 
 # Open worlds: streaming, dormancy, floating origin
-
-**Covers:** Big worlds in Game Engine — cells streamed around the player with @gameengine/stream (defineStreaming, StreamFocus, StreamCell, Dormant), saved changes per cell, recycle mode for procedural worlds (a fixed ring of slots rebuilt in place, no spawns in play, a keyed change overlay, loading covers that wait for it), the floating origin, SpatialHash, and how systems must treat far or unloaded content. Use for any level larger than a screen or two, endless runners and drivers, or anything with "open world", "chunks", "regions", "tiles", "slots" or "LOD".
 
 ## Streaming or a scene switch
 
@@ -51,7 +49,7 @@ is the fallback that breaks when they move.
 When a cell's content is a pure function of its coordinates and the seed (an endless road, a
 city from a seed, a runner's track), don't author cell files and don't spawn per cell: keep a
 fixed ring of **slots** that are rebuilt in place. Nothing is spawned or despawned in play, and
-memory stays flat however far the player goes (ADR 0129).
+memory stays flat however far the player goes.
 
 ```ts
 export const city = defineStreaming({

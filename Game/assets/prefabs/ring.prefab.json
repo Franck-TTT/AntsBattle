@@ -1,0 +1,22 @@
+{
+  "$schemaVersion": 2,
+  "guid": "6ad5d01d-41d9-45f7-865c-0dc7e84c6369",
+  "id": "ring",
+  "entities": [
+    {
+      "name": "CooldownRing",
+      "id": "ring-root",
+      "LocalTransform": {},
+      "Sprite": {
+        "image": { "guid": "4d8faba4-ca55-4d90-b993-51f2461ef45d" },
+        "size": [0.86, 0.86],
+        "color": "#ffffffe6",
+        "mode": "Filled",
+        "fillMethod": "Radial360",
+        "fillOrigin": "Top",
+        "fillAmount": 0,
+        "order": 7
+      }
+    }
+  ]
+}

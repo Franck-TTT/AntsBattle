@@ -1,0 +1,251 @@
+{
+  "$schemaVersion": 1,
+  "guid": "a767f87d-7878-4139-aae5-6a8ac107dfb3",
+  "name": "stat-chip",
+  "title": "Stat chip",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Stat chip",
+      "style": {
+        "dir": "row",
+        "pad": [
+          10,
+          16,
+          10,
+          16
+        ],
+        "align": "center",
+        "bg": "#1a1220dd",
+        "radius": 28,
+        "gap": 14,
+        "h": 118,
+        "w": 0,
+        "grow": 1,
+        "minW": 0
+      },
+      "children": [
+        "sc_icon",
+        "sc_text"
+      ]
+    },
+    "sc_icon": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "sc_dot"
+      ],
+      "style": {
+        "pad": 0,
+        "w": 54,
+        "h": 54,
+        "radius": 27,
+        "bg": "#ffc51fff",
+        "shrink": 0
+      },
+      "point": "target"
+    },
+    "sc_dot": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "w": 22,
+        "h": 22,
+        "radius": 11,
+        "bg": "#00000040",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ]
+      }
+    },
+    "sc_text": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "sc_caption",
+        "sc_value"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "column",
+        "gap": 0,
+        "grow": 1,
+        "minW": 0
+      }
+    },
+    "sc_caption": {
+      "type": "label",
+      "name": "Label",
+      "text": "{caption}",
+      "style": {
+        "fontSize": 24,
+        "fitMin": 14,
+        "weight": 800,
+        "color": "#ffffffaa",
+        "letterSpacing": 1
+      }
+    },
+    "sc_value": {
+      "type": "label",
+      "name": "Label",
+      "text": "{amount}{suffix}",
+      "style": {
+        "fontSize": 50,
+        "fitMin": 26,
+        "weight": 900,
+        "color": "#ffffffff",
+        "outline": 3,
+        "outlineColor": "#00000099"
+      }
+    }
+  },
+  "properties": {
+    "caption": {
+      "type": "text",
+      "default": "GOLD"
+    },
+    "amount": {
+      "type": "number",
+      "default": 60,
+      "format": "value",
+      "drivers": [
+        {
+          "type": "smooth",
+          "min": 250,
+          "max": 700
+        },
+        {
+          "type": "steps",
+          "by": 1
+        }
+      ]
+    },
+    "suffix": {
+      "type": "text",
+      "default": ""
+    },
+    "tone": {
+      "type": "enum",
+      "values": [
+        "wave",
+        "gold",
+        "lives",
+        "walls"
+      ],
+      "default": "wave",
+      "poses": {
+        "wave": {
+          "set": {
+            "sc_icon": {
+              "bg": "#e2482aff"
+            }
+          }
+        },
+        "gold": {
+          "set": {
+            "sc_icon": {
+              "bg": "#ffc51fff"
+            }
+          }
+        },
+        "lives": {
+          "set": {
+            "sc_icon": {
+              "bg": "#ff3b5cff",
+              "radius": 14
+            }
+          }
+        },
+        "walls": {
+          "set": {
+            "sc_icon": {
+              "bg": "#a7afb8ff",
+              "radius": 10
+            }
+          }
+        }
+      }
+    }
+  },
+  "reactions": {
+    "gain": {
+      "on": {
+        "property": "amount",
+        "change": "up",
+        "when": "now"
+      },
+      "set": {
+        "root": {
+          "scale": 1.1
+        },
+        "sc_icon": {
+          "scale": 1.25
+        }
+      },
+      "in": {
+        "type": "easeOut",
+        "ms": 80
+      },
+      "hold": 60,
+      "back": {
+        "type": "elastic",
+        "ms": 380,
+        "amplitude": 1.1,
+        "period": 0.3
+      }
+    },
+    "loss": {
+      "on": {
+        "property": "amount",
+        "change": "down",
+        "when": "now"
+      },
+      "set": {
+        "root": {
+          "scale": 1.12,
+          "bg": "#c0392bff"
+        }
+      },
+      "in": {
+        "type": "easeOut",
+        "ms": 50
+      },
+      "hold": 120,
+      "back": {
+        "type": "elastic",
+        "ms": 480,
+        "amplitude": 1,
+        "period": 0.3
+      }
+    }
+  },
+  "samples": {
+    "gold": {
+      "caption": "GOLD",
+      "amount": 125,
+      "tone": "gold"
+    },
+    "wave": {
+      "caption": "WAVE",
+      "amount": 4,
+      "suffix": "/10",
+      "tone": "wave"
+    },
+    "lives": {
+      "caption": "LIVES",
+      "amount": 10,
+      "tone": "lives"
+    },
+    "walls": {
+      "caption": "FREE WALLS",
+      "amount": 8,
+      "tone": "walls"
+    }
+  }
+}

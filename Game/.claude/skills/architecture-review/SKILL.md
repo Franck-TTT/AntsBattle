@@ -1,13 +1,11 @@
 ---
 name: architecture-review
-version: 1.5.0
+version: 1.6.0
 tier: required
 description: Architecture review of a game (a file, feature, package or the whole project) for layering (input → sim → presentation), data ownership, module boundaries, determinism, testability and scale. Use before merging a feature, when splitting code into a package, or when asked whether a design is sound.
 ---
 
 # Architecture review
-
-**Covers:** Reviewing the architecture of a Game Engine game — a file, a feature with its dependencies and dependents, a package, or the whole project — across TypeScript sim systems, UI views, services, Rust native systems, schema, scenes and packages: layering (input → sim → presentation), data ownership, module boundaries, determinism, testability and how it scales with content and team. Use before merging a feature, when splitting code into a package, or when asked whether a design is sound.
 
 Judge the design against how this engine works, not against generic patterns. The rules that
 matter most are the ones that break replays, saves, tests and teams later.

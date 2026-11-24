@@ -1,0 +1,14 @@
+/* Coins flying from a kill to the gold counter (positioned by the HUD view in reference px). */
+.hud-root { width: 100%; height: 100%; }
+.hud-flights { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+.hud-coin {
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  margin-left: -23px;
+  margin-top: -23px;
+  border-radius: 23px;
+  background-color: #ffc51f;
+  border-width: 5px;
+  border-color: #b8860b;
+}

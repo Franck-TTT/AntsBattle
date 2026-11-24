@@ -1,0 +1,111 @@
+{
+ "$schemaVersion": 1,
+ "name": "hit",
+ "emitters": [
+  {
+   "name": "flash",
+   "capacity": 1,
+   "bursts": [
+    {
+     "at": 0,
+     "count": 1
+    }
+   ],
+   "loop": false,
+   "lifetime": [
+    0.07,
+    0.07
+   ],
+   "speed": [
+    0,
+    0
+   ],
+   "size": [
+    0.38,
+    0.38
+   ],
+   "color": [
+    1,
+    0.95,
+    0.6,
+    1
+   ],
+   "colorOverLife": [
+    [
+     0,
+     1,
+     1,
+     1,
+     1
+    ],
+    [
+     1,
+     1,
+     1,
+     1,
+     0
+    ]
+   ],
+   "sizeOverLife": [
+    [
+     0,
+     0.6
+    ],
+    [
+     1,
+     1.1
+    ]
+   ],
+   "blend": "additive"
+  },
+  {
+   "name": "sparks",
+   "capacity": 8,
+   "bursts": [
+    {
+     "at": 0,
+     "count": 5
+    }
+   ],
+   "loop": false,
+   "lifetime": [
+    0.12,
+    0.2
+   ],
+   "speed": [
+    3,
+    5
+   ],
+   "drag": 6,
+   "size": [
+    0.05,
+    0.08
+   ],
+   "color": [
+    1,
+    0.8,
+    0.3,
+    1
+   ],
+   "orient": "velocity",
+   "stretch": 0.05,
+   "colorOverLife": [
+    [
+     0,
+     1,
+     1,
+     1,
+     1
+    ],
+    [
+     1,
+     1,
+     0.3,
+     0.05,
+     0
+    ]
+   ],
+   "blend": "additive"
+  }
+ ]
+}

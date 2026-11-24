@@ -51,7 +51,7 @@
     "orientation": "portrait"
   },
   "text": {
-    "defaultFont": "fonts/NotoSans-Regular"
+    "defaultFont": { "guid": "8ef6f051-c314-4d1d-a09a-e3c1f1886ff9" }
   },
   "bundles": [
     {
@@ -69,7 +69,7 @@
   "platforms": [
     "mobile"
   ],
-  "startScene": "scenes/main.scene.json",
+  "startScene": { "guid": "76b5586a-1c06-4634-8801-f405a3facf6f" },
   "plugins": [
     "privacy-manifest"
   ],

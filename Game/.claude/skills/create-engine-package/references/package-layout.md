@@ -45,9 +45,11 @@ only to show their manifest keys.
   `part` are reserved). `"glyphSources": ["assets/strings"]` names project folders whose `.json`
   files the cook pre-bakes into fonts (relative, not `assets` itself).
 - **Content beside `assets/`:** `"contentFolders": ["strings"]` (or `{ "folder": "strings", "private":
-  ["notes.json"] }`) gives the package a top-level project folder: the cook ships its `.json` files
-  (not hidden ones nor the private names), loose runs serve them, sessions and the editor hot-reload
-  them, and the package's Rust reads one with `read_data("strings/en.json")`. Never a folder the
+  ["notes.json"] }`) gives the package a top-level project folder: the cook ships its `.json` files,
+  subfolders included (not hidden files or folders, nor the private names in any subfolder), loose
+  runs serve them, sessions and the editor hot-reload them. The package's TypeScript lists them with
+  `listContent('strings')` and reads one as plain JSON with `loadContent('strings/en.json')` (from
+  `@gameengine/runtime`); its Rust reads one with `read_data("strings/en.json")`. Never a folder the
   engine owns (`assets`, `ui`, `src`, …, in any case), and never one another installed package
   declares: `gen` refuses both.
 - **Build steps and checks:** `"gameengine": { "build": "build" }` and `build/*.build.ts` files. Read [build steps and checks](build-steps.md).

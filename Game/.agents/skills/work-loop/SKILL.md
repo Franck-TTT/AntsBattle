@@ -1,13 +1,25 @@
 ---
 name: work-loop
-version: 1.17.0
+version: 1.19.0
 tier: required
 description: The edit → test → inspect loop for a Game Engine game and the CLI command for each step — gameengine test, hash traces, goldens, headless sessions, step/screenshot/world query, ui press, view render, cheats, replays. Use at the start of any gameplay, UI or content task, or when unsure which command checks a change.
 ---
 
 # Work loop
 
-The commands below need `gameengine` on PATH. If the session started with "gameengine is not on PATH", put it there once: `node .gameengine/engine/tools/cli/bin/gameengine.mjs setup --path` (or `node tools/cli/bin/gameengine.mjs setup --path` in the engine checkout; plain `setup` does it too, with the toolchain) writes a launcher into a user bin directory on PATH (`--dir <dir>` picks one; `gameengine doctor` checks it), then start a new session. Until then, `node .gameengine/engine/tools/cli/bin/gameengine.mjs` runs the same CLI.
+## The loop
+
+1. Change code or content, keeping every save compiling (`gameengine gen` after a schema edit).
+2. `gameengine test`: prove the behaviour with a test or a replay, never by reading code.
+3. Look at it: `gameengine run --headless`, then `step`, `screenshot`, `world query`, `ui press`, `view render`.
+4. `gameengine check` before handing back, and fix what it reports.
+5. Stop every session you started.
+
+**Done means a test or replay shows the behaviour, not that the code compiles.** Every command takes `--json`. Read errors; they name the fix.
+
+## Commands
+
+The commands below need `gameengine` on PATH. If the session started with "gameengine is not on PATH", put it there once: `node .gameengine/engine/tools/cli/bin/gameengine.mjs setup --path` (plain `setup` does it too, with the toolchain) writes a launcher into a user bin directory on PATH (`--dir <dir>` picks one; `gameengine doctor` checks it), then start a new session. Until then, `node .gameengine/engine/tools/cli/bin/gameengine.mjs` runs the same CLI.
 
 | Step | Command |
 |---|---|
@@ -29,21 +41,28 @@ The commands below need `gameengine` on PATH. If the session started with "gamee
 | Rust systems | `gameengine test --native both` (Rust = its TypeScript twin), `gameengine native asm <System>` (skill `perf-to-rust`) |
 | What a build ships | `gameengine build android --config release --dry-run --report` (skill `ship-mobile`) |
 | Playable ads | `gameengine playable new` / `run` / `build` / `validate <ad>` (skill `playable-ads`) |
-| Stop | `gameengine session stop --all` |
+| Stop the session you started | `gameengine session stop --session <pid>` (`--all` stops the user's sessions too: only when asked) |
 | The editor the user watches | `gameengine editor state`, `gameengine editor mode editor.play`, `gameengine editor play` / `stop`, `gameengine editor stream on` (URL in `editor state`), `gameengine editor call render.stats --role game`, `gameengine editor restart-engine` (when `editor state` says `editEngine.running: false`), `gameengine editor screenshot out.png` (MCP `editor`, `editor_screenshot`) |
 | The editor's console | `gameengine editor console --level error` (`--since <next>` for only new entries, `--follow` to keep reading): script errors, rejected hot reloads, cook failures, stale engine binaries |
-| Before handing back | `gameengine check`: validate, cook, and a smoke run of the cooked game (`check.smoke` in `project.gameengine.json`: `frames`, `input`); `--tests` adds the game tests on V8 and Hermes, `gameengine test --cooked` runs them on cooked content |
+| Before handing back | `gameengine check`: validate, cook, a smoke run of the cooked game (`check.smoke` in `project.gameengine.json`: `frames`, `input`), then the project's checks (`gameengine checks list`; `--only <id>` runs one alone, `--skip <glob>` leaves some out); `--tests` adds the game tests on V8 and Hermes, `gameengine test --cooked` runs them on cooked content |
+
+- **An animated result is checked at its last frame.** A view at rest says nothing about where a flight, a fill or a slide ends: render it at the end (`view render <View> --times end`, or `--times` up to the end on the slim and the wide device) and assert where it landed in a test (`ui.finishAnimations()`, then `expect('coin').toLandOn('coins.target')`; skill `testing`).
+
+## Hot reload
 
 - Hot reload keeps the session's world. A bundle that fails to build or load is rejected and the last good build keeps running.
   - **A headless session started with `--watch`** reloads on every save. Wait for its `::reload::` line before you check the edit: `script … ok` means the new code runs, `refused: <reason>` means it does not (the reason names the file and position of a build error). `asset`, `ui` and `material` lines say the session reloaded that content from disk; a file that then fails to load is reported in the session's log (`gameengine session list` names it), not on the line. A changed `*.material.ts` is compiled for you.
   - **A headless session started without `--watch`** is reloaded by the next `step`, `screenshot`, `world`, `ui` or `view` command when the code changed since (stderr: `hot-reloaded session …`, or a warning when the code does not build), so a check right after an edit shows the edit. `gameengine call` does not reload.
   - **In the editor**, each reload logs `reloaded: …` (category `hot-reload`): wait for it with `gameengine editor console --since <next>` instead of asking the user to restart anything.
-- A schema change is not a plain reload: the editor restarts its edit engine, which rebuilds the project's native host first. Run `gameengine gen` before saving code that uses new schema types, and wait for `edit engine restarted` or `restart failed: …` in the console (AGENTS.md "The live project" says what to do on a failure).
+- A schema change is not a plain reload: the editor restarts its edit engine, which rebuilds the project's native host first. Run `gameengine gen` before saving code that uses new schema types, and wait for `edit engine restarted` or `restart failed: …` in the console (§ The live project says what to do on a failure).
 - Session-start config (`project.gameengine.json`, `pipelines.json`, `input.json`) is the exception: a headless session needs `session stop` and `run` again (so does one whose reload was refused with `schema changed`); the editor restarts its edit engine itself and offers Restart Play.
-- Every command takes `--json`. Read errors; they name the fix.
-- **New asset files need a `.gmeta` sidecar** (its GUID and importer): create text assets (effects, materials, tilemaps, clips, banks, data) with `gameengine cmd asset.setText` (it writes a new file under `assets/` with its sidecar) or run `gameengine cook` once after adding files, and commit the `.gmeta`; until then `validate` fails with `E_ASSET: no .gmeta sidecar`.
-- Done means a test or replay shows the behaviour, not that the code compiles.
-- **An animated result is checked at its last frame.** A view at rest says nothing about where a flight, a fill or a slide ends: render it at the end (`view render <View> --times end`, or `--times` up to the end on the slim and the wide device) and assert where it landed in a test (`ui.finishAnimations()`, then `expect('coin').toLandOn('coins.target')`; skill `testing`).
+
+## New files, scenes and prefabs
+
+- **New asset files need a `.gmeta` sidecar** (its GUID and importer): create text assets (effects, materials, tilemaps, clips, banks, data) with `gameengine cmd asset.setText --params '{"path":"assets/fx/boom.vfx.json","text":"…"}'` (it writes a new file under `assets/` with its sidecar) or run `gameengine cook` once after adding files, and commit the `.gmeta`; until then `validate` fails with `E_ASSET: no .gmeta sidecar`.
+- **Make a prefab** with the editor's commands, or by hand: a batch script (`gameengine editor --batch make-coin.json`) with `"new": true`, `"commands"` that build it (`scene.createEntity`, `scene.setComponentField`) and `"save": "assets/prefabs/coin.prefab.json"`; place it in a scene with `scene.instantiatePrefab` (`source`, `parent`, `name`, `overrides`; a `source` given as the prefab's GUID writes a `{ "guid" }` reference, a path writes a path string that `validate` notes as `I_ASSET_REF_PATH`). The commands are listed in `gameengine cmd --list`; each step is `{ "name": "scene.createEntity", "params": { … } }`.
+- **A new scene or prefab can be hand-written without a `guid`**: leave it out and run `gameengine fmt`, which gives the file one and puts it in canonical form (until then `validate` fails it with `E_DOCUMENT_GUID`, or warns `W_FORMAT` on layout alone). Then read the GUID back from the file for `startScene` or a `{ "guid": "…" }` reference; never invent one. Keep a scene id and an entity id from sharing a name: they share one namespace (`E_PRECONDITION: an entity already has id …`).
+- **Scenes and prefabs live under `assets/`**, anywhere but `assets/pkg/`: new ones in `assets/scenes/` and `assets/prefabs/`, or beside the art of their feature (`assets/shop/shop.prefab.json`). Code names one by a reference read from configuration (an `asset('prefab')` or `asset('scene')` field, a data asset's `p.ref`), which reads as its GUID; its full project path, exact case included, is the fallback for one nothing configures, and breaks when the file moves. Builds ship documents only from there (and the legacy `scenes/`/`prefabs/`, which `gameengine documents move` empties), so the engine refuses any other path in dev too (`E_DOCUMENT_PATH`), and `gameengine validate`/`cook` fail on the file and on string literals naming it. Paths you build at run time are only caught by running: `gameengine check` smoke-runs the cooked game.
 
 ## Finding things without paths in the files
 
@@ -106,5 +125,6 @@ disk, so a project change never needs the editor restarted, by you or the user.
 - Only a change to the engine itself (its Rust binaries) needs a restart: rebuild every binary that reads the
   changed format (`gameengine doctor` lists stale ones), then ask the user to restart the editor.
 - To make `gameengine check` a gate, add a Stop hook to `.claude/settings.json`. It blocks finishing once when
-  the check fails; if it still fails, the agent stops and reports what is failing:
+  the check fails; if it still fails, the agent stops and reports what is failing. The hook skips checks marked
+  `slow: true` and names them:
   `"Stop": [{ "hooks": [{ "type": "command", "command": "gameengine check --hook", "timeout": 900 }] }]`

@@ -1,6 +1,6 @@
 ---
 name: packages
-version: 1.20.0
+version: 1.21.0
 tier: optional
 description: Game Engine package add, install, update and remove; built-in activation, settings, engine login, lockfiles and compatibility. Use when a game needs a shared dependency, a package migration or help with registry access. For creating or maintaining the package itself, use create-engine-package.
 ---
@@ -17,9 +17,10 @@ game and may supply systems, services, plugins, schema, images, skills or build 
    own skill when available for imports, settings and platform requirements. Check that the requested package
    version is published; a repository or merged PR alone is not installable.
 2. For a built-in, run `gameengine package on <name>`. For a published registry package, run
-   `gameengine package add @scope/name@<version-or-range>`. Tactile packages use
-   `@tactilegames/gameengine.<name>`. Approved private reads use engine sign-in, without a
-   developer GitHub token or npm login.
+   `gameengine package add @scope/name@<version-or-range>`. The engine's own
+   external packages are published as `@tactilegames/gameengine.<name>`; a studio's packages use
+   its own scope and registry. Private reads from the engine's registry use engine sign-in, without
+   a developer GitHub token or npm login.
 3. Inspect `gameengine package settings <name>` and set the required public values with
    `gameengine package set <name> <key> ...`. `add` and `on` apply declared activation defaults
    and regenerate bindings. Never put a secret in settings; they ship in the app.

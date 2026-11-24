@@ -1,0 +1,129 @@
+{
+ "$schemaVersion": 1,
+ "name": "pop",
+ "emitters": [
+  {
+   "name": "flash",
+   "capacity": 1,
+   "bursts": [
+    {
+     "at": 0,
+     "count": 1
+    }
+   ],
+   "loop": false,
+   "lifetime": [
+    0.1,
+    0.1
+   ],
+   "speed": [
+    0,
+    0
+   ],
+   "size": [
+    0.7,
+    0.7
+   ],
+   "color": [
+    1,
+    0.95,
+    0.75,
+    1
+   ],
+   "colorOverLife": [
+    [
+     0,
+     1,
+     1,
+     1,
+     1
+    ],
+    [
+     1,
+     1,
+     1,
+     1,
+     0
+    ]
+   ],
+   "sizeOverLife": [
+    [
+     0,
+     0.5
+    ],
+    [
+     1,
+     1.2
+    ]
+   ],
+   "blend": "additive"
+  },
+  {
+   "name": "bits",
+   "capacity": 16,
+   "bursts": [
+    {
+     "at": 0,
+     "count": 10
+    }
+   ],
+   "loop": false,
+   "shape": {
+    "kind": "circle",
+    "radius": 0.05
+   },
+   "lifetime": [
+    0.25,
+    0.45
+   ],
+   "speed": [
+    2.5,
+    4.5
+   ],
+   "drag": 5,
+   "size": [
+    0.08,
+    0.14
+   ],
+   "color": [
+    0.55,
+    0.18,
+    0.1,
+    1
+   ],
+   "color2": [
+    1,
+    0.75,
+    0.2,
+    1
+   ],
+   "colorOverLife": [
+    [
+     0,
+     1,
+     1,
+     1,
+     1
+    ],
+    [
+     1,
+     1,
+     1,
+     1,
+     0
+    ]
+   ],
+   "sizeOverLife": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     0.2
+    ]
+   ],
+   "blend": "alpha"
+  }
+ ]
+}

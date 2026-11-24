@@ -1,17 +1,16 @@
 ---
 name: playable-ads
-version: 1.8.0
-tier: required
+version: 1.9.0
+tier: optional
 description: Playable ads — cut a game slice in playable-ads/<ad>/, verify it, rewrite it for the web, story-video ads (*.story.json, createStoryVideo), then `gameengine playable build|validate` per network (AppLovin, Unity, Meta, Google, TikTok…). Use for any playable, HTML5, MRAID or interactive video ad, end card, loading phase or size problem.
 ---
 
-# Playable ads (ADR 0069)
+# Playable ads
 
-**Covers:** Making playable ads from the game in Game Engine — cut an engine slice in playable-ads/<ad>/, verify it in the engine, rewrite it for the web against playable-ads/_shared/runtime, then gameengine playable export-assets | build | validate per ad network (AppLovin, Unity, ironSource, Google, Meta, Mintegral, TikTok). Use for any playable ad, HTML5 ad, MRAID ad, end card or ad-network size problem.
-
-A playable ad is a single HTML file the ad network runs in a web view. The engine is not its
-runtime: you **cut a slice of the game** that runs in the engine, then **rewrite that slice for
-the web** against the shared web runtime. Nothing under `playable-ads/` ever ships in the game.
+A playable ad is a single HTML file the ad network runs in a web view, without the engine. You
+**cut a slice of the game** that runs in the engine, then put it on the web one of two ways:
+**port** it, so the ad runs the slice's own systems on `@gameengine/playable` (the default when
+the slice fits the playable profile), or **rewrite** it by hand against the shared web runtime. Nothing under `playable-ads/` ever ships in the game.
 
 ## First, ask the size target
 
@@ -49,9 +48,8 @@ built size against that cap, not only against each network's.
    bodies); it runs in the engine like any system. The web side is the constraint: the
    `@gameengine/playable` profile runs 3D physics on the engine's own Jolt bridge (Box, Sphere,
    Capsule and ConvexHull bodies, no joints or characters; about 530 kB of the ad,
-   `playable-ad-porting` § 3D physics), but not 2D physics yet (Box2D is proven bit-identical in
-   wasm, about 150 kB, 67 kB compressed; the mirror module is in progress, ADR 0023 amendment), so
-   a slice with 2D physics is a **rewrite** for now. Before you choose, ask whether the loop needs
+   skill `playable-ad-porting`), but not 2D physics, so
+   a slice with 2D physics is a **rewrite**. Before you choose, ask whether the loop needs
    real physics: a throw, a drop or a bounce that only looks physical is often a tween or simple
    kinematics in a slice system, which ports. Keep the physics the loop does need small (a few
    bodies, short runs), and count the physics module against the size target.
@@ -74,7 +72,7 @@ built size against that cap, not only against each network's.
 9. **Promote:** when the same web code (a gem renderer, a hand tutorial, a board) is used by a
    **second** ad, move it into `playable-ads/_shared/` and import it from both. Not before.
 
-## Loading phases (ADR 0348)
+## Loading phases
 
 The first frame waits for **core** only. Put what the first seconds do not show in phases:
 
@@ -106,7 +104,7 @@ The first frame waits for **core** only. Put what the first seconds do not show 
 - `playable:start`, `playable:first-touch`, `playable:phase`, `playable:end-card` and
   `playable:cta` are window events for the company's own tracking; the ad itself sends nothing.
 
-## Story video (ADR 0433)
+## Story video
 
 An interactive "choose what happens next" ad made of clips: no game slice and no sim, only the web
 side. One opaque clip plays at a time under the canvas; the ad's code draws captions, choices and
@@ -166,8 +164,7 @@ the end card over it.
 - **Timers** (the 30-second end) start at the first touch, not at load.
 - **Start** through `whenReady()`: MRAID `ready` and viewable, or DOM ready in a browser.
 - **End:** show the end card (`showEndCard`), which also calls Mintegral's `gameEnd`.
-- **Size caps:** Meta 2 MB, ironSource 4 MB, the others 5 MB (ask which one the ad targets,
-  above). Aim for well under 1 MB:
+- **Size caps** are per network (§ First, ask the size target). Aim for well under 1 MB:
   WebP images (`export.images: "webp"`), MP3 at 96 kbps, 3D models with `export.meshes:
   "quantize"` or `"meshopt"` (skill `playable-ad-porting`), only the assets the loop shows.
 - Portrait and landscape both have to work; the stage letterboxes a fixed design size.

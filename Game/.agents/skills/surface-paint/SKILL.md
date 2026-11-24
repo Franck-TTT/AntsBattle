@@ -1,16 +1,16 @@
 ---
 name: surface-paint
-version: 1.0.0
+version: 1.1.0
 tier: optional
 description: Paint on 3D surfaces at run time — paint.create/stamp/clear/coverage, paint:<name> material keys, splats, footprints, wear, territory and coverage scores, UV layouts for painting (uv1), skinned meshes. Use when players or effects paint, mark or wear meshes, or a score depends on painted area.
 ---
 
 # Surface paint
 
-**Covers:** paint targets (`paint` in `@gameengine/runtime`): GPU textures you paint by stamping
-world-space brushes onto an entity's mesh, sampled by any 3D material slot as `paint:<name>`.
-For masks your code computes texel by texel (fog of war, lookup tables) use dynamic textures
-instead (`textures`, skill `vfx-materials`).
+Paint targets (`paint` in `@gameengine/runtime`) are GPU textures you paint by stamping world-space
+brushes onto an entity's mesh; any 3D material slot samples one as `paint:<name>`. For masks your
+code computes texel by texel (fog of war, lookup tables) use dynamic textures instead (`textures`,
+skill `vfx-materials`).
 
 ## How it works
 

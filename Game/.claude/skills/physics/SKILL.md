@@ -1,13 +1,11 @@
 ---
 name: physics
-version: 1.1.0
+version: 1.2.0
 tier: optional
 description: Rigid-body physics (Box2D, Jolt) — RigidBody2D/3D, Collider2D/3D, kinematic bodies, contact and sensor events, impulses, joints, batch raycasts and overlaps. Use for anything that falls, stacks, bounces or pushes, and when porting Unity Rigidbody/Collider code (physics-free triggers are overlap-queries).
 ---
 
 # Physics (Box2D in 2D, Jolt in 3D)
-
-**Covers:** Rigid-body physics in Game Engine — RigidBody2D/3D and Collider2D/3D (Box2D and Jolt), compound bodies from child colliders, kinematic bodies and teleports, contact and sensor events, impulses, joints, and the batch queries (raycasts, casts, overlaps with contacts, closestPoint). Use for anything that falls, stacks, bounces, pushes or is pushed, and when porting Unity Rigidbody/Collider code. (Physics-free triggers and rollback games: overlap-queries.)
 
 Components say what exists; the engine steps the physics world in `PostUpdate` with the sim's
 fixed `dt` and writes poses back to `LocalTransform` (top-level bodies) and velocities back to

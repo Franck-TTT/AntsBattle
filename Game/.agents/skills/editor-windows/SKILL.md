@@ -1,13 +1,11 @@
 ---
 name: editor-windows
-version: 1.4.0
+version: 1.5.0
 tier: optional
 description: Project editor windows (editor/windows/*.tsx, defineEditorWindow) — floating tool windows in the game's menu that read the scene and edit through the command bus. Use when designers need a pop-up tool (balance table, content audit, batch edit) rather than a whole editor mode.
 ---
 
 # Editor windows
-
-**Covers:** Adding the project's own editor windows — editor/windows/*.tsx with defineEditorWindow — listed in the game's menu (the menu bar menu named after the game) and opened as floating tool windows that read the scene, select entities and edit through the undoable command bus. Use when designers need a pop-up tool (a balance table, a content audit, a batch edit) rather than a whole editor mode.
 
 A tool designers keep open while they work is better as a dockable widget (skill
 `editor-widgets`): they dock it in their own layouts and can still pop it out. Use a window for a

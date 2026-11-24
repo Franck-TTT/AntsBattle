@@ -1,13 +1,11 @@
 ---
 name: animation-2d-agent
-version: 2.1.3
+version: 2.2.0
 tier: optional
 description: 2D skeleton rigging and animation with `gameengine anim2d` / MCP anim2d_* on *.skeleton2d.json, or guiding an artist through the Animation 2D editor mode (Spine-style tools). Use when rigging, weighting, keying or exporting 2D rigs, or picking rig features that stay cheap on phones.
 ---
 
 # Using the Animation 2D tool
-
-**Covers:** Using Game Engine's 2D animation tool end to end — as an agent with `gameengine anim2d` / MCP `anim2d_*` ops on *.skeleton2d.json, or guiding an artist through the editor's Animation 2D mode (Setup/Animate, Spine's tools and hotkeys). Create or import a rig (PSD with Spine's layer tags, Spine JSON/binary), bones/slots/attachments, meshes (Trace), weights, IK/transform/path/physics constraints and sliders, skins and placeholders, keys, curves, events, draw order, mix table; check with `anim2d lint`, `anim2d problems`, `anim2d metrics --device` and `skel2d preview`/export; export back to Spine. Includes measured per-feature costs for mobile (physics, clipping, deform keys, transform/path constraints, blend and atlas-page batch breaks vs cheap GPU-skinned meshes) and how to prove a rig's cost on a device (run --json, perf.stats, profile batches, tests/budgets). Use when rigging or animating 2D skeletons, choosing rig features for phones, or helping someone use the Animation 2D editor.
 
 Two ways to do the same work on a `*.skeleton2d.json` (the format: skill `skeleton-2d`):
 

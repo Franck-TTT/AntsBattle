@@ -1,13 +1,11 @@
 ---
 name: skeleton-2d
-version: 1.13.0
+version: 1.15.0
 tier: optional
 description: 2D skeletal animation at run time — *.skeleton2d.json rigs, the Skeleton2D component, tracks and queues, skins, events, bone queries, hit tests, procedural overrides, rigs in UI views, `gameengine skel2d`. Use for characters or props animated with bones, including converted Spine exports.
 ---
 
 # 2D skeletal animation
-
-**Covers:** 2D skeletal animation in Game Engine — *.skeleton2d.json rigs, the Skeleton2D component, playSkeleton2D/queueSkeleton2D/setSkeleton2DSkin (8 tracks, queues, additive layers, empty animations, mix tables — Spine 4.3's AnimationState), Skeleton2DEvent (keys and start/interrupt/end/complete/dispose), bone queries, bounds and bounding-box hit tests, Skeleton2DFollower, procedural overrides (aim a bone, move an IK target, swap attachments and slot colours, combine outfit skins), path/physics/slider constraints (physics is presentation only), rigs inside UI views (<Skeleton> with onEvent) and in playable ads, `gameengine skel2d info|pose|preview` and `gameengine anim2d` edits. Use for characters or props animated with bones (including Spine exports converted by spine-import).
 
 A rig is `assets/<dir>/<name>.skeleton2d.json` (the engine's format, Spine's concepts:
 bones, slots, skins, region and mesh attachments, IK, transform, path, physics and slider
@@ -17,6 +15,13 @@ sprites in the rig's `images` folder, which is relative to the rig file (`"$sche
 at or below its folder (no `..`), so move a rig and its images folder together; give them one atlas
 group so the whole rig is one draw call. A rig of `"$schemaVersion": 1` names the folder under
 `assets/` (`"images": "rig/hero/"`) and still loads; `gameengine refs migrate` rewrites it.
+
+## The rules that matter most
+
+1. **Track state, bone overrides and skins are sim state:** change them only in fixed-step systems (pass their `ctx`); LateUpdate, views and UI send an event or intent instead.
+2. **Physics constraints are presentation:** gameplay never reads a bone a physics constraint moves.
+3. **Give a rig and its images one atlas group**, so the whole rig is one draw call, and move a rig and its images folder together.
+4. **Check the cost on the device class** (`gameengine anim2d metrics <rig> --device phone-low`) before shipping a rig.
 
 ## Put one in a scene
 
@@ -37,10 +42,17 @@ It is a hashed field like the rest of `Skeleton2D`, but only changes what is dra
 Inside the rig, Spine's clipping attachments clip slots (a polygon, concave is fine; `inverse`
 keeps the outside), sequences flip frame-by-frame images (`skeleton2DSlots` reports the frame's
 `image` by GUID), linked meshes share one mesh between images, and slots with `dark` tint with two
-colours — all on every tier (docs/skeleton2d-format.md). Clipping skins and clips its slots on the
+colours — all on every tier. Clipping skins and clips its slots on the
 CPU and draws them through a second pipeline (clipping some slots costs two draw calls per
 instance): prefer `maskInteraction` with a `SpriteMask`; measured costs of every feature are in
 skill `animation-2d-agent`, `references/performance.md`.
+**Recolour with a material:** add `"Skeleton2DMaterial": { "material": { "guid": "<palette.material.ts guid>" },
+"params": [3, 0, 0, 0] }` to draw every slot through a material (skill `vfx-materials`: one grey rig
+and a gradient table instead of a coloured copy per colour; `params` is `instanceParams()`, so all
+colours share the material and batch). It is presentation, apart from the hashed `Skeleton2D`. In the
+rig, `"material": false` on a slot keeps that slot on the plain shader (shadows, a lid that keeps its
+colours); each switch between material and plain slots is a draw call, so group them in draw order.
+Two-colour tint does not apply to material slots. Not yet in UI `<Skeleton>` elements or playable ads.
 On a `sortByY` sorting layer it sorts by its entity's position (add `SortPivot` to move the sort
 point to the feet), on a `sortByZ` layer by its entity's world z (higher in front); skill `atlasing`.
 
@@ -120,7 +132,7 @@ animation events stay on a world `Skeleton2D`. Its physics constraints swing on 
 
 ## Constraints: path, physics, sliders
 
-Spine 4.3's constraints play as in Spine, in one shared `order` (docs/skeleton2d-format.md):
+Spine 4.3's constraints play as in Spine, in one shared `order`:
 path constraints move bones along a `path` attachment (ropes, tank treads, vines), sliders pose
 an animation at a time a bone drives (a dial, a blend by an aim bone), transform constraints take
 4.3's property mapping, IK takes `scaleY: "uniform" | "volume"`.
@@ -248,8 +260,8 @@ extra). For game code:
 - **Instances:** posing runs natively on job threads into preallocated buffers, linear in
   instances (no per-frame allocation). Instances off every camera are neither posed nor drawn
   (`render.stats().culledSkeletons`); hide or remove what the player cannot see.
-- **Batching:** instances of one rig with the same atlas page, blend mode and two-colour variant
-  are one draw call. Keep a rig's images in one atlas group, give each rig type its own `order` or
+- **Batching:** instances of one rig with the same atlas page, blend mode, two-colour variant and
+  `Skeleton2DMaterial` material (any `params`) are one draw call. Keep a rig's images in one atlas group, give each rig type its own `order` or
   sorting layer so its instances are contiguous (24 blobs and 8 kites interleaved: 17 draws; kites
   at their own order: 3), and check with `gameengine profile batches`.
 - **Queries:** `skeleton2DBone(s)`, `skeleton2DSlots`, `skeleton2DBounds`, `skeleton2DHit` and

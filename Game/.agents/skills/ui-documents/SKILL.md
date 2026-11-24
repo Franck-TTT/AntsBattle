@@ -1,16 +1,14 @@
 ---
 name: ui-documents
-version: 1.11.0
+version: 1.15.0
 tier: required
 description: UI documents (ui/**/*.ui.json) for every HUD, menu, popup, button and widget, built and changed with `gameengine ui doc` (MCP ui_doc_*), never hand-written JSON — layers, layout, states, poses, drivers, lists, transitions, placing one from a thin view. Use whenever a ui/**/*.ui.json is made or changed.
 ---
 
 # UI documents: widgets and views as data
 
-**Covers:** Building game UI as UI documents (ui/**/*.ui.json, ADR 0122), the format the editor's UI mode edits — widgets (buttons, toggles, chips, bars, rows) and views (screens, dialogs) made and changed with `gameengine ui doc` (MCP ui_doc_*), never hand-written JSON. Covers layers (elements, labels, icons, placed widgets, repeats, code areas), layout, anchors, images and text; a widget's face (text, number, yes/no, enum, list, choice, image and trigger properties) and its events; states and poses (Pressed, Disabled, yes/no and enum values, number Empty/Full with Range/Steps/Smooth drivers, Fill, lit up to, reactions, Enter/Exit) and their transitions; lists (Repeat, groups, tab bars, virtual scrolling lists); screens and dialogs on the view stack; placing a document from a thin TSX view (<Widget doc props onIntent refs codeAreas>, src/ui.gen.ts), samples, renders and tests. Use for every new HUD, menu, popup, button or widget, and whenever a ui/**/*.ui.json changes.
-
 A **UI document** (`ui/**/*.ui.json`) is a widget or a whole screen that a person can open and tune in the
-editor's **UI** mode. The split, from ADR 0122:
+editor's **UI** mode. The split:
 
 - **The document holds the looks:** structure, layout, images, text, and every look that follows state
   (Pressed, a toggle's on, an enum's value, a number's position, a reaction, a view's Enter / Exit).
@@ -24,7 +22,7 @@ hold (end of this skill). A project with older TSX views ports them with the `ui
 ## The loop
 
 Edit documents only with `gameengine ui doc` (MCP `ui_doc_list`, `ui_doc_show`, `ui_doc_check`, `ui_doc_edit`).
-It runs the editor's own edits, checks every document alone and the whole set as `pnpm gen` does, and writes
+It runs the editor's own edits, checks every document alone and the whole set as `gameengine gen` does, and writes
 all its files or none: a refused edit writes nothing and names the field. It keeps GUIDs and fixes the
 documents that place the one it changes. Hand-written JSON skips all of that.
 
@@ -50,6 +48,29 @@ ids, files). The editor follows the files: a saved document hot-reloads in place
 | A screen or dialog | `ui doc new shop --kind view` | `kind: view`, a full-size root, `behaviour: screen` |
 | A tab bar | `ui doc new tabs --kind tab-bar` | the bar (a Repeat of toggles in an Exactly-one group over a `tabs` list, `selected` choice) and its private `tabs-tab` |
 | Step progress, stars | `ui doc new steps --kind segmented-bar` | a row lit up to `progress` over `steps` segments, and its private segment toggle |
+| A progress, health or XP bar | `ui doc new hp --kind progress-bar --image ui/bar [--fill ui/bar_fill]` | a track and a fill that grows its round art (`keepCaps`) with `progress` 0–100, eased, Empty / Full poses |
+| A button on art | `ui doc new play --kind button --image ui/btn` | the Button above on the texture, sliced at the scale that keeps its caps round |
+
+`--image` refuses rounded art with no `.gmeta` border (square art, opaque into its corners, is drawn unsliced) and prints the `gameengine gmeta set … border=…` that fixes it.
+
+### Round art: buttons, bars, pills, panels
+
+Rounded art keeps its shape only when it is 9-sliced and drawn at one scale on both axes. Every time:
+
+1. **Slice it in its `.gmeta`, once:** `gameengine gmeta set assets/ui/bar.png 'border={ left = 21, right = 21 }'`.
+   A pill (bar, capsule button, counter) slices on its long axis only, each cap half the texture's height; a
+   panel or card with round corners slices all four sides, each border past its corner's curve.
+2. **Draw the caps at the box's size:** a pill's `sliceScale` makes its caps exactly the box's height
+   (`sliceScale` = box height ÷ texture height, with the project's art scale; the template and the layout
+   check compute it). Never stretch unsliced round art to another shape: its ends turn into points.
+3. **Grow the fill, never clip it:** the fill is an element with the fill art as `image`, `fill=horizontal` and
+   `keepCaps` (it grows the 9-slice, so its moving end stays round at every amount). A flat bar does the same with
+   `bg`, `radius` of half its height and `keepCaps`. Not a square `bg` box over a round track (its corners show past
+   the round ends) and not a clipped image or rounded box (its end is cut square).
+4. **Render and read the warnings** (`gameengine ui doc render`, `view lint`): `stretched art`, `stretched caps`,
+   `squashed caps`, `cut caps` and `square fill` each name the element and the number that fixes it.
+
+`samples/ui-gallery/ui/docs/art-bar.ui.json` is a finished example: a sliced slot and a `keepCaps` fill tinted by its poses.
 
 A widget's `behaviour` is what it does when pressed: `ui doc settings <doc> behaviour=button` (sends its key) or
 `behaviour=toggle` (flips its yes/no `on`, sends `changed`), default `none`. Only buttons and toggles have the
@@ -76,7 +97,8 @@ gameengine ui doc move reward r_coin --parent r_panel --index 0 · duplicate · 
   one the result names the id it made (`rew_button`).
 - **Elements** are containers (every element can hold children, show an image and be pressed).
 - **Labels:** `--text 'Level {level}'` shows a property inside text; `property=title` makes the whole text a
-  property a holder sets; `loc:key` localises. Any text source an installed package declares works the same
+  property a holder sets; `loc:key` localises once the localization package is installed (its own skill,
+  `localization`). Any text source an installed package declares works the same
   way as JSON: `--text '{"<source>":"<value>"}'` (in the file `"text": { "<source>": "<value>" }`); `gen` refuses
   a source no package provides. A label never changes its text per state: two labels with hide poses, or a text
   property.
@@ -85,53 +107,38 @@ gameengine ui doc move reward r_coin --parent r_panel --index 0 · duplicate · 
   `image=@art` shows an `image` property instead of a fixed texture.
 - **Any layer:** `show=<yes/no property>` shows it only while that is yes; `point=target` names it as a point
   (where a reward flies to: `ui.animateTo(icons, { to: 'coins.target' })`, skill `ui-mvc-views`).
+- **Element, label, icon or placed widget:** `lift=<text or number property>` draws it with its children lifted
+  over the view that text names (a tutorial dim) or at that camera order, taking the presses there; empty draws it in
+  place. The holder sets the property (`props={{ spot: () => step() === 1 ? 'TutorialDim' : '' }}`); skill `ui-mvc-views`
+  has what a lift keeps. TSX lifts a whole placed document with `<Widget doc="…" lift={…}>`, which replaces the root's own `lift` (`null`: in place); a use node's `lift` and `pointerEvents` replace the placed root's own the same way.
+- **Element, label, icon or placed widget:** `pointerEvents=<yes/no property>` lets presses through it while that is no
+  (a text property: `none` lets them through, `auto` takes them), so one step lifts a button with its presses off
+  and the press is the dim's (Unity's `ToggleButton(false)`); never cover the lifted rect from another view.
+- **Element:** `liftSlot=yes` marks where elements lifted over this view draw: over the layers before it, under the
+  layers after it (a tutorial dim's backdrop, the slot, then its hand and text).
 - A new element pads 8 and a new view's root has a background: set `pad=0` or `bg=` where the design has none.
   A field the layer does not take is refused with the list of those it does.
 
-**Layout** (UI Toolkit's flex model, reference px): `dir` (`column`/`row`), `align`, `justify`, `w`/`h` (`auto`,
-a number, `50%`, or `clamp(min, preferred, max)` of those), `minW`/`maxW`/`minH`/`maxH`, `grow` (`w=0 grow=1` for
-equal shares), `shrink`, `gap`, `pad` / `margin` (`"t r b l"` or one number),
-`hide`, `clip=true` (clips children), `mask=ui/portrait_mask` (the layer and its children draw only where that
-texture is opaque, 9-sliced by its `.gmeta` borders: Unity's `Mask`; code areas take it too). **Anchored** (taken out of the flow, placed on the parent):
-`position=anchored anchor="1 0" offset="-8 8"` (anchor 0–1 of the parent; `pivot` follows the anchor unless set,
-`centre` or `"x y"`). Use anchors for overlaps (a badge on a corner, a ribbon): a negative `margin` does not lay out as in CSS.
-`offset` on a layer in the flow nudges it from where the layout puts it, without moving its siblings (a label
-centred by eye on its pill: Unity's anchored position in a layout group); a pose's `offset` slides it there. Set `attach=true` on an element placed over or past its parent on purpose (a badge, a ribbon): layout
-warnings then leave it out of the escape and overlap checks.
+**Style fields** (`--set` on `add`, or `ui doc set`). The common ones; the full list with every option is `references/style-fields.md`.
+
+| Group | Fields |
+|---|---|
+| Layout (flex, reference px) | `dir` (`column`/`row`), `align`, `justify`, `w`/`h` (`auto`, a number, `50%`, `clamp(min, preferred, max)`), `grow`, `gap`, `pad`, `margin`, `hide`, `clip`, `mask` |
+| Anchored (out of the flow) | `position=anchored anchor="1 0" offset="-8 8"` for overlaps such as a badge on a corner (a negative `margin` does not lay out as in CSS); `attach=true` for an element placed past its parent on purpose |
+| Paint | `bg` (`#rrggbbaa`), `radius`, `opacity`, and the cheap fields to animate in poses: `tx`/`ty`/`scale`/`scaleX`/`scaleY`/`rotate` |
+| Images | `image=ui/panel` (9-sliced by the texture's own `.gmeta` borders; fix a border there, not per element), `sliceScale`, `fit`, `flip`, `tile`, `mirror`, `blend`, `tint`, `saturation`, `imageAlpha` |
+| Fill (bars and rings) | `fill=horizontal\|vertical\|radial`, `fillAmount` 0–1, `fillOrigin`; `keepCaps` on every filling button, counter or bar so a pill keeps its round end |
+| Text | `font`, `fontSize` (max) with `fitMin` (shrinks to fit), `weight`, `letterSpacing`, `upper`, `color`, `textAlign`, `outline` + `outlineColor`, `shadowX/Y`, `gradient` |
+
+A state or pose eases a px-to-px `w`/`h` change (costing a layout per frame while it plays); any other size change jumps and is warned about.
 
 **Per aspect:** a layer's `aspect` restyles it on tall or wide screens, keyed by width ÷ height (at most 8
 breakpoints): `ui doc set shop s_grid aspect='{"<0.6":{"pad":12},">=9/16":{"w":640}}'`.
 
-**Paint:** `bg` (`#rrggbbaa`), `radius`, `opacity`, `tx`/`ty`/`scale`/`scaleX`/`scaleY`/`rotate` (the cheap fields to
-animate in poses). A state or pose eases a px-to-px `w`/`h` change (a resize, costing a layout per frame while it
-plays); any other size change jumps and is warned about. **Images:** `image=ui/panel` on any element, 9-sliced by the texture's own `.gmeta`
-borders (fix a border there, not per element; `sliceScale` scales it), its `.gmeta` body drawn past the box (a
-hard shadow; on an unsliced, stretched image the body fills the box and the transparent margin or shadow around it
-reaches past in proportion, so a sprite with padding sizes by its opaque area) and its content padding used while
-the element sets none (a sized, sliced image with no children overhangs its box by its border, like the
-source); `fit`, `flip`, `tile` (repeats the texels at `sliceScale` instead of stretching, Unity's Tiled: a sliced image keeps
-its corners and repeats its edges and centre; `fit` is ignored), `fillCenter=false` (a frame without its centre),
-`mirror=x|y|both` (half-art frames), `blend=additive|multiply|screen` (glows), `keepCaps` (a Fill that grows
-the 9-slice instead of clipping it: a clipped pill loses its round end, so turn it on for every filling button,
-counter or bar; add `squeezeCaps` for a bar whose short fills squeeze their round ends instead of starting as a
-whole pill, as Unity's sliced Image does), `imageSwap=cut|fade` for images swapped by poses; colour in order `tint` (+ `tintMode`
-colorize | multiply, `tintAmount`), `saturation`, `brightness`, `imageAlpha` (Grey out: `saturation=0` on the same
-texture). **Fill:** `fill=horizontal|vertical|radial`, `fillAmount` 0–1, `fillOrigin` (`start`, `end` or `center`): a clip reveal
-for bars and rings. **Text:** `font` (a font asset key, e.g. `fonts/Digits`, for a label that is not in the project's
-default face; one per label, never changed by a state), `fontSize` (max) with `fitMin` (shrinks to fit), `weight`
-(600 and up draws synthetic bold and adds the class `.ud-bold`; a project whose face is already bold sets
-`font-synthesis: none` on it), `letterSpacing` (px after each letter), `upper` (upper-cased after `loc:` keys
-resolve), `color`, `textAlign` (may change in a state), `outline` +
-`outlineColor` (outside the letters, at most 0.2 em), `shadowX/Y` + `shadowColor` + `shadowSoft`, `gradient` (a CSS
-`linear-gradient(#ffe066, #ff9a00)` filling the letters in place of `color`: top to bottom, any angle, up to 5 stops). Sizes
-may be fractional (`fontSize=27.5`); a face that draws larger than the original game's at the same size takes a
-project-wide multiplier in `project.gameengine.json` `ui.fontScale` (`[{ "font": { "guid": "…" }, "scale": 0.82 },
-{ "font": "*", "scale": 1 }]`: the font by reference, its GUID from its `.gmeta`; `"*"` for every other font)
-instead of every label's size being lowered by hand.
-
 **Text and icons keep clear space** inside whatever they sit on (a button, chip, pill, card, panel or bar):
 never let a label or icon touch or cross the edge of its face. This is the default for every design; a design
 that touches its edge on purpose opts out.
+
 - Give the container `pad` (or let its image's `.gmeta` content padding do it) of at least about 6% of its
   smaller side (a 120×56 button: `pad="8 14"`), and never size a label exactly to its container.
 - Every label in a button, chip or other sized box gets `fontSize` (its largest) and `fitMin` (its smallest),
@@ -213,8 +220,9 @@ where it is, a new one goes last, and `--index n` puts it at a position:
 gameengine ui doc driver bar progress range min=0 maxFrom=goal     # clamp and give a 0–1 position (max=100, or follow another number)
 gameengine ui doc driver chip amount smooth min=300 max=1200       # count up, longer for a bigger change (ms)
 gameengine ui doc driver chip amount steps by=1                    # then snap what it shows to whole numbers
+gameengine ui doc set bar pb_fill image=ui/bar_fill fill=horizontal keepCaps=true   # round art grows, never clipped
 gameengine ui doc set bar pb_fill fillAmount=0 --pose progress=empty
-gameengine ui doc set bar pb_fill fillAmount=1 bg=#7cf29aff --pose progress=full   # blended by the position
+gameengine ui doc set bar pb_fill fillAmount=1 tint=#7cf29aff --pose progress=full   # blended by the position
 gameengine ui doc set steps root lit=progress                      # toggle children lit up to the number
 gameengine ui doc driver chip amount steps --index 0                # move Steps first
 gameengine ui doc driver chip amount steps --remove
@@ -276,56 +284,14 @@ gameengine ui doc settings shop behaviour=screen safe=yes
 
 ### Keyed Enter and Exit, staggers and the tap lock
 
-A pose plays every layer from one look to the design together. A **track** gives one layer its own keys,
-length (`transition=`) and `delay=` (ms) inside the view's Enter or Exit: overshoots, a drop with a bounce, a
-squash and stretch, children popping in one after another. `at=` is a share of the track (0–1); an Enter ends
-on the design and an Exit starts on it, so leave those keys out. Each step between keys eases by the track's
-transition, or by the key's `ease=` (`linear`, `easeIn`, `easeOut`, `easeInOut`, `smooth`: `smooth` turns
-gently at each key, like Unity's auto tangents, and fits overshoot curves). A layer's pose becomes its
-track's first key; a layer has one or the other.
+A pose plays every layer from one look to the design together. A **track** gives one layer its own keys, length and delay (staggers, overshoots, a frame that unrolls), a key may set `sizeX`/`sizeY`, and `lockInput` holds every tap off while the view enters. Commands, a worked popup and porting a Unity clip key by key: `references/enter-exit.md`. See it with `gameengine view render doc:<name> --times 0,0.1,0.25,0.5` and `--phase exit`.
 
-A key may also set **`sizeX` / `sizeY`**: the layer's drawn size as a share of its laid-out size (0–4, 1 is
-the design), about its centre, with no re-layout. It is Unity's `SetSizeWithCurrentAnchors`, not a scale:
-a sliced background redraws at the new size with its borders intact, `clip=yes` clips to the resized box,
-anchored children ride its edges at their own size (at a percentage size they resize with it), and flowed
-children keep their size and follow the layer's `justify` / `align` (the default, start, rides the top edge,
-`end` the bottom one, `center` stays put), so content is revealed, not squashed. `clipContent=yes` clips inside `pad`, which keeps its size. Port a Unity frame that animates its rect
-height with `sizeY`, and one that animates its scale with `scaleY`. Taps land on the drawn box.
-
-```sh
-# Unity's popup frame: unrolls with two overshoots over 0.5 s, fades in over the first half,
-# its button pops in after 150 ms, and taps wait 0.25 s.
-gameengine ui doc track no-lives nl_frame --pose enter "transition=linear 500" at=0 sizeY=0 opacity=0 ease=smooth
-gameengine ui doc track no-lives nl_frame --pose enter at=0.5 sizeY=1.05 opacity=1 ease=smooth
-gameengine ui doc track no-lives nl_frame --pose enter at=0.7 sizeY=0.975 ease=smooth
-gameengine ui doc track no-lives nl_frame --pose enter at=0.85 sizeY=1.0125 ease=smooth
-gameengine ui doc track no-lives nl_ok --pose enter "transition=back 300" delay=150 at=0 scale=0
-gameengine ui doc settings no-lives lockInput=250            # yes: the whole Enter; no: none
-# It closes in 0.25 s: a bulge, then a collapse as it fades.
-gameengine ui doc track no-lives nl_frame --pose exit "transition=linear 250" at=0.136 sizeY=1.186 ease=easeIn
-gameengine ui doc track no-lives nl_frame --pose exit at=1 sizeY=0 opacity=0
-gameengine ui doc track no-lives nl_frame --pose enter at=0.7 --remove   # one key; without at=, the whole track
-gameengine ui doc track no-lives nl_frame --pose enter --keys '[{"at":0,"set":{"scaleY":0}},{"at":0.5,"set":{"scaleY":1.05}}]'
-```
-
-- Unity's frame mask (a RectMask2D with fixed insets, content riding its bottom edge): `clip=yes` on the frame
-  would clip a header sticking out above it too, so mask a flowed layer around the content instead, as tall
-  as the frame: move the frame's vertical `pad` onto it, give it `clipContent=yes`, `justify=end` and the
-  frame's `sizeY` keys, and set the frame to `justify=center` so the layer stays centred in it. Keep that
-  layer's height from its content: at `h=100%` it would follow the frame and its own keys resize it twice.
-- A key that sets only `sizeY` sets `sizeX` back to 1 (as `scaleY` alone does `scaleX`); key both when the
-  two axes move at different times.
-- Port a Unity clip key by key: a curve's normalised time is `at=`, the clip's length the track's `transition`.
-  Keys of different lengths on one layer (alpha over 0.25 s in a 0.5 s clip) go in one track, at their times.
-- `lockInput` holds every tap off while the view enters: its buttons do nothing and nothing under it gets the
-  tap. Exit always ignores taps. Popping a screen plays its Enter back with the stagger mirrored.
-- See it with `gameengine view render doc:<name> --times 0,0.1,0.25,0.5` and `--phase exit`.
 - `safe=yes` (default) keeps the root's content inside the safe area; a direct child of the root set to
   `safeArea=full` reaches the screen edges under the notch (a background, a top bar's colour). A share of
   each inset, per platform if needed (a Unity HUD's 65 % top): `"safe": { "top": 0.65, "bottom": 0.4,
   "android": { "top": 1 } }` in the view.
-- A template may fill `t()` values (`"Wave {n}"`, `"{headline}"`): it is formatted in the current language and
-  follows a language switch; `ui layout` shows the drawn `text` and its `loc`.
+- A template fills each property's value as text (`"Wave {n}"`, `"{headline}"`); a property set to an accessor
+  (the localization package's `t()`) is read in the label's effect, so the label follows a language switch.
 
 ## Placing a document from code
 
@@ -397,7 +363,8 @@ export const RewardView = defineView<RewardModel>({
 
 ## What stays TSX
 
-`<Particles>`, `<Model>`, `<Skeleton>`, `<Flipbook>` and `<Pooled>` go in a **code area**. Rich text does not:
+`<Particles>`, `<Model>`, `<Skeleton>`, `<Flipbook>` and `<Pooled>` go in a **code area**, and a screen
+with text fields stays a TSX view (skill `text-fields`). Rich text needs neither:
 a label with `"rich": true` in its style reads markup (`<b>`, `<color=#hex>`, `<size=1.5>`, `<wave>`) and draws
 icons in the line (`Costs 50 <img src="ui/gem">`), from `loc:` strings too, so translations can move the icon.
 Screen anchors and `@media` beyond aspect (width, orientation), `align-self`, and a per-button
@@ -406,6 +373,9 @@ areas (a 3D portrait, a particle showcase) can stay a TSX view (skill `ui-mvc-vi
 
 ## Traps
 
+- Rounded art (a bar, pill button, counter, card) is sliced in its `.gmeta`, drawn with caps at the box's size and
+  filled with `keepCaps` (§ Round art). A flat `bg` + `radius` fill or an unsliced stretched image looks fine in a
+  thumbnail and pointed or square on a phone; the layout warnings catch both.
 - Not refused is not right: render it and look. Read the warnings too: an unused property, or an `image` swapped
   in a pose (it jumps instead of animating; prefer a second element faded with `opacity`).
 - `ui doc delete` (refused while something places it) and `ui doc rename` (every reference follows; TSX naming

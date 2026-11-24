@@ -50,8 +50,10 @@ export const events = defineBuildStep({
   file; zip a folder first) put files in the artifacts folder (`--artifacts <dir>`, else
   `<outDir>/artifacts`), listed in `build-report.json` `artifacts` for the build server to collect,
   failed builds included. Two steps can't write the same artifact. `ctx.message('warning', text)`
-  adds a line to the build's summary. `ctx.build` has the platform, config, outDir, artifactsDir and
-  dryRun; `ctx.log` prints.
+  adds a line to the build's summary. `ctx.build` has the platform, config, outDir, artifactsDir,
+  dryRun and cheats (the build carries the cheat console: dev, probe, and an in-house release with
+  `--cheats` or `cheats.release`; never a store build), so a step can write what only testers get,
+  such as an in-house service's token, and clear it otherwise; `ctx.log` prints.
 - **Files that never ship:** list the files (not folders or patterns) a step reads that must stay
   off devices in `private: ['boosters.json']`. Keep those at the project root or in a folder of their own, never in
   `assets/`, `src/`, `scenes/`, `plugins/` or the settings files. The build fails if one would ship
@@ -99,3 +101,14 @@ export const keys = defineBuildCheck({
   each check's verdict: passed, warned, failed, downgraded or skipped), failed builds included; the
   build summary lists every finding. A staged build keeps its first stage's mode. `gameengine
   build-steps run --checks warn` runs a phase's checks and then its steps now.
+
+### Project checks: checks that run before every hand-back too
+
+`gameengine check` (the hand-back command, the Stop hook and any CI job that runs it) runs
+every `pre-build` check of the game and its packages after its own steps, so a check catches a
+problem before anyone builds. Write new ones with `defineCheck` in a `*.check.ts` file beside the
+build files (`build/<name>.check.ts` in a package, `tools/<name>.check.ts` in a game): it is a
+pre-build check with the same context, plus `slow` (the Stop hook skips it) and `ctx.exec(command,
+args)` to wrap a command. `gameengine check` runs a check with no `platforms` once and a limited
+one once per platform it lists, always with the release config; `gameengine checks list` lists them
+and `gameengine check --only <id>` runs one alone. Skill `project-tools` has an example.

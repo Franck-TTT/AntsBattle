@@ -1,18 +1,15 @@
 ---
 name: vfx
-version: 1.22.0
+version: 1.25.0
 tier: optional
 description: Particle effects (*.vfx.json) — emitters, forces, colour and size over life, sub-emitters, `gameengine vfx preview|stats|set`, recipes (burst, trail, smoke, fire, confetti, hit flash), mobile rules. Use for any visual effect, explosion, magic, pickup sparkle or UI flourish, and before shipping one to phones.
 ---
 
 # Particle effects
 
-**Covers:** Particle effects in Game Engine — the *.vfx.json data form (emitters with spawn, shape, lifetime, speed, forces, colour and size over life, sprite sheets, blend, collision, sub-emitters), the preview → adjust loop with `gameengine vfx preview` contact sheets and `vfx stats` budgets, small edits with `vfx set`, recipes (burst, sparkle, trail, smoke, fire, confetti, UI glint, hit flash) and mobile performance rules. Use for any visual effect, explosion, magic, pickup sparkle or UI flourish, and before shipping one to phones.
-
 Effects are **data**: `assets/fx/<name>.vfx.json`, the exact JSON the engine loads (no build
 step, hot reloaded). A `*.vfx.ts` (the `@gameengine/vfx` DSL) is for effects built by code; it
-compiles to the same data (`pnpm gen` → `*.vfx.gen.json`). Format: `docs/vfx-format.md`, JSON
-Schema `docs/generated/vfx.schema.json`. Designers edit either in the editor's **VFX mode** (on by default; its effect list finds an effect by name, path,
+compiles to the same data (`gameengine gen` → `*.vfx.gen.json`). Designers edit either in the editor's **VFX mode** (on by default; its effect list finds an effect by name, path,
 emitter, texture or any text in it).
 
 Effects are presentation only: the sim decides *when* (spawn an entity with
@@ -71,21 +68,18 @@ gameengine vfx stats boom --device android-low-compat   # before you call it don
   `vfx_validate`.
 - `gameengine vfx validate` (also part of `gameengine validate`) reports what the engine would
   refuse, with JSON pointers. `gameengine vfx convert x.vfx.ts` turns a code effect into data.
-- **A new effect needs its `.gmeta` sidecar**: create it with `gameengine cmd asset.setText
-  --params '{"path":"assets/fx/boom.vfx.json","text":"…"}'` (it writes a new file under
-  `assets/` with its sidecar) or run `gameengine cook` once after adding
-  files, and commit the `.gmeta`; until then `validate` fails with `E_ASSET: no .gmeta sidecar`.
+- **A new effect needs its `.gmeta` sidecar** (skill `work-loop`, § New files, scenes and prefabs).
 
 ## Emitter cheat sheet
 
 | Module | Keys (defaults) |
 |---|---|
 | Spawn | `capacity` 256 (live cap), `rate` 0 /s, `bursts` `[{at, count}]`, `duration` 1 s, `loop` true, `delay` 0, `rateOverDistance` 0 /unit (trails behind a moving emitter, spread along its path), `prewarm` false (a looping emitter starts full) |
-| Shape | `shape: {kind: point\|sphere\|cone\|box\|circle, radius, angle (cone, rad), size (box), surface, rotation [x,y,z] degrees}`; cone emits along +Y, circle in XY (2D) |
-| Initial | `lifetime` [1,1], `speed` [1,1], `size` [0.1,0.1] (quad width, world units), `rotation`, `spin`, `color` / `color2` (random mix) |
-| Forces | `gravity` [x,y,z], `drag`, `maxSpeed` (0: no limit), `inheritVelocity` (sub-emitters) |
-| Velocity over life | `velocityOverLife` `[[t, x,y,z], …]` units/s added to the move (never builds up; drag and gravity do not act on it), `velocityOverLife2` (each particle a fixed random mix of the two), `velocitySpace` local\|world, `orbital` `[[t, x,y,z]]` rad/s about the emitter's axes, `orbitalOffset` (orbit centre), `radial` `[[t, v]]` away from it, `speedOverLife` `[[t, ×]]` on the own velocity; one key = constant |
-| Over life | `colorOverLife` `[[t, r,g,b,a], …]` × start colour; `sizeOverLife` `[[t, scale], …]` (linear between keys) |
+| Shape | `shape: {kind: point\|sphere\|hemisphere\|cone\|box\|circle, radius, angle (cone, rad), size (box), surface, rotation [x,y,z] degrees, position}`; cone emits along +Y, hemisphere outward over the +Y half, circle in XY (2D). Options: `arc` 360 (degrees of the circle used), `arcSteps` 0 (particle n at even step `n mod arcSteps` round the arc: a burst of 8 with 8 steps is an even ring), `thickness` (outer share of the radius, 0 edge to 1 whole; absent: follows `surface`), `scale` [x,y,z] (ellipses), `length` (a cone emits from its volume), `emitFrom` volume\|shell\|edge (box), `sphericalDirection` and `randomDirection` 0 to 1 (blend directions outward / at random) |
+| Initial | `lifetime` [1,1], `speed` [1,1], `size` [0.1,0.1] (quad width, world units), `rotation`, `spin`, `flipRotation` 0 (share of particles mirrored and spinning the other way), `color` / `color2` (random mix) |
+| Forces | `gravity` [x,y,z], `drag` with `dragMode` share (a share of the speed per second, never stops) \| deceleration (units/s per second, stops; × area with `dragBySize`, × speed² with `dragBySpeed`), `maxSpeed` (0: no limit) with `maxSpeedDampen` 1 (the share of the speed above `maxSpeed` lost every 1/30 s: 1 holds the limit hard, 0.1 eases a burst down to it), `curl` + `curlFrequency` with `curlMode` force \| velocity (carried along, own speed kept) and `curlScroll` (units/s the field scrolls along +Y as a particle ages), `inheritVelocity` (sub-emitters) |
+| Velocity over life | `velocityOverLife` `[[t, x,y,z], …]` units/s added to the move (never builds up; drag and gravity do not act on it), `velocityOverLife2` (each particle a fixed random mix of the two; `velocityRandom: perAxis` mixes x, y and z apart), `velocitySpace` local\|world, `orbital` `[[t, x,y,z]]` rad/s about the emitter's axes, `orbitalOffset` (orbit centre), `radial` `[[t, v]]` away from it, `speedOverLife` `[[t, ×]]` on the own velocity (`speedOverLifeAll: true`: on velocity over life, orbital and radial too); one key = constant |
+| Over life | `colorOverLife` `[[t, r,g,b,a], …]` × start colour; `sizeOverLife` `[[t, scale], …]` (linear between keys); `colorOverLife2` / `sizeOverLife2`: each particle keeps its own random mix of the two for life (costs one draw per instance of that emitter: not for effects that play many at once on phones) |
 | Rendering | `texture` (image key, none = soft dot), `material` (a `*.mat.json`/`*.material.ts` key drawn unlit over the textured particle: its surface reads the particle colour as `vertexColor`, the quad uv, and `instanceParams` = life fraction, random, age; dissolves and scrolling noise; one extra draw per material, so drop it for `phone-low` in `overrides`), `sheet {cols, rows, fps, startFrame}` (fps 0: once per life; `startFrame` a frame, `[min, max]` or `"random"` per particle — varied debris shards), `mesh` (a model key, `models/rock.glb#Shard`: each particle draws that mesh, unlit with a facing shade, tumbling by its rotation; at most 2,048 triangles and capacity 256; back faces culled; one draw per emitter and `material` is ignored, so keep it to debris, coins and leaves), `blend` additive\|alpha\|premultiplied\|multiply (Unity's Premultiply and Multiply; UI particles and playable ads draw those two as alpha), `orient` billboard\|velocity (+ `stretch`, `lengthScale`)\|horizontal\|vertical\|world\|local, `aspect` (height / width), `space` world\|local |
 | Collision | `collision {bounce, friction, lifetimeLoss}` — scene depth, desktop GPU only |
 | Sub-emitters | `subEmitters [{on: death\|collision, emitter, count ≤ 64}]`; the child has no rate/bursts, same space, capacity = parent × count |
@@ -97,9 +91,9 @@ additive blending). 1 to 8 emitters per effect.
 **From Unity's Velocity over Lifetime:** Linear X/Y/Z → `velocityOverLife` (a constant is one
 key, `[[0, x, y, z]]`; curves become keys at the union of the three axes' key times, times the
 curve multiplier, in your unit scale); Random Between Two Constants or Curves →
-`velocityOverLife` + `velocityOverLife2` (one mix for all three axes); Space → `velocitySpace`;
+`velocityOverLife` + `velocityOverLife2` with `velocityRandom: perAxis` (Unity picks each axis apart); Space → `velocitySpace`;
 Orbital X/Y/Z → `orbital`; Offset → `orbitalOffset`; Radial → `radial`; Speed Modifier →
-`speedOverLife`. Do not stand in gravity or drag for it any more. Differences: keys are
+`speedOverLife` with `speedOverLifeAll: true` (Unity's Speed Modifier also scales linear, orbital and radial velocity). Do not stand in gravity or drag for it. Differences: keys are
 straight lines baked into 16 entries (add keys where a Unity curve bends), orbital, offset, radial
 and speed take one curve each (no random pair), and in a world-space emitter orbiting particles
 move with a moving emitter instead of sweeping round its new position.
@@ -251,7 +245,7 @@ with your lab numbers). Per effect instance:
   sorted) — use it for smoke, dust, confetti, and keep those counts low.
 - **Counts:** set `capacity` to what the effect needs (it is also the memory reserved); a
   looping emitter holds about `rate × lifetime[1]`. `vfx stats` warns when every slot is used.
-- **Draw calls:** one per emitter per *effect*, however many instances play (ADR 0092): every live
+- **Draw calls:** one per emitter per *effect*, however many instances play: every live
   `ParticleSystem` of `fx/boom.vfx.json` that draws at the same place (unsorted, or the same
   sorting layer/order slot) with the same `maskInteraction` shares one draw per emitter, on the
   GPU and CPU paths. So 40 overlapping combo bursts of a 3-emitter effect are 3 draws, and it pays
@@ -270,8 +264,9 @@ with your lab numbers). Per effect instance:
   other, so overlapping alpha-blended instances may stack differently — additive is unaffected.
 - **Textures:** small (64–128 px for sparks and dots, 256 for smoke), in a sheet rather than
   many files; no texture at all is cheapest (the soft dot).
-- `android-low-compat` simulates on the CPU: particle count is CPU time there. Collision is
-  desktop only; effects must look right without it.
+- `android-low-compat` and Android `phone-low` phones of the mobile tier (`cpuParticles`, skill
+  `device-tiers`) simulate on the CPU: particle count is CPU time there. Collision is desktop
+  only; effects must look right without it.
 - Measure the real thing: `gameengine lab` (T2) with the effect on screen; `vfx stats --render`
   adds what the engine reports for one frame.
 

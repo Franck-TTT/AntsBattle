@@ -1,0 +1,74 @@
+{
+  "$schemaVersion": 1,
+  "guid": "d699a627-b7b3-42eb-9422-a2cc7b66f8f7",
+  "name": "restart-button",
+  "title": "Restart button",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Restart button",
+      "style": {
+        "dir": "row",
+        "h": 150,
+        "minW": 480,
+        "pad": [
+          18,
+          60,
+          18,
+          60
+        ],
+        "align": "center",
+        "justify": "center",
+        "bg": "#ffc51fff",
+        "radius": 75
+      },
+      "children": [
+        "label"
+      ]
+    },
+    "label": {
+      "type": "label",
+      "name": "Label",
+      "style": {
+        "fontSize": 64,
+        "fitMin": 32,
+        "weight": 900,
+        "color": "#1a1220ff",
+        "textAlign": "center"
+      },
+      "text": "Button",
+      "property": "label"
+    }
+  },
+  "behaviour": "button",
+  "properties": {
+    "label": {
+      "type": "text",
+      "default": "Button"
+    }
+  },
+  "transition": {
+    "type": "back",
+    "ms": 240,
+    "overshoot": 1.4
+  },
+  "states": {
+    "pressed": {
+      "set": {
+        "root": {
+          "scale": 0.94
+        }
+      }
+    },
+    "disabled": {
+      "set": {
+        "root": {
+          "saturation": 0,
+          "opacity": 0.6
+        }
+      }
+    }
+  }
+}

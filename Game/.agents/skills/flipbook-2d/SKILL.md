@@ -1,13 +1,11 @@
 ---
 name: flipbook-2d
-version: 1.5.0
+version: 1.6.0
 tier: optional
 description: Frame-by-frame 2D animation — *.clip2d.json clips, the Clip2D component, frame events, and Animator state machines (*.animctrl.json) over 2D clips or skeletons. Use for sprite characters, pickups, props and effects animated with frames, and attack, hit or death logic keyed to frames.
 ---
 
 # 2D flipbook clips
-
-**Covers:** Frame-by-frame 2D animation in Game Engine — *.clip2d.json clips (frames from atlases, durations, once/loop/pingpong, frame events, keyed offset/scale/rotation/tint/flipX), the Clip2D component, playClip2D/setClip2D/clip2DFrame, Clip2DEvent/Clip2DFinished, and Animator state machines (*.animctrl.json) whose states play 2D clips or Skeleton2D animations. Use for sprite characters, pickups, props and effects animated with frames, and for "attack/hit/death" logic keyed to animation frames.
 
 A clip is `assets/<dir>/<name>.clip2d.json` (spec: `docs/clip2d-format.md` in the engine;
 JSON Schema `docs/generated/clip2d.schema.json`). Frames are sprites named by reference: each
@@ -31,11 +29,11 @@ so every animated sprite sharing the page is one draw call.
 
 - `frames`: a list of references (one per frame, in order), or of
   `{ "sprite": { "guid": "…" }, "duration": 0.08 }` for a frame of its own length (seconds;
-  default 1 / fps). The quick way to write one: put the legacy pattern `"frames": "hero/run_{0..7}"`
-  (a range of sprite keys: `assets/hero/run_0.png` is `"hero/run_0"`; `"a,b,c"` lists them) and run
-  `gameengine refs migrate`, which writes it as the list (every frame image needs its `.gmeta`
-  first). A pattern still loads, but names its sprites by path and breaks when they move:
-  `validate` notes it (`I_ASSET_REF_PATH`).
+  default 1 / fps). To write the list without typing GUIDs, give `gameengine refs migrate` a pattern as its input:
+  put `"frames": "hero/run_{0..7}"` (a range of sprite keys: `assets/hero/run_0.png` is
+  `"hero/run_0"`; `"a,b,c"` lists them) and run it at once; it rewrites the pattern as the list
+  (every frame image needs its `.gmeta` first). Never commit a pattern: it names sprites by path and
+  breaks when they move (`validate` notes it, `I_ASSET_REF_PATH`).
 - `loop`: `once` (stops on the last frame), `loop`, `pingpong` (0 1 2 3 2 1 0 …).
 - `events`: fire when playback **enters** the frame, once per crossing, every loop; `int`,
   `float`, `string` payloads ride along.
@@ -43,7 +41,7 @@ so every animated sprite sharing the page is one draw call.
   `flipX`; `frame` may be fractional (2.5 = half way through frame 2); `ease` is how the value
   moves into the key: `linear` (default), `inQuad` … `inOutBounce`, or `step`.
 
-A new `*.clip2d.json` needs its `.gmeta` before `validate` passes: write it with `gameengine cmd asset.setText` (it writes a new file under `assets/` with its sidecar) or run `gameengine cook` once after adding files, and commit the `.gmeta`; until then `validate` fails with `E_ASSET: no .gmeta sidecar`.
+A new `*.clip2d.json` needs its `.gmeta` sidecar before `validate` passes (skill `work-loop`, § New files, scenes and prefabs).
 
 ## Play one
 

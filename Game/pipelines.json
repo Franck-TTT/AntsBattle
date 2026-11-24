@@ -16,6 +16,27 @@
      "format": 22
     }
    }
+  },
+  {
+   "r": "2d",
+   "key": {
+    "Text": {
+     "samples": 1,
+     "format": 22
+    }
+   }
+  },
+  {
+   "r": "particles",
+   "additive": false,
+   "samples": 1,
+   "format": 22
+  },
+  {
+   "r": "particles",
+   "additive": true,
+   "samples": 1,
+   "format": 22
   }
  ],
  "desktop": [
@@ -35,6 +56,27 @@
      "format": 40
     }
    }
+  },
+  {
+   "r": "2d",
+   "key": {
+    "Text": {
+     "samples": 4,
+     "format": 40
+    }
+   }
+  },
+  {
+   "r": "particles",
+   "additive": false,
+   "samples": 4,
+   "format": 40
+  },
+  {
+   "r": "particles",
+   "additive": true,
+   "samples": 4,
+   "format": 40
   }
  ],
  "mobile": [
@@ -54,6 +96,27 @@
      "format": 22
     }
    }
+  },
+  {
+   "r": "2d",
+   "key": {
+    "Text": {
+     "samples": 1,
+     "format": 22
+    }
+   }
+  },
+  {
+   "r": "particles",
+   "additive": false,
+   "samples": 1,
+   "format": 22
+  },
+  {
+   "r": "particles",
+   "additive": true,
+   "samples": 1,
+   "format": 22
   }
  ]
 }

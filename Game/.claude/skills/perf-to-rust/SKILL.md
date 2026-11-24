@@ -1,8 +1,8 @@
 ---
 name: perf-to-rust
-version: 1.10.0
+version: 1.18.0
 tier: optional
-description: Find a slow system with the profiler, transpile the sim to Rust or move a system to hand-written Rust while keeping its TypeScript version as the reference, then run it in parallel ranges and check its codegen. Use when script time or a system's time is over budget.
+description: Find a slow system with the profiler, transpile the sim to Rust or move a system to hand-written Rust while keeping its TypeScript version as the reference, then run it in parallel ranges and check its codegen; or warm code that is only slow on its first calls. Use when script time or a system's time is over budget.
 ---
 
 # Performance, and moving a system to Rust
@@ -12,6 +12,35 @@ description: Find a slow system with the profiler, transpile the sim to Rust or 
 - `gameengine test --json` reports each sim system's `meanMs`/`maxMs` per test (`systems`); `gameengine call perf.stats` has `systemTimeMs` (p50/p95 per frame, `native: true` for Rust systems), `scriptTimeMs`, `gcMaxMs`, `jsHeapMB`; `gameengine call script.systems` has the last frame.
 - Put the numbers in the budget file: `tests/budgets/<name>.json` → `devices.<class>.systemsP95Ms: { "Steer": 4 }` (ms per frame at p95). `gameengine test --tier t2` gates them; a budget naming a system the engine does not report fails.
 - Port only a system that is over budget after steps 2 and 3. One hot system is the usual case; a dozen lukewarm ones are a design problem, not a Rust problem.
+
+### Slow only the first time: a warm-up, not Rust
+
+The script engine compiles and warms code on its first calls, so code the player reaches once per action can cost several times its warm time the first few times (the device report's `first runs since launch`: first run against later mean). If the later mean is within budget, Rust is the wrong fix: a port does not beat warm TypeScript, and code that is only slow cold may even run slower as transpiled Rust. Warm it under a loading cover instead:
+
+```ts
+// src/board/orders.warmup.ts: found by the bundler like *.cheats.ts; nothing imports it
+import { defineWarmup } from '@gameengine/runtime';
+
+export const orders = defineWarmup({
+  name: 'orders',                         // profiler section warmup:orders
+  when: { boot: true, loads: ['level'] }, // the boot cover and/or loading.run names (default: the swap scene's GUID)
+  repeat: 3,                              // default 1; one call may not be enough
+  reads: [ordersMeta, Board, Piece],      // metas, documents, resources, components
+  run({ read, rows, content }) {
+    const board = read(Board);
+    if (board) nextOrder(read(ordersMeta), board, rows(Piece), content.loadData(OrderTable, board.orderTable));
+  },
+});
+```
+
+- `run` gets deep copies the engine throws away (`read` for resources, documents and metas, `rows` for components) and `content.loadData`/`listData`. Keep it synchronous: a returned promise fails it. Call the same functions the system calls, with the copies, so the warm-up and the game share code.
+- `run` also gets `ctx`, a scratch system context: pass it to the game's real sim code. `ctx.events.emit`, `ctx.signal` and `ctx.commands` work and reach nothing; `ctx.rng` has a fixed seed. It has no world, so `ctx.resource`, `ctx.get` and `ctx.events.read` throw (read state through `read`/`rows`), and so do `commands.spawnPrefab`/`spawnMany`, `pool.take` and `ctx.input`: split those out of the code you warm and pass in their result (any entity id will do on `ctx`). Document writes in the run, a meta's `dispatch` included, go to scratch copies the same run reads back, then are dropped: `ordersMeta.dispatch('take', piece, 0)` runs the real reducer, store and signal path. Anything else that would change the game throws.
+- Never keep an interned string or asset id in a plain number field, or order sim work by one: a warm-up that encodes a string field interns it, and warm-ups run on V8 only, so V8 and Hermes would then hash differently. `gameengine test --js both` catches it.
+- It runs once the cover's state is ready, before the cover lifts, and its time adds to the boot or load: nothing caps it. The log line `loading '<name>': warm-ups <ms> ms: …` and the device report's `warm-ups since launch` give run and copy time apart.
+- Hashes and replays do not change: prove it with `gameengine test --hash-trace .gameengine/warm` and then `gameengine test --no-warmups --hash-trace-baseline .gameengine/warm`.
+- **Measure on a phone, before and after**, cold launch each time: the first real call's time and the cover's length. Keep it only if it removes the spike for less cover time than the spike cost; raise `repeat` while the first real call keeps getting faster.
+- **V8 only.** Warm-ups are a JIT tool: the engine skips them on Hermes, which has no JIT and runs every call at the same cost. Each cover logs `warm-ups skipped (hermes: no JIT to warm)` and the device report says `warm-ups: skipped (hermes: …)`. A first call that is slow on Hermes is cut only by cheaper code or by Rust (steps 2 to 6).
+- Too slow even when warm: carry on below (steps 2 to 6).
 
 ## 2. Fix it in TypeScript first
 
@@ -27,12 +56,44 @@ Fewer allocations in `run`, typed arrays, no per-row closures, no `Map`/`Set` pe
 Every project compiles each sim system that fits the transpilable subset to Rust, with no Rust to write or keep in sync (`"native": { "transpile": false }` in `project.gameengine.json` opts out; `GAMEENGINE_TRANSPILE=off` for one run):
 
 - `gameengine native transpile` lists each sim system: `rust`, or `ts` with the construct that kept it out and where (`call … is outside the subset (src/board.ts:62)`). A system left out keeps running as TypeScript, unchanged.
-- Device and desktop builds warn for each system left out (`warning: system … was not transpiled to Rust …`, `build-report.json` `warnings`, a build warning on the build server). A warning that was not there before means a change moved a system back to TypeScript: fix it, or say why it stays.
+- Device and desktop builds log each system left out (`sim: system … runs as TypeScript, not transpiled Rust …`, `build-report.json` `untranspiledSystems`). It is not a warning: a cold system is fine as TypeScript. A system that was not on the list before means a change moved it back to TypeScript: fix it if it is hot, or say why it stays.
 - The Rust is regenerated from the TypeScript before every host build (`.gameengine/transpiled/`, never committed). `gameengine test --native both` must pass: it proves every transpiled system hash-identical.
-- In the subset: numbers (as f64, with JavaScript's integer and rounding rules), queries and columns (nested loops too), resources, events (`read`, `count`, `emit`, and `forEach` with a callback that does not keep the event), spawns, commands, enums, strings and assets, constant tables, typed arrays, `Map`/`Set`, helpers and local arrow functions (inlined; a helper may write into an array the caller passed it), `forEach`/`map`/`filter`/`every`/`some`/`find`/`Array.from`, object records (interfaces, `T | null`, arrays of them; `{ chunk, row }` and column views kept in them), documents (`defineDoc` get/set/update), object spreads (a spread of JSON builds JSON, read by field; a spread of records into a typed record, `{ ...state, next: n }`, builds that record with later members winning, as long as every source field is in the target, no optional source field lands on an earlier member and no source may be undefined), meta state (`metaInWorld` get/loaded/dispatch, `defineMeta` actions and invariants, which may call `loadData`; a `migrate` stays TypeScript, run as the save loads), `loadData` (records with `$type` fields and unions too, its type token passed to helpers), `listData` (a constant baked from `src/content.gen.ts`: `length`, indexing and `for…of`; a new index re-transpiles), tunables (converted once per step, not per read), `NavGrid`/`findPath`/`smoothPath`, and the runtime calls with twins (tweens, raycasts, overlap contacts, animation parameters, pools, Skeleton2D play/hit/attachments, `spawnPrefab`, `entityIndex`, `playTimeline` and `stopTimeline`, events with no fields, `ctx.signal`, streaming, `fitWorldView`).
-- Stays TypeScript: recursion, a function used as a value, writing a field of a record (JavaScript shares records; build a new one with a spread), spreading a record into JSON, runtime calls without a twin. The report names the construct and line.
+- **In the subset:**
+  - numbers (as f64, with JavaScript's integer and rounding rules)
+  - queries and columns (nested loops too)
+  - resources
+  - events (`read`, `count`, `emit`, and `forEach` with a callback that does not keep the event)
+  - spawns
+  - commands
+  - enums
+  - strings and assets
+  - constant tables
+  - typed arrays
+  - `Map`/`Set`
+  - helpers and local arrow functions (inlined; a helper may write into an array the caller passed it, or hand it on to a helper that does; a record or array a helper only reads is passed by reference, not copied)
+  - functions as values (a closure a helper returns, which keeps copies of what it captured; objects of functions with methods, getters and spreads, `deps.f?.()` on a member the object has; arrays of functions walked with `for…of`, `every`, `some` or `forEach`; module constants a call made, such as `const rules = makeRules(4)`, made again where they are used)
+  - `forEach`/`map`/`filter`/`every`/`some`/`find`/`Array.from`
+  - object records (interfaces, `T | null`, arrays of them; `{ chunk, row }` and column views kept in them)
+  - documents (`defineDoc` get/set/update)
+  - object spreads (a spread of JSON builds JSON, read by field; a spread of records into a typed record, `{ ...state, next: n }`, builds that record with later members winning, as long as every source field is in the target, no optional source field lands on an earlier member and no source may be undefined)
+  - meta state (`metaInWorld` get/loaded/dispatch, `defineMeta` actions and invariants, which may call `loadData`; a `migrate` stays TypeScript, run as the save loads)
+  - `loadData` (records with `$type` fields and unions too, its type token passed to helpers)
+  - `listData` (a constant baked from `src/content.gen.ts`: `length`, indexing and `for…of`; a new index re-transpiles)
+  - tunables (converted once per step, not per read)
+  - `NavGrid`/`findPath`/`smoothPath`
+  - and the runtime calls with twins (tweens, raycasts, overlap contacts, animation parameters, pools, Skeleton2D play/hit/attachments, `spawnPrefab`, `entityIndex`, `playTimeline` and `stopTimeline`, events with no fields, `ctx.signal`, streaming, `fitWorldView`)
+- Installed packages are transpiled with `src/`: a system may call code from any package installed in `node_modules` (`file:`, a registry or git) whose exports point at its TypeScript, and the report names a package line by package (`@scope/pkg/src/x.ts:12`). Systems a package declares stay TypeScript, and a package reached only through tsconfig `paths` is not installed: calling it gives `which is not a module function`.
+- **Stays TypeScript** (the report names the construct and line):
+  - recursion
+  - assigning a function to a variable again (or keeping one past the loop iteration or callback that made it)
+  - a closure that changes what it captures or captures a `let`
+  - a closure or an object of functions that keeps an array, map or grid (JS shares it; they keep numbers, strings, records and handles)
+  - a helper that returns different functions
+  - writing a field of a record (JavaScript shares records; build a new one with a spread)
+  - spreading a record into JSON
+  - runtime calls without a twin
 - In hot loops prefer plain column loops: a loop that calls into the world between rows (a hit test, a computed string, a document write) reaches its table through a handle at each access, which is slower than the loop-wide borrow.
-- A release over the air (`gameengine release`) that changes a transpiled system runs its TypeScript (the twin carries the hash of the source it was made from) until the next store build.
+- A release over the air (`gameengine release`) that changes a transpiled system, or an installed package it imports, runs its TypeScript (the twin carries the hash of the source it was made from) until the next store build. Installing, updating or removing a package `src/` imports re-transpiles. A system's hash now covers the installed packages it imports (any non-engine npm import), so after an engine update that brings this, the first over-the-air release runs those systems as TypeScript until the next store build.
 - Transpiled code is about as fast as a straight port (crowd sample: 1.6 ms vs 40 ms on Hermes). Steps 5 and 6 are for the systems that need more.
 - Project hosts build with the `fast` profile while you iterate (a change relinks in seconds); shipping builds use `release`.
 

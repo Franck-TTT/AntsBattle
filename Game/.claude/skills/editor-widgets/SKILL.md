@@ -1,16 +1,11 @@
 ---
 name: editor-widgets
-version: 1.2.0
+version: 1.3.0
 tier: optional
 description: Dockable editor widgets (editor/widgets/*.tsx, defineEditorWidget): project tools users dock in their own layouts beside the scene view, split, tab, resize and pop out, and modes place with { widget }. Use when building any custom editor tool, panel or inspector-like view for designers.
 ---
 
 # Editor widgets
-
-**Covers:** Writing the project's editor tools as dockable widgets — `editor/widgets/*.tsx` with
-`defineEditorWidget` — that every user can dock in their own layouts (the Mode picker's **My
-layouts**), split, tab, resize and pop out to another display, and that modes place with
-`{ widget: id, dock }`. Use when building any custom editor tool, panel or view for designers.
 
 **Write every custom tool as a widget first.** A widget is the unit users arrange: it shows in
 the widget list (the **+** in any group's tab strip of a personal layout) under *Project widgets*,

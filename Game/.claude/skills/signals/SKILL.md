@@ -1,13 +1,11 @@
 ---
 name: signals
-version: 1.0.1
+version: 1.1.0
 tier: required
 description: Game signals for listeners outside the sim (analytics, achievements, tutorials, stingers) — ctx.signal, signal(), meta.<doc>.<action> signals, onSignal, expectSignal in tests. Use when adding analytics events, achievement or tutorial triggers, or anything that listens for when X happens.
 ---
 
 # Signals
-
-**Covers:** Game signals in Game Engine — named moments the game reports (coins spent, loot gained, level completed, life lost, purchase made) for listeners outside the simulation — analytics, achievements, tutorials, audio/VFX stingers, the debug console. Covers ctx.signal (sim), signal() (UI), the automatic meta.<doc>.<action> signals, onSignal/onAnySignal listeners, forwarding to an analytics SDK, and expectSignal in game tests. Use when adding analytics events, achievement or tutorial triggers, or anything that "listens for when X happens" without changing the sim.
 
 A signal is a record that something happened, reported once, in order, to whoever listens:
 `{ seq, name, source: 'sim' | 'ui' | 'meta', step, fields }`. The game says **what** happened;

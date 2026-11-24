@@ -30,9 +30,8 @@ delivery separately. A green mock test or dry-run assembly cannot stand in for a
 
 ## CI and automatic releases
 
-The template calls the dedicated
-[`tactilegames/gameengine.package-workflows`](https://github.com/tactilegames/gameengine.package-workflows)
-repository, with validation and publishing pinned to the same immutable commit. It is separate
+The template calls the engine's shared package workflows
+([`gameengine.package-workflows`](https://github.com/tactilegames/gameengine.package-workflows)), with validation and publishing pinned to the same immutable commit. It is separate
 from Unity UPM workflows. Read the caller and shared workflow for current inputs and permissions
 instead of copying their implementation here.
 
@@ -49,7 +48,7 @@ Renaming or removing a public component, field or service method needs a breakin
 because scenes and saves refer to those names.
 
 Publication uses GitHub Packages. Consumers read through the engine's configured registry,
-including Tactile Create for approved private packages. Publication does not update games'
+including approved private packages. Publication does not update games'
 lockfiles or create a searchable catalog in the editor. It appears in a game's Packages panel
 after installation into that game.
 

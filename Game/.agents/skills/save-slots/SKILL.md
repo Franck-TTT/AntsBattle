@@ -1,11 +1,21 @@
 ---
 name: save-slots
-version: 1.1.1
+version: 1.2.0
 tier: optional
 description: Save progress with typed slots, immediate write receipts, awaited persistence barriers, backups, migrations and settings. Use when a game needs to save or load local progress, batch saves, confirm browser persistence, handle storage failures or distinguish memory updates from durable native writes.
 ---
 
 # Save slots and persistence confirmation
+
+A save slot is a typed file presentation code reads and writes: a profile the player picks, or progress the game loads itself.
+State the sim reads every step (currencies, timers, onboarding done) is simpler in a persisted meta, which is saved, hashed and replayed for you (skill `meta-economy`).
+A game that keeps progress in a slot brings it into the sim as recorded input (last paragraph), and a view never decides from a slot directly (skill `sim-boundaries`).
+
+**Rules:**
+
+1. A write receipt means memory was updated; only an awaited persistence barrier means it is stored.
+2. Never acknowledge a purchase or describe progress as persisted before the barrier succeeds.
+3. Page exit is too late to start a guaranteed save: save when the state changes.
 
 Declare a type with `saveData` in the project schema and run `gameengine gen`. Create its
 slots with `defineSave(Token, { defaults, migrate })` from `@gameengine/runtime`.
@@ -22,7 +32,7 @@ const result = await progress.flush();
 native platforms queue the file write on their ordered worker. Its `accepted` promise reports
 file or validation errors. Always handle it. Receipt rejections are also logged.
 
-Existing `await progress.write(data)` waits for the same engine-write stage. On native
+`await progress.write(data)` waits for the same engine-write stage. On native
 platforms this includes fsync; on web it does not wait for IndexedDB. `await progress.flush()`
 confirms earlier accepted writes and deletes across all save types, plus current
 `gameengine.kv` settings. Browser confirmation follows a strict IndexedDB transaction;

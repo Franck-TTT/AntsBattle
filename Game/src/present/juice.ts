@@ -1,0 +1,218 @@
+/**
+ * Game feel, derived from sim state each frame: enemy flashes and waddle, squash and stretch on
+ * drop, refused-pick shakes, the base's red flash, camera shakes and sounds. Presentation only.
+ */
+import { audio, burstAt, defineSystem, onSignal, parseColor, query, read, shakeCamera, withTag, write, Camera, RenderTime, Shape, VisualOffset, type EntityId } from '@gameengine/runtime';
+import { Base, Big, Block, Enemy, FxHost, FxKind, Item, Placement, PlacementRefused, Run, TraySlot, WaveStarted } from '../schema.gen.ts';
+import { ENEMY_NAMES } from '../kinds.ts';
+import { BASE_CELL, NESTS, cellX, cellY } from '../grid.ts';
+import { COLORS, ENEMY_LOOKS, FLASH } from '../looks.ts';
+
+const lin = (hex: string) => parseColor(hex);
+const WHITE = lin(FLASH.hit);
+const BASE_RED = lin(FLASH.base);
+const BASE_BLUE = lin(COLORS.base);
+const ENEMY_BODY = ENEMY_NAMES.map((k) => lin(ENEMY_LOOKS[k].body.color));
+
+function setColor(col: Float32Array, i: number, c: readonly number[], alpha = 1): void {
+  col[i * 4] = c[0]!;
+  col[i * 4 + 1] = c[1]!;
+  col[i * 4 + 2] = c[2]!;
+  col[i * 4 + 3] = c[3]! * alpha;
+}
+
+function rotZ(r: Float32Array, i: number, a: number): void {
+  r[i * 4] = 0;
+  r[i * 4 + 1] = 0;
+  r[i * 4 + 2] = Math.sin(a / 2);
+  r[i * 4 + 3] = Math.cos(a / 2);
+}
+
+export const Juice = defineSystem({
+  name: 'Juice',
+  stage: 'LateUpdate',
+  queries: {
+    enemies: query(read(Enemy), write(VisualOffset), withTag(Big)),
+    items: query(read(Item), write(Shape), write(VisualOffset)),
+    blocks: query(read(Block), write(VisualOffset)),
+    base: query(withTag(Base), write(Shape), write(VisualOffset)),
+    slots: query(read(TraySlot), write(VisualOffset)),
+    camera: query(read(Camera)),
+    fx: query(read(FxHost)),
+  },
+  resources: [read(Run), read(Placement), read(RenderTime)],
+  run(ctx, q) {
+    const s = ctx.local(() => {
+      const st = { t: 0, runId: -1, placements: 0, refusals: 0, shots: 0, booms: 0, baseHits: 0, kills: 0, bosses: 0, nestsOpen: 0, wave: 0, active: 0, phase: 0, baseFlash: 0, slotShake: -1, slotShakeT: 0, lastShot: 0 };
+      onSignal(PlacementRefused, (sig) => {
+        if (sig.fields.reason === 'gold') {
+          st.slotShake = 1;
+          st.slotShakeT = 0;
+        }
+      });
+      onSignal(WaveStarted, () => audio.play('audio/wave', { bus: 'SFX', volume: 0.7 }));
+      return st;
+    });
+    const dt = ctx.resource(RenderTime).realDelta[0]!;
+    s.t += dt;
+    const run = ctx.resource(Run);
+    const p = ctx.resource(Placement);
+    const time = run.time[0]!;
+    let cam: EntityId | null = null;
+    for (const c of q.camera.chunks()) if (c.length > 0) cam = c.entity(0);
+
+    // Counters → sounds, shakes, flashes. A restart resets them without playing anything.
+    if (s.runId !== run.runId[0]) {
+      s.runId = run.runId[0]!;
+      s.placements = run.placements[0]!; s.refusals = run.refusals[0]!; s.shots = run.shots[0]!; s.booms = run.booms[0]!;
+      s.baseHits = run.baseHits[0]!; s.nestsOpen = run.nestsOpen[0]!; s.kills = run.kills[0]!; s.bosses = run.bosses[0]!; s.phase = run.phase[0]!;
+    }
+    if (p.active[0] && !s.active) audio.play('audio/pickup', { bus: 'SFX', volume: 0.6 });
+    s.active = p.active[0]!;
+    if (run.placements[0] !== s.placements) {
+      s.placements = run.placements[0]!;
+      audio.play('audio/place', { bus: 'SFX', volume: 0.9, pitchRandom: 0.06 });
+    }
+    if (run.refusals[0] !== s.refusals) {
+      s.refusals = run.refusals[0]!;
+      audio.play('audio/deny', { bus: 'SFX', volume: 0.7 });
+    }
+    if (run.shots[0] !== s.shots) {
+      s.shots = run.shots[0]!;
+      if (s.t - s.lastShot > 0.06) {
+        s.lastShot = s.t;
+        audio.play('audio/shot', { bus: 'SFX', volume: 0.35, pitchRandom: 0.12, maxVoices: 4 });
+      }
+    }
+    if (run.booms[0] !== s.booms) {
+      s.booms = run.booms[0]!;
+      audio.play('audio/boom', { bus: 'SFX', volume: 0.8, pitchRandom: 0.08, maxVoices: 3 });
+      if (cam) shakeCamera(cam, 0.22);
+    }
+    if (run.kills[0] !== s.kills) {
+      s.kills = run.kills[0]!;
+      audio.play('audio/pop', { bus: 'SFX', volume: 0.55, pitchRandom: 0.15, maxVoices: 5 });
+    }
+    if (run.baseHits[0] !== s.baseHits) {
+      s.baseHits = run.baseHits[0]!;
+      s.baseFlash = 1;
+      for (const c of q.fx.chunks()) {
+        const k = c.col(FxHost).kind;
+        for (let i = 0; i < c.length; i++) if (k[i] === FxKind.baseHit) burstAt(c.entity(i), [[cellX(BASE_CELL), cellY(BASE_CELL)]]);
+      }
+      audio.play('audio/basehit', { bus: 'SFX', volume: 0.9 });
+      if (cam) shakeCamera(cam, 0.3);
+    }
+    if (run.nestsOpen[0]! > s.nestsOpen) {
+      // A nest opens: a shake and a burst of dirt on it.
+      const wave = run.wave[0]!;
+      for (const nest of NESTS) {
+        if (nest.fromWave !== wave) continue;
+        for (const c of q.fx.chunks()) {
+          const k = c.col(FxHost).kind;
+          for (let i = 0; i < c.length; i++) if (k[i] === FxKind.dust || k[i] === FxKind.boom) burstAt(c.entity(i), [[cellX(nest.cell), cellY(nest.cell)]]);
+        }
+      }
+      audio.play('audio/boom', { bus: 'SFX', volume: 0.7 });
+      if (cam) shakeCamera(cam, 0.45);
+    }
+    s.nestsOpen = run.nestsOpen[0]!;
+    if (run.bosses[0] !== s.bosses) {
+      s.bosses = run.bosses[0]!;
+      audio.play('audio/boss', { bus: 'SFX', volume: 1 });
+      if (cam) shakeCamera(cam, 0.55);
+    }
+    if (run.phase[0] !== s.phase) {
+      s.phase = run.phase[0]!;
+      if (s.phase === 1) audio.play('audio/win', { bus: 'SFX', volume: 0.9 });
+      if (s.phase === 2) audio.play('audio/lose', { bus: 'SFX', volume: 0.9 });
+    }
+
+    // Big enemies only (beetles, boss): grow in, squash on hit. Plain ants get no per-frame
+    // presentation work so a swarm of thousands costs nothing here; their flash is set by the sim.
+    for (const c of q.enemies.chunks()) {
+      const en = c.col(Enemy);
+      const vo = c.col(VisualOffset);
+      for (let i = 0; i < c.length; i++) {
+        const age = time - en.bornAt[i]!;
+        const grow = en.kind[i] === 3 ? Math.min(1, 0.2 + age * 0.8) : Math.min(1, 0.3 + age * 4);
+        const squash = en.flashSteps[i]! > 0 ? 0.12 : 0;
+        vo.scale[i * 3] = grow * (1 + squash);
+        vo.scale[i * 3 + 1] = grow * (1 - squash);
+        vo.scale[i * 3 + 2] = 1;
+      }
+    }
+
+    // Items: squash and stretch on drop, a shake when a pick-up is refused, faded while held.
+    for (const c of q.items.chunks()) {
+      const it = c.col(Item);
+      const sh = c.col(Shape);
+      const vo = c.col(VisualOffset);
+      for (let i = 0; i < c.length; i++) {
+        const age = time - it.placedAt[i]!;
+        let sx = 1;
+        let sy = 1;
+        if (age >= 0 && age < 0.5) {
+          const k = Math.exp(-age * 9) * Math.cos(age * 30);
+          sx = 1 + 0.28 * k;
+          sy = 1 - 0.28 * k;
+        }
+        vo.scale[i * 3] = sx;
+        vo.scale[i * 3 + 1] = sy;
+        vo.scale[i * 3 + 2] = 1;
+        const deny = it.denySteps[i]!;
+        vo.position[i * 3] = deny > 0 ? Math.sin(deny * 1.6) * 0.09 : 0;
+        sh.color[i * 4 + 3] = it.held[i] ? 0.35 : 1;
+      }
+    }
+
+    // Blocks: a heavier squash on drop, a shake when the player tries to move one (they are fixed).
+    for (const c of q.blocks.chunks()) {
+      const b = c.col(Block);
+      const vo = c.col(VisualOffset);
+      for (let i = 0; i < c.length; i++) {
+        const age = time - b.placedAt[i]!;
+        let k = 0;
+        if (age >= 0 && age < 0.5) k = Math.exp(-age * 8) * Math.cos(age * 26);
+        vo.scale[i * 3] = 1 + 0.22 * k;
+        vo.scale[i * 3 + 1] = 1 - 0.22 * k;
+        vo.scale[i * 3 + 2] = 1;
+        const deny = b.denySteps[i]!;
+        vo.position[i * 3] = deny > 0 ? Math.sin(deny * 1.6) * 0.07 : 0;
+      }
+    }
+
+    // Base: red flash and a punch when an enemy gets in.
+    s.baseFlash = Math.max(0, s.baseFlash - dt * 2.5);
+    for (const c of q.base.chunks()) {
+      const sh = c.col(Shape);
+      const vo = c.col(VisualOffset);
+      for (let i = 0; i < c.length; i++) {
+        const k = s.baseFlash;
+        for (let j = 0; j < 4; j++) sh.color[i * 4 + j] = BASE_BLUE[j]! + (BASE_RED[j]! - BASE_BLUE[j]!) * k;
+        const punch = 1 + Math.sin(k * Math.PI) * 0.18;
+        vo.scale[i * 3] = punch;
+        vo.scale[i * 3 + 1] = punch;
+        vo.scale[i * 3 + 2] = 1;
+      }
+    }
+
+    // Tray: the slot being dragged from dips; an unaffordable pick shakes.
+    if (s.slotShake >= 0) s.slotShakeT += dt;
+    for (const c of q.slots.chunks()) {
+      const ts = c.col(TraySlot);
+      const vo = c.col(VisualOffset);
+      for (let i = 0; i < c.length; i++) {
+        const slot = ts.slot[i]!;
+        const held = p.active[0] === 1 && p.fromCell[0]! < 0 && p.slot[0] === slot;
+        const sc = held ? 0.92 : 1;
+        vo.scale[i * 3] = sc;
+        vo.scale[i * 3 + 1] = sc;
+        vo.scale[i * 3 + 2] = 1;
+        const shaking = s.slotShake >= 0 && p.slot[0] === slot && s.slotShakeT < 0.35;
+        vo.position[i * 3] = shaking ? Math.sin(s.slotShakeT * 60) * 0.1 * (1 - s.slotShakeT / 0.35) : 0;
+      }
+    }
+    if (s.slotShakeT >= 0.35) s.slotShake = -1;
+  },
+});

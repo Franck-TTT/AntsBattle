@@ -1,13 +1,11 @@
 ---
 name: navigation-3d
-version: 1.0.3
+version: 1.1.0
 tier: optional
 description: 3D pathfinding for ground characters — buildNavMesh from static colliders, findPath3D/findPaths3D (batched, budgeted), nearestWalkable, navAscii to see the field, separate() for crowds. Use for NPCs, enemies, companions, click-to-move or anything that walks around 3D obstacles (2D grids are tilemaps-nav).
 ---
 
 # 3D navigation
-
-**Covers:** Pathfinding for ground characters in 3D in Game Engine — buildNavMesh from static colliders, findPath3D / findPaths3D (batched, budgeted), nearestWalkable, navAscii to see the field, and separate() for crowds. Use for NPCs, enemies, companions, click-to-move or anything that walks around 3D obstacles. (2D grids: tilemaps-nav.)
 
 The walkable field is built from the scene's **static 3D colliders** (no `RigidBody3D`, or a
 `Static` one; sensors ignored). Boxes and `builtin:cube` meshes are exact; spheres, capsules
@@ -29,12 +27,9 @@ const results = findPaths3D(agents.map((a) => ({ from: a.pos, to: a.goal })), { 
 // results[i] = { path, error: null | 'noStart' | 'noGoal' | 'unreachable' | 'budget' }
 ```
 
-## How it is fast
+## Keep it cheap
 
-Walkable cells merge into large rectangles (`info.rects`, usually far fewer than
-`info.nodes`); a path searches portal crossings between rectangles, then a funnel pulls it
-tight. A path across a 120 m level with 184k cells takes about 2 ms (release) against 44 ms
-for cell-by-cell A*, and is on average as short (worst case in the tests: +19%).
+A path across a 120 m level with 184k cells takes about 2 ms on a desktop; what an author controls:
 
 - **Budget** with `maxExpansions` when paths are requested every frame; on `'budget'`, keep the
   old path and ask again next frame or with a nearer goal.
@@ -47,7 +42,7 @@ for cell-by-cell A*, and is on average as short (worst case in the tests: +19%).
 - **Rebuild** after static geometry changes (doors that become walls, streamed cells):
   `buildNavMesh` again. Several agent sizes → several fields with `name`.
 - **Follow a path** with a `CharacterController3D` or by moving `LocalTransform` toward the next
-  waypoint; drop waypoints as you reach them; re-path when the target moves a cell or more.
+  waypoint; drop waypoints as you reach them.
 - **Crowds:** feed desired velocities to `separate(agents, radius)` before moving; it is
   deterministic (index order), fine for tens of agents.
 - Paths are deterministic (fixed portal order, ties broken by id, IEEE-exact arithmetic), so

@@ -1,15 +1,199 @@
 {
   "version": 1,
   "package": "AntsBattle",
-  "enums": [],
+  "enums": [
+    {
+      "name": "BlockShape",
+      "values": [
+        "b1x1",
+        "b2x2",
+        "b2x1",
+        "b1x2",
+        "b3x1",
+        "b1x3"
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "EnemyKind",
+      "values": [
+        "ant",
+        "fast",
+        "beetle",
+        "boss"
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "FxKind",
+      "values": [
+        "dust",
+        "pop",
+        "boom",
+        "hit",
+        "baseHit"
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "ItemKind",
+      "values": [
+        "none",
+        "wall",
+        "tower",
+        "cannon"
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "PlaceReason",
+      "values": [
+        "ok",
+        "offBoard",
+        "occupied",
+        "blocks",
+        "gold",
+        "enemy",
+        "noBlock",
+        "fixed"
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "RunPhase",
+      "values": [
+        "playing",
+        "won",
+        "lost"
+      ],
+      "package": "AntsBattle"
+    }
+  ],
   "types": [
     {
-      "name": "Bubble",
+      "name": "Base",
+      "kind": "tag",
+      "sim": true,
+      "fields": [],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Big",
+      "kind": "tag",
+      "sim": true,
+      "fields": [],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Block",
       "kind": "component",
       "sim": true,
       "fields": [
         {
-          "name": "radius",
+          "name": "shape",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "BlockShape"
+        },
+        {
+          "name": "cell",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Top-left cell"
+        },
+        {
+          "name": "placedAt",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "denySteps",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Shake left after a refused pick-up (blocks never move)"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Board",
+      "kind": "resource",
+      "sim": true,
+      "fields": [
+        {
+          "name": "cells",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 77,
+          "doc": "1 where a block stands (blocks the ants), 0 free"
+        },
+        {
+          "name": "weapons",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 77,
+          "doc": "Weapon kind index standing on the block of each cell (0 none)"
+        },
+        {
+          "name": "dist",
+          "kind": "array",
+          "scalar": "i16",
+          "lanes": 77,
+          "doc": "Steps to the base per cell, -1 unreachable or blocked"
+        },
+        {
+          "name": "path",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 77,
+          "doc": "Cells of the path from the nest to the base"
+        },
+        {
+          "name": "pathLen",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "version",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "BoardTile",
+      "kind": "tag",
+      "sim": true,
+      "fields": [],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Enemy",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "EnemyKind"
+        },
+        {
+          "name": "hp",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "maxHp",
           "kind": "f32",
           "scalar": "f32",
           "lanes": 1
@@ -19,31 +203,836 @@
           "kind": "f32",
           "scalar": "f32",
           "lanes": 1,
-          "doc": "Units per step"
+          "doc": "Cells per game second"
+        },
+        {
+          "name": "reward",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Gold per kill (fractional at swarm scale)"
+        },
+        {
+          "name": "damage",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Lives lost when it reaches the base"
+        },
+        {
+          "name": "hx",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "default": 0,
+          "doc": "Facing, unit vector x (smoothed; no trig per step)"
+        },
+        {
+          "name": "hy",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "default": -1,
+          "doc": "Facing, unit vector y"
+        },
+        {
+          "name": "remaining",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Path length left to the base, for targeting"
+        },
+        {
+          "name": "flashSteps",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "lane",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Sideways offset in its column, cells (spreads the swarm)"
+        },
+        {
+          "name": "bornAt",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
         }
       ],
       "package": "AntsBattle"
     },
     {
-      "name": "Game",
-      "kind": "resource",
+      "name": "EnemyKilled",
+      "kind": "event",
       "sim": true,
       "fields": [
         {
-          "name": "score",
-          "kind": "u32",
-          "scalar": "u32",
-          "lanes": 1,
-          "doc": "Bubbles popped"
+          "name": "x",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
         },
         {
-          "name": "spawned",
+          "name": "y",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "gold",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "EnemyKind"
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "Signal: an enemy died; gold flies to the counter."
+    },
+    {
+      "name": "FlowCell",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "cell",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "dist",
+          "kind": "i16",
+          "scalar": "i16",
+          "lanes": 1,
+          "default": -1
+        },
+        {
+          "name": "next",
+          "kind": "i16",
+          "scalar": "i16",
+          "lanes": 1,
+          "default": -1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "FxHost",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "FxKind"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Item",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "ItemKind"
+        },
+        {
+          "name": "cell",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "cooldown",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds before it can be moved again"
+        },
+        {
+          "name": "reload",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds before it fires again"
+        },
+        {
+          "name": "aim",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Barrel angle, radians"
+        },
+        {
+          "name": "placedAt",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Run.time of its last drop (squash and stretch)"
+        },
+        {
+          "name": "denySteps",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Shake left after a refused pick-up"
+        },
+        {
+          "name": "held",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Picked up by the finger right now"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "ItemPlaced",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "ItemKind"
+        },
+        {
+          "name": "shape",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "BlockShape"
+        },
+        {
+          "name": "cell",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "moved",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "cost",
           "kind": "u32",
           "scalar": "u32",
           "lanes": 1
         }
       ],
+      "package": "AntsBattle",
+      "doc": "Signal: an item was dropped on the board."
+    },
+    {
+      "name": "NestLabel",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "index",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
       "package": "AntsBattle"
+    },
+    {
+      "name": "NestOpened",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "nest",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "wave",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "Signal: a new nest opened."
+    },
+    {
+      "name": "NestSpot",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "index",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "open",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Offer",
+      "kind": "resource",
+      "sim": true,
+      "fields": [
+        {
+          "name": "kinds",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 3,
+          "doc": "ItemKind index per offer slot"
+        },
+        {
+          "name": "shapes",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 3,
+          "doc": "BlockShape index per offer slot (blocks)"
+        },
+        {
+          "name": "sold",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 3,
+          "doc": "1 once bought; the slot stays empty until the next set"
+        },
+        {
+          "name": "sets",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Sets drawn this run"
+        },
+        {
+          "name": "rerolls",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Rerolls bought this run (the price rises with each)"
+        },
+        {
+          "name": "version",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Bumped on every new set or purchase, so the tray redraws"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "OfferRerolled",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "price",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "Signal: the player paid for a new offer."
+    },
+    {
+      "name": "Placement",
+      "kind": "resource",
+      "sim": true,
+      "fields": [
+        {
+          "name": "active",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "ItemKind"
+        },
+        {
+          "name": "shape",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "BlockShape"
+        },
+        {
+          "name": "fromItem",
+          "kind": "entity",
+          "scalar": "u32",
+          "lanes": 2,
+          "doc": "The placed item being moved, or none for a tray pick"
+        },
+        {
+          "name": "fromCell",
+          "kind": "i8",
+          "scalar": "i8",
+          "lanes": 1,
+          "default": -1
+        },
+        {
+          "name": "slot",
+          "kind": "i8",
+          "scalar": "i8",
+          "lanes": 1,
+          "default": -1,
+          "doc": "Tray slot it came from"
+        },
+        {
+          "name": "x",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "y",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "cell",
+          "kind": "i8",
+          "scalar": "i8",
+          "lanes": 1,
+          "default": -1,
+          "doc": "Hovered cell (a block: its top-left cell), -1 off the board"
+        },
+        {
+          "name": "valid",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "reason",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "PlaceReason"
+        },
+        {
+          "name": "previewDist",
+          "kind": "array",
+          "scalar": "i16",
+          "lanes": 77,
+          "doc": "Flow field if the hovered drop happened (each nest preview path is traced from it)"
+        },
+        {
+          "name": "previewLen",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "1 when previewDist holds a valid preview"
+        },
+        {
+          "name": "returnSteps",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "retFromX",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "retFromY",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "retToX",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "retToY",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "retKind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "ItemKind"
+        },
+        {
+          "name": "retShape",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "BlockShape"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "PlacementRefused",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "reason",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "PlaceReason"
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "Signal: a drop was refused."
+    },
+    {
+      "name": "Projectile",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "ItemKind"
+        },
+        {
+          "name": "target",
+          "kind": "entity",
+          "scalar": "u32",
+          "lanes": 2
+        },
+        {
+          "name": "tx",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "ty",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "damage",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "splash",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "speed",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "RestartRequested",
+      "kind": "event",
+      "sim": true,
+      "fields": [],
+      "package": "AntsBattle",
+      "doc": "The player pressed Restart on the end screen."
+    },
+    {
+      "name": "Run",
+      "kind": "resource",
+      "sim": true,
+      "fields": [
+        {
+          "name": "phase",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "RunPhase"
+        },
+        {
+          "name": "runId",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Bumped on every restart"
+        },
+        {
+          "name": "time",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds, scaled by speed (slow motion while dragging)"
+        },
+        {
+          "name": "speed",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "default": 1,
+          "doc": "Game speed: 1 normal, 0.05 while a finger drags an item"
+        },
+        {
+          "name": "wave",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Waves started so far (0 before the first)"
+        },
+        {
+          "name": "lives",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "gold",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "goldFrac",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Fractional gold from swarm kills, paid out as whole coins"
+        },
+        {
+          "name": "wallsBuilt",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Walls bought this run (the first FREE_WALLS are free)"
+        },
+        {
+          "name": "nextWaveAt",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "group",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Spawn group of the current wave"
+        },
+        {
+          "name": "groupSpawned",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "spawnAt",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "spawning",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "alive",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "kills",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "bossSteps",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Steps left of the boss intro beat"
+        },
+        {
+          "name": "placements",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "refusals",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "shots",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "booms",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "baseHits",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "bosses",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "nestTurn",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Round-robin counter: which open nest the next ant leaves from"
+        },
+        {
+          "name": "nestsOpen",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Nests open so far (presentation plays the opening)"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "TrayIcon",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "slot",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "TrayLabel",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "slot",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "TraySlot",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "slot",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "shownVersion",
+          "kind": "i32",
+          "scalar": "i32",
+          "lanes": 1,
+          "default": -1
+        },
+        {
+          "name": "shownPrice",
+          "kind": "i16",
+          "scalar": "i16",
+          "lanes": 1,
+          "default": -2
+        },
+        {
+          "name": "affordable",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "WaveStarted",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "wave",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "boss",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "Signal: a wave started."
     }
   ],
   "commands": [],

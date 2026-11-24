@@ -1,16 +1,11 @@
 ---
 name: touch-input
-version: 1.1.0
+version: 1.2.0
 tier: required
 description: Touch input feel on phones: Tap, Swipe, Drag, Pinch, LongPress, PointerState velocity, fling, swipe on threshold vs release, input.json gestures, following the finger (teleport), testing swipes; gamepad and keyboard menus (uiNavigation, onBack) and the gameplay cursor. Use when building or tuning any touch, tap, drag or pad control.
 ---
 
 # Touch input that feels good
-
-**Covers:** which input event to build each control on, swipes that answer mid-gesture, velocity
-and flings, dragging things that stay under the finger, tuning gesture thresholds in `input.json`,
-and proving it in tests. Read it before writing or changing any touch control. Players judge a phone
-game by its touch feel in the first seconds, and on phones touch is the only input.
 
 ## How input reaches the game
 
@@ -61,7 +56,7 @@ stops (a release after the finger stopped is no fling).
 - **Big targets.** Touch targets are at least 9 mm (about 50 points). Hit-test taps with a radius,
   not the sprite's exact pixels.
 - **Haptics on the action, not on the touch:** tick when the swap or snap happens (skill `haptics`).
-- **Sim only.** Gesture events and `PointerState` are sim state. Presentation may read them, but never
+- **Sim state.** Gesture events and `PointerState` are sim state. Presentation may read them, but never
   writes back. A UI button is a UI document, not a world tap (skill `ui-documents`).
 
 ## Tuning (`input.json`)
@@ -121,7 +116,7 @@ worldTest('a swap starts before the finger lifts', async ({ world, step, input }
 });
 ```
 
-`swipe(from, to, steps)` and `tap(p)` cover the common cases. A swipe now lands on the step it
+`swipe(from, to, steps)` and `tap(p)` cover the common cases. A swipe lands on the step it
 crosses the threshold, not on its last step. Assert the fling with a `Drag` `End` velocity and a few
 `step`s. Run on both engines (`gameengine test --js both`), and feel it on a phone, at 30 fps on
 phone-low too, before handing it back.

@@ -28,6 +28,18 @@ a separately declared serde_json dependency has its own types in an SDK build.
   launches only for the same package build, and that build hash reads `Cargo.toml`, not a
   `Cargo.lock`. `gameengine package check` fails on a looser one. A built-in package's crate exports
   `pub static PACKAGE: gameengine_game::Package` instead.
+- **Rust calls:** for a numeric kernel script calls with arrays it holds, set
+  `"nativeOps": true` beside `native` and export `pub static OPS: gameengine_game::OpSet` from the
+  crate: `OpSet { name: "mypkg", ops: &[("addScaled", add_scaled)] }`, each a
+  `fn(&gameengine_game::Args) -> Result<f64, String>`. `args.num(i)` reads a number,
+  `args.view::<f32>(i)` / `view_mut::<f32>(i)` borrow a typed array's own memory (no copy), and
+  `args.same(i, j)` says an output is also an input. The package's TypeScript calls it through
+  `nativeOp('mypkg.addScaled')`, which is `null` on the web, in playable ads, in a game another app
+  launches and wherever no project host is built: keep a TypeScript version, and run the game's
+  tests with `--native both`, whose TypeScript lane turns the calls off, to prove the two hash
+  alike. A call never touches the world and never panics (a panic aborts the game): return
+  `Err("E_ARG: …")` for bad input. Used in sim code it must be deterministic: `gameengine_math::det`
+  for trigonometry and powers, no FMA, a fixed reduction order. Built-in packages use the same manifest flag and export.
 - **Developer executables:** declare `gameengine.rust.tools.<name>` with `crate`, `bin` and
   optional `features`, then call `ctx.rustTool(name)` from a project tool. The engine builds and
   caches it with pinned Rust; it never enters a game. Use `gameengine package rust check

@@ -1,15 +1,19 @@
 ---
 name: ship-web
-version: 1.8.1
+version: 1.10.0
 tier: optional
 description: WebGPU browser builds — export a static game with gameengine build web, configure the Emscripten toolchain and hosting, and verify rendering, input, audio, saves and tab lifecycle. Use for web exports, browser deployment or browser-specific failures; playable ads use a separate build path.
 ---
 
 # Shipping a browser game
 
+`gameengine build web` needs an engine source checkout; an installed editor cannot run it.
+
 `gameengine build web --project . --config release --out <build-dir>` exports `<build-dir>/site/`.
 Serve that whole folder over HTTPS or localhost, with `.wasm` served as `application/wasm`.
 The browser must support WebGPU. Ordinary folder exports need a server.
+Open the page with `?muted` (e.g. `http://localhost:8080/?muted`) to start the game muted; do this
+whenever an agent opens a build in a browser pane, unless the check is about audio.
 
 Add `--single-file` to embed the engine, wasm and cooked content into `site/index.html`.
 That HTML needs no supporting files and can also be opened directly in a compatible browser.
@@ -42,16 +46,7 @@ for a visible frame. The editor's **Build Settings → Web** keeps single-file a
 choices visible, with size limits and startup styling under the collapsed **Advanced** section;
 **Save and build** persists them before queuing the export. Web builds have no signing or store upload.
 
-Restricted opaque-origin previews using `sandbox="allow-scripts"` automatically use
-the engine's compatibility scope when a script iframe is inaccessible. Game globals, tool eval
-and Math/Date/console guards stay separate from the player and reset with the runtime. Intrinsic
-prototypes and browser objects remain shared, so this mode is for trusted engine bundles that
-use engine APIs and do not modify prototypes. It is not a JavaScript security boundary.
-The outer host's sandbox stays unchanged. Do not add `allow-same-origin` to untrusted uploads on
-an authenticated host. Normal browser pages and Node still use separate realms. For example, in Cortex,
-**Settings → Force view as blob → Open to interact** remains an optional separate-tab route.
-
-This currently requires an engine source checkout. It builds the Rust/C++ engine for `wasm32-unknown-emscripten`. Scripts run on the browser's
+It builds the Rust/C++ engine for `wasm32-unknown-emscripten`. Scripts run on the browser's
 own JavaScript engine. The canvas uses the same renderer, materials, physics and animation
 as native players. No native process or video stream is needed. Playable ads remain a
 separate, smaller export through `gameengine playable build`.
@@ -74,6 +69,8 @@ explicitly enabled. Build checks and pre/post/failure steps run with `build.plat
 Build outputs and reports are separate from the game source.
 
 ## Browser behavior
+
+A game embedded in a sandboxed iframe (`sandbox="allow-scripts"`) runs in a compatibility scope that is not a security boundary: `references/sandboxed-previews.md`.
 
 The loading screen prepares the engine before enabling Start game. The click unlocks WebAudio.
 Mouse, touch, pointer capture, keyboard codes, typed characters and normalized wheel deltas
@@ -106,11 +103,7 @@ font charset and keep initial content small to avoid long loading frames.
 - Probe/dev pages expose `gameengineProbe.state()` with rendered frame count, sim step and hash.
   It returns null while an engine call is running. Measure frame-count change over elapsed time;
   requestAnimationFrame's configured frequency does not prove the game rendered that fast.
-- The engine repo's explicit `pnpm test:web -- <site-dir>` runs a headless browser smoke test.
-  Set `GAMEENGINE_E2E_DIR` to an isolated scratch directory before running it.
-- For a self-contained file, separately run `pnpm test:web:single-file -- <index.html>` in the
-  engine repo: startup, input, offline use, restricted previews and restarts. Browser verification
-  is not an implicit build step and requires an installed Playwright Chromium.
+- Browser verification is not an implicit build step: open the built site in a real browser (or drive it with Playwright) and check startup, input, offline use and restarts.
 
 ## Multiplayer invitation links and game UI
 
@@ -123,11 +116,6 @@ Games own player-name entry, room and lobby screens, validation and interpretati
 links. The engine launcher has only its generic startup controls. It does not collect game values
 or rewrite URL parameters. Browser game scripts have no DOM or guaranteed `URL` global, so parse
 links with a portable JS helper. Emit recorded input if the validated values affect sim state.
-
-The engine repo's explicit `pnpm test:web:launch-link` builds a generated 3D fixture and verifies
-unchanged launch URLs in normal, single-file and opaque embedded exports, with no game-entry form
-in the engine launcher. Set `GAMEENGINE_E2E_DIR`; `GAMEENGINE_E2E_ARTIFACTS` retains screenshots,
-videos and logs. Native parity also runs when both host paths are configured.
 
 ## Browser networking
 
@@ -154,10 +142,6 @@ One active engine match has a separate socket owner and a reusable 256 KiB recei
 open, at most 8 packets / 64 KiB wait; overflow or send backpressure closes the match with an explicit
 error through multiplayer status/events. Leaving or disposing the session closes its socket.
 A suspended tab can disconnect; preserve the seat token and rejoin according to the game's policy.
-The engine repo's explicit `pnpm test:web:multiplayer` builds a generated fixture and runs a real
-engine authoritative server with one native and one browser client, checking input and snapshot
-sync. Set `GAMEENGINE_E2E_DIR` and `GAMEENGINE_HOST` to the compatible native host; artifacts are
-retained under `GAMEENGINE_E2E_ARTIFACTS` when supplied.
 
 Each session permits 8 sockets, 16 subprotocols per open and 256 KiB per message. Sends above the
 1 MiB outgoing buffer cap per socket answer `E_BACKPRESSURE`. Close codes are 1000 or 3000-4999, with at most
@@ -176,20 +160,16 @@ Attach `onmessage` and `onclose` in the same turn after awaiting the socket to r
 A close-only consumer receives its terminal event after one checkpoint, with `E_UNREAD` if payload
 was left unhandled. Existing transport errors take precedence over that diagnostic.
 
-The engine repo's explicit `pnpm test:web:network -- <site-dir>` checks two compiled browser clients,
-ordered text/binary data, rejected headers, connection failure, close and a paused receive overflow.
-Set `GAMEENGINE_E2E_DIR` to an isolated scratch directory before running it.
-
 A project's `native/` crate and its packages' Rust crates are linked into the browser player: the
 export builds a `native-web-player` wrapper in the engine (Rust and Emscripten toolchains required) and its
 `build-report.json` names the plugin under `nativeSystems`. `gameengine test --js v8,web` runs the same
 crates on the wasm host. That Rust runs without threads (`std::thread::spawn` fails there: fall back to
 the caller under `cfg(target_os = "emscripten")`) and cannot drive the GPU itself; dev and probe pages
 show the linked plugin as `gameengineProbe.native`. `GAMEENGINE_NATIVE_SYSTEMS=off` exports the stock
-player with every system's TypeScript twin. Transpiled systems keep their TypeScript in the browser
-(ADR 0299). A browser that exposes WebGPU without a GPU adapter stops at launch with `E_WEB_ADAPTER`.
+player with every system's TypeScript twin. Transpiled systems keep their TypeScript in the browser.
+A browser that exposes WebGPU without a GPU adapter stops at launch with `E_WEB_ADAPTER`.
 The export rejects native mobile plugins beyond the system launch-link subset and on-demand/HTTP
 bundles with named errors. Initial in-app cooked content is downloaded before startup,
 bounded to 512 MiB. Mobile keyboards, browser service plugins, native video, editor browser-build
 integration and cross-browser hash lanes remain separate work. Do not substitute a native stream
-when verifying a browser export. Design: ADR 0133 and design.md § 8.4a.
+when verifying a browser export.

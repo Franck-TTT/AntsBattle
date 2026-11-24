@@ -1,23 +1,51 @@
 ---
 name: platform-services
-version: 1.22.0
+version: 1.25.0
 tier: optional
 description: Third-party SDKs and backends as project services (analytics, consent, ad networks, login; in-app purchases come from a package) — services/*.schema.ts, mocks, plugin manifests, Kotlin and Swift sources, replay-safe rules. Use when adding, changing or testing any SDK, store, ad network or server call from native code.
 ---
 
 # Platform services: integrate an SDK as a project service
 
-**Covers:** Integrating any SDK or backend in Game Engine as a project service — analytics, consent/CMP, an ad network or attribution SDK no built-in package provides, a login or backend SDK — with services/*.schema.ts, mocks, a plugins/<id>/plugin.json manifest, Kotlin and Swift sources and project.gameengine.json settings (env:NAME keys). Covers the rules that keep them replay-safe (calls from UI only, outcomes as recorded sim events or meta actions, idempotent grants), consent before tracking, testing with mocks, and the working examples in examples/services. Use when adding, changing or testing any third-party SDK, store, ad network or server call a game makes from native code.
-
 The engine ships the **plumbing** (schema checks, routing, mocks, replay suppression, the
-MessagePack bridge to Swift/Kotlin) and the platform basics (`docs/generated/services.md`).
+MessagePack bridge to Swift/Kotlin) and the platform basics.
 Analytics, consent and every other SDK or backend are **your project's services**. Working
 integrations to copy: `examples/services/{analytics,consent}` in the engine repo;
 `samples/gem-cascade` uses both. In-app purchases are not an example to copy: they come from the
-external package `@tactilegames/gameengine.in-app-purchase`, installed with `gameengine package add`. Before writing one, check whether a package already provides
+engine's in-app purchase package, installed with `gameengine package add` (skill `packages`). Before writing one, check whether a package already provides
 the SDK: a game switches a package on rather than copying it, and the package's own skill says how
 (skill `packages`): `gameengine package on <name>` brings its plugin with it, and
 `gameengine package settings <name>` lists the ids it asks for.
+
+## The rules that matter most
+
+1. **Call services from UI and other non-sim code only.** A call from a sim system throws: its
+   outcome would not be in the replay.
+2. **Outcomes enter the game as recorded sim events or meta actions**, never by writing state in
+   a promise callback: `emit(PurchaseDelivered, { transactionId, moves })` from UI, handled by a
+   sim system. Replays and tests then reproduce the game without the SDK.
+3. **Grants are idempotent.** Stores, ad callbacks and backends redeliver. Key every grant by
+   the provider's id (transaction id, order id, reward id) in a **meta action that refuses an id it
+   has already recorded** (`@gameengine/meta`, skill `meta-economy`), dispatched from the sim
+   system that handles the event. Save that state before you acknowledge (`finish`) the
+   transaction, and replay the saved ids into it at launch before you listen for redeliveries.
+   The in-app purchase package's skill shows it for store orders.
+4. **Consent before tracking.** Ask (`services.consent.request({ tracking: true })`, from
+   `examples/services/consent`) before starting any ad, attribution or analytics SDK that collects
+   identifiers.
+5. **Test with mocks.** Every method has one; script cancels, failures, redeliveries and events:
+
+   ```ts
+   ctx.services.mock('store.buy', { error: 'E_CANCELLED: user cancelled' });
+   ctx.services.emit('store', 'orderUpdated', { order: 'o-1', state: 'paid' });
+   expect(ctx.services.calls('store.buy')[0]!.params).toEqual({ sku: 'gems_100' });
+   ```
+
+   Test that a redelivered id grants once, and that a saved and reloaded state still refuses it.
+   A build without the plugin is `ctx.services.mock('store.*', { error: 'E_UNAVAILABLE: no store plugin in this build' })`:
+   test that the game plays on.
+6. **Replays never touch a store.** During replay playback and verification every call goes to
+   the mock; the replay holds the recorded event, not the SDK's answer.
 
 ## Which services need a plugin in `plugins`
 
@@ -27,7 +55,8 @@ call answers `E_UNAVAILABLE`; mocks answer in the editor, so nothing looks wrong
 | Service | On a device |
 |---|---|
 | `haptics`, `keyboard`, `net` | built in, always there |
-| `storage`, `bundles`, `releases` | answered by the engine (`releases`: updates and launching other games, skill `ship-mobile`) |
+| `storage`, `bundles`, `releases` | answered by the engine (`releases`: updates and launching other games, skill `releases`) |
+| `devCapture` | answered by the engine in builds with cheats and the debug protocol (QA screenshots, skill `cheats`); `E_UNAVAILABLE` in store builds |
 | `push`, `system`, `cloudSave` | only with `"plugins": ["push"]`, `["system"]`, `["cloudsave"]` |
 | your own (`services/*.schema.ts`) | only with the plugin that lists it in `services` |
 
@@ -118,71 +147,7 @@ against it. Pin exact versions. `{{services.<path>}}` reads `project.gameengine.
 written as `{ "ios": …, "android": … }` resolves per platform (and each app ships only its own
 platform's entry); a line or key whose placeholder has no value and no `|default` is left out. A plugin may have only one platform section.
 
-Info.plist texts in other languages go in the plugin as `ios/<lang>.lproj/InfoPlist.strings`
-(`"NSUserTrackingUsageDescription" = "…";`, the English one stays in `info`). The iOS build merges
-every enabled plugin's into one file per language; two plugins giving one key in one language fail
-the build unless the game gives it in its own `ios/<lang>.lproj/InfoPlist.strings`, which wins over
-every plugin's (skill `ship-mobile`).
-
-Android SDKs that ship a Gradle plugin and a config file (crash reporters, some attribution SDKs)
-also take, in `android`:
-
-```json
-"gradlePlugins": [{ "id": "com.acme.crash.gradle", "version": "1.2.0" }],
-"gradle": ["acmeCrash {", "    failBuildOnUploadErrors.set(false)", "}"],
-"files": { "src/main/acme-crash-config.json": "config/acme-crash-config.json" }
-```
-
-`gradlePlugins` are declared at their version and applied in the app module; `gradle` lines go at
-the end of the app's `build.gradle.kts`; `files` copies a file from the plugin directory (not from
-`android/`, which is Kotlin source) into the app module, under `src/` but not in the engine's
-`src/main/assets/gameengine/` or `src/main/java/dev/gameengine/`. In these three a placeholder with
-no value and no `|default` fails the build; values are escaped for Kotlin strings, JSON and Android
-XML resources. Placeholders are filled only in text files (`.json .xml .properties .txt .kt .kts
-.pro .cfg`); images, `.so` files and the like are copied byte for byte. Don't list the Android or
-Kotlin Gradle plugins: the template applies them. Google Play rejects native libraries whose LOAD
-segments are not 16 KB aligned: every `.so` a plugin copies or its vendor SDK brings must be linked
-with `-z max-page-size=16384` (pick an SDK version that supports 16 KB pages), and
-`gameengine build android --config release` fails, naming the library in `play.problems`, when one
-is not (ADR 0130). An SDK that must start before the activity starts from a ContentProvider line in `application`
-(`android:initOrder`), as the engine's push plugin starts Firebase.
-
-On iOS, `"buildPhases": [{ "name": "Upload dSYMs", "script": "…", "inputFiles": ["${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}"] }]`
-runs scripts after the build, on every build (a crash reporter's symbol upload). Placeholders in
-`script` must have a value or a default, and each becomes one single-quoted shell word: write
-`--app {{services.reporter.appId}}`, not `--app "{{services.reporter.appId}}"`; read tokens from the build environment (`$REPORTER_TOKEN`), never write them
-into `plugin.json` or `services`.
-
-`"linkerFlags": ["-ObjC"]` adds flags to the app's `OTHER_LDFLAGS`, one self-contained flag per entry (a flag
-with an argument takes the `-Wl,` form: `-Wl,-weak_framework,Foo`). Use it when an
-SDK's setup guide asks for a linker flag: a static SDK that finds its own classes by name (Firebase
-Analytics' IDFA support) needs `-ObjC`, or the linker drops those classes and the SDK silently does less.
-
-`"xcframeworks": ["libs/AcmeSDK.xcframework"]` links an SDK that comes only as a prebuilt
-XCFramework (a private fork Swift Package Manager cannot fetch; use `packages` when a Swift package
-exists). Keep it in the plugin directory beside `ios/`, never inside it. It needs an iOS device slice
-and an iOS simulator slice, and no symbolic link: npm pack drops links, so strip macOS slices. The
-build reads static or dynamic from its binaries and embeds and signs a dynamic one; you declare
-nothing. Two plugins shipping one framework (`AcmeSDK.framework`) fail the build. The framework must
-import as built: the engine adds no Swift include path, so a Swift interface that imports a Clang
-module kept in the framework's `Headers/` fails at `import`. A static framework's resources never
-reach the app on their own: list its resource bundle in `"bundles": ["libs/AcmeSDK_AcmeSDK.bundle"]`
-(same rules: beside `ios/`, no symbolic link), and the app carries it whole at its root, where
-`Bundle.module` looks. A package using either key raises its `gameengine.engine` minimum to the engine
-release that added them: an older engine ignores them, and `import AcmeSDK` fails to compile or the
-SDK finds no resources. On Android the same SDK's `.aar` goes in `files`
-(`"src/acme/acme.aar": "libs/acme.aar"`) with a `gradle` line
-`dependencies { implementation(files("src/acme/acme.aar")) }`.
-
-`"files"` (Android and iOS) can also copy **the game's own file** into the app: a source that is one
-setting, `"{{services.firebase.configFile}}"`, copies the file that setting names, relative to the
-project, untouched. That is how a vendor's per-build config file (Firebase's `google-services.json` and
-`GoogleService-Info.plist`) reaches the app: the game keeps one file per build type and sets the path
-per build type (`{ "ios": "env:FIREBASE_IOS_CONFIG", "android": "env:FIREBASE_ANDROID_CONFIG" }`).
-The path must stay inside the project; a missing setting or file fails the build. On Android the
-destination may also be a `.json` file beside the app's `build.gradle.kts` (`"google-services.json"`,
-where Google's Gradle plugin reads it). On iOS, `"files": { "GoogleService-Info.plist": … }` names a
-file at the app bundle's root; plugin files there are copied untouched too (no placeholders).
+More manifest fields (Info.plist texts per language, `gradlePlugins`, `gradlePrepareTasks`, iOS `buildPhases`, `linkerFlags`, `xcframeworks`, `files`): `references/manifest.md`.
 
 **3. Native sources.** Implement the generated interface (Kotlin `StoreService`, Swift protocol
 `StoreService`; generated per build, with typed params/results) and register in `install`:
@@ -208,43 +173,7 @@ test crash, on `context.cheats`, not on `buildConfig`: an in-house release keeps
 Answer every call once (`reply.ok` / `reply.fail("E_CANCELLED", "…")`), from any thread; raise
 events with `services.emitStoreOrderUpdated(…)`. Plugins never touch the ECS.
 
-**App lifecycle in a plugin.** Implement the lifecycle listener (every method optional, main thread)
-instead of registering OS callbacks yourself (ADR 0549 amendment of 2026-11-09):
-
-```kotlin
-class StoreAcmePlugin : GameEnginePlugin, StoreService, GameEngineLifecycleListener {
-    override fun onApplicationCreate(app: Application) { Acme.init(app) } // process start, before any Activity (state: companion object)
-    override fun install(services: GameEngineServices, context: GameEnginePluginContext) {
-        GameEngineServicesHost.instance?.addLifecycleListener(this)
-    }
-    override fun onPause(activity: Activity) { sdk.flush() }        // the game Activity, before the engine hears it
-    override fun onCover(callback: String, activity: Activity) {}    // another Activity of the app: an ad, billing
-    override fun onAppBackground() {}                                // the last Activity of the app stopped
-    override fun onHandled(state: String) {}                         // app.onLifecycle's listeners and save flush have run
-}
-// a result that belongs to you, with no request code to pick:
-GameEngineServicesHost.instance?.requestPermissions(arrayOf(POST_NOTIFICATIONS)) { answers -> }
-GameEngineServicesHost.instance?.startForResult(intent) { resultCode, data -> }
-```
-
-```swift
-final class StoreAcmePlugin: GameEnginePlugin, StoreService, GameEngineLifecycleListener {
-    func didFinishLaunching(_ application: UIApplication, options: [UIApplication.LaunchOptionsKey: Any]?) { Acme.configure() }
-    func install(_ services: GameEngineServices, _ context: GameEnginePluginContext) { GameEngineLifecycle.shared.add(self) }
-    func didEnterBackground() { sdk.flush() }   // before the engine hears it
-    func presented(_ screen: String) {}          // a screen over the game window: an ad, a sheet
-    func handled(_ state: String) {}
-}
-```
-
-Android also hears `onStart`, `onResume`, `onStop`, `onSaveInstanceState`, `onDestroy`, `onNewIntent`,
-`onWindowFocusChanged`, `onConfigurationChanged`, `onTrimMemory`, `onUserLeaveHint` and `onAppForeground`.
-iOS also hears active and foreground changes, `willTerminate`, memory warnings, `significantTimeChange`,
-`openURL`, the game view controller's appear/disappear, safe area and size, `dismissed` and `windowKey`.
-Plugins never hear a transition a test or the debug protocol injects. Each event is a `[lifecycle]`
-line in the device log, so a device test can check what a plugin was told. Plugins are created once
-per process for the early hook; an Activity recreated later installs new instances, so what
-`onApplicationCreate` / `didFinishLaunching` set up lives in a companion object or a static.
+**App lifecycle in a plugin** (Android Activity and iOS app-delegate callbacks, links, notifications): implement the lifecycle listener; `references/lifecycle.md`.
 
 **4. Settings and keys** in `project.gameengine.json` `services.<name>`; secrets as `"env:NAME"`,
 read from the build environment (left out with a warning in dev builds, an error in release).
@@ -274,36 +203,6 @@ reference's value in every file.
 **5. Enable** it: `"plugins": ["store-acme"]`. `gameengine build android|ios` copies the sources,
 applies the manifest and generates a dispatcher that routes your services
 (`--dry-run` assembles the native project without a toolchain: check it there).
-
-## Rules that are not optional
-
-1. **Call services from UI and other non-sim code only.** A call from a sim system throws: its
-   outcome would not be in the replay.
-2. **Outcomes enter the game as recorded sim events or meta actions**, never by writing state in
-   a promise callback: `emit(PurchaseDelivered, { transactionId, moves })` from UI, handled by a
-   sim system. Replays and tests then reproduce the game without the SDK.
-3. **Grants are idempotent.** Stores, ad callbacks and backends redeliver. Key every grant by
-   the provider's id (transaction id, order id, reward id) in a **meta action that refuses an id it
-   has already recorded** (`@gameengine/meta`, skill `meta-economy`), dispatched from the sim
-   system that handles the event. Save that state before you acknowledge (`finish`) the
-   transaction, and replay the saved ids into it at launch before you listen for redeliveries.
-   The `@tactilegames/gameengine.in-app-purchase` package's skill shows it for store orders.
-4. **Consent before tracking.** Ask (`services.consent.request({ tracking: true })`, from
-   `examples/services/consent`) before starting any ad, attribution or analytics SDK that collects
-   identifiers.
-5. **Test with mocks.** Every method has one; script cancels, failures, redeliveries and events:
-
-   ```ts
-   ctx.services.mock('store.buy', { error: 'E_CANCELLED: user cancelled' });
-   ctx.services.emit('store', 'orderUpdated', { order: 'o-1', state: 'paid' });
-   expect(ctx.services.calls('store.buy')[0]!.params).toEqual({ sku: 'gems_100' });
-   ```
-
-   Test that a redelivered id grants once, and that a saved and reloaded state still refuses it.
-   A build without the plugin is `ctx.services.mock('store.*', { error: 'E_UNAVAILABLE: no store plugin in this build' })`:
-   test that the game plays on.
-6. **Replays never touch a store.** During replay playback and verification every call goes to
-   the mock; the replay holds the recorded event, not the SDK's answer.
 
 ## Crash reporters
 

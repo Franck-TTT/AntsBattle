@@ -1,5 +1,5 @@
 // @generated — do not edit. Regenerate with `pnpm gen` (tools/bindgen).
-import { typeToken, registerSchema, type EntityId } from '@gameengine/runtime';
+import { typeToken, rowRead as $r, registerSchema, type EntityId } from '@gameengine/runtime';
 
 export type { EntityId };
 
@@ -7,15 +7,199 @@ export type { EntityId };
 export const schemaIr = {
   "version": 1,
   "package": "AntsBattle",
-  "enums": [],
+  "enums": [
+    {
+      "name": "BlockShape",
+      "values": [
+        "b1x1",
+        "b2x2",
+        "b2x1",
+        "b1x2",
+        "b3x1",
+        "b1x3"
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "EnemyKind",
+      "values": [
+        "ant",
+        "fast",
+        "beetle",
+        "boss"
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "FxKind",
+      "values": [
+        "dust",
+        "pop",
+        "boom",
+        "hit",
+        "baseHit"
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "ItemKind",
+      "values": [
+        "none",
+        "wall",
+        "tower",
+        "cannon"
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "PlaceReason",
+      "values": [
+        "ok",
+        "offBoard",
+        "occupied",
+        "blocks",
+        "gold",
+        "enemy",
+        "noBlock",
+        "fixed"
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "RunPhase",
+      "values": [
+        "playing",
+        "won",
+        "lost"
+      ],
+      "package": "AntsBattle"
+    }
+  ],
   "types": [
     {
-      "name": "Bubble",
+      "name": "Base",
+      "kind": "tag",
+      "sim": true,
+      "fields": [],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Big",
+      "kind": "tag",
+      "sim": true,
+      "fields": [],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Block",
       "kind": "component",
       "sim": true,
       "fields": [
         {
-          "name": "radius",
+          "name": "shape",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "BlockShape"
+        },
+        {
+          "name": "cell",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Top-left cell"
+        },
+        {
+          "name": "placedAt",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "denySteps",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Shake left after a refused pick-up (blocks never move)"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Board",
+      "kind": "resource",
+      "sim": true,
+      "fields": [
+        {
+          "name": "cells",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 77,
+          "doc": "1 where a block stands (blocks the ants), 0 free"
+        },
+        {
+          "name": "weapons",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 77,
+          "doc": "Weapon kind index standing on the block of each cell (0 none)"
+        },
+        {
+          "name": "dist",
+          "kind": "array",
+          "scalar": "i16",
+          "lanes": 77,
+          "doc": "Steps to the base per cell, -1 unreachable or blocked"
+        },
+        {
+          "name": "path",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 77,
+          "doc": "Cells of the path from the nest to the base"
+        },
+        {
+          "name": "pathLen",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "version",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "BoardTile",
+      "kind": "tag",
+      "sim": true,
+      "fields": [],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Enemy",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "EnemyKind"
+        },
+        {
+          "name": "hp",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "maxHp",
           "kind": "f32",
           "scalar": "f32",
           "lanes": 1
@@ -25,31 +209,836 @@ export const schemaIr = {
           "kind": "f32",
           "scalar": "f32",
           "lanes": 1,
-          "doc": "Units per step"
+          "doc": "Cells per game second"
+        },
+        {
+          "name": "reward",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Gold per kill (fractional at swarm scale)"
+        },
+        {
+          "name": "damage",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Lives lost when it reaches the base"
+        },
+        {
+          "name": "hx",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "default": 0,
+          "doc": "Facing, unit vector x (smoothed; no trig per step)"
+        },
+        {
+          "name": "hy",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "default": -1,
+          "doc": "Facing, unit vector y"
+        },
+        {
+          "name": "remaining",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Path length left to the base, for targeting"
+        },
+        {
+          "name": "flashSteps",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "lane",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Sideways offset in its column, cells (spreads the swarm)"
+        },
+        {
+          "name": "bornAt",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
         }
       ],
       "package": "AntsBattle"
     },
     {
-      "name": "Game",
-      "kind": "resource",
+      "name": "EnemyKilled",
+      "kind": "event",
       "sim": true,
       "fields": [
         {
-          "name": "score",
-          "kind": "u32",
-          "scalar": "u32",
-          "lanes": 1,
-          "doc": "Bubbles popped"
+          "name": "x",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
         },
         {
-          "name": "spawned",
+          "name": "y",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "gold",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "EnemyKind"
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "Signal: an enemy died; gold flies to the counter."
+    },
+    {
+      "name": "FlowCell",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "cell",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "dist",
+          "kind": "i16",
+          "scalar": "i16",
+          "lanes": 1,
+          "default": -1
+        },
+        {
+          "name": "next",
+          "kind": "i16",
+          "scalar": "i16",
+          "lanes": 1,
+          "default": -1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "FxHost",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "FxKind"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Item",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "ItemKind"
+        },
+        {
+          "name": "cell",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "cooldown",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds before it can be moved again"
+        },
+        {
+          "name": "reload",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds before it fires again"
+        },
+        {
+          "name": "aim",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Barrel angle, radians"
+        },
+        {
+          "name": "placedAt",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Run.time of its last drop (squash and stretch)"
+        },
+        {
+          "name": "denySteps",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Shake left after a refused pick-up"
+        },
+        {
+          "name": "held",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Picked up by the finger right now"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "ItemPlaced",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "ItemKind"
+        },
+        {
+          "name": "shape",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "BlockShape"
+        },
+        {
+          "name": "cell",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "moved",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "cost",
           "kind": "u32",
           "scalar": "u32",
           "lanes": 1
         }
       ],
+      "package": "AntsBattle",
+      "doc": "Signal: an item was dropped on the board."
+    },
+    {
+      "name": "NestLabel",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "index",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
       "package": "AntsBattle"
+    },
+    {
+      "name": "NestOpened",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "nest",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "wave",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "Signal: a new nest opened."
+    },
+    {
+      "name": "NestSpot",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "index",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "open",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Offer",
+      "kind": "resource",
+      "sim": true,
+      "fields": [
+        {
+          "name": "kinds",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 3,
+          "doc": "ItemKind index per offer slot"
+        },
+        {
+          "name": "shapes",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 3,
+          "doc": "BlockShape index per offer slot (blocks)"
+        },
+        {
+          "name": "sold",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 3,
+          "doc": "1 once bought; the slot stays empty until the next set"
+        },
+        {
+          "name": "sets",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Sets drawn this run"
+        },
+        {
+          "name": "rerolls",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Rerolls bought this run (the price rises with each)"
+        },
+        {
+          "name": "version",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Bumped on every new set or purchase, so the tray redraws"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "OfferRerolled",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "price",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "Signal: the player paid for a new offer."
+    },
+    {
+      "name": "Placement",
+      "kind": "resource",
+      "sim": true,
+      "fields": [
+        {
+          "name": "active",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "ItemKind"
+        },
+        {
+          "name": "shape",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "BlockShape"
+        },
+        {
+          "name": "fromItem",
+          "kind": "entity",
+          "scalar": "u32",
+          "lanes": 2,
+          "doc": "The placed item being moved, or none for a tray pick"
+        },
+        {
+          "name": "fromCell",
+          "kind": "i8",
+          "scalar": "i8",
+          "lanes": 1,
+          "default": -1
+        },
+        {
+          "name": "slot",
+          "kind": "i8",
+          "scalar": "i8",
+          "lanes": 1,
+          "default": -1,
+          "doc": "Tray slot it came from"
+        },
+        {
+          "name": "x",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "y",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "cell",
+          "kind": "i8",
+          "scalar": "i8",
+          "lanes": 1,
+          "default": -1,
+          "doc": "Hovered cell (a block: its top-left cell), -1 off the board"
+        },
+        {
+          "name": "valid",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "reason",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "PlaceReason"
+        },
+        {
+          "name": "previewDist",
+          "kind": "array",
+          "scalar": "i16",
+          "lanes": 77,
+          "doc": "Flow field if the hovered drop happened (each nest preview path is traced from it)"
+        },
+        {
+          "name": "previewLen",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "1 when previewDist holds a valid preview"
+        },
+        {
+          "name": "returnSteps",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "retFromX",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "retFromY",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "retToX",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "retToY",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "retKind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "ItemKind"
+        },
+        {
+          "name": "retShape",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "BlockShape"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "PlacementRefused",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "reason",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "PlaceReason"
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "Signal: a drop was refused."
+    },
+    {
+      "name": "Projectile",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "ItemKind"
+        },
+        {
+          "name": "target",
+          "kind": "entity",
+          "scalar": "u32",
+          "lanes": 2
+        },
+        {
+          "name": "tx",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "ty",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "damage",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "splash",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "speed",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "RestartRequested",
+      "kind": "event",
+      "sim": true,
+      "fields": [],
+      "package": "AntsBattle",
+      "doc": "The player pressed Restart on the end screen."
+    },
+    {
+      "name": "Run",
+      "kind": "resource",
+      "sim": true,
+      "fields": [
+        {
+          "name": "phase",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "RunPhase"
+        },
+        {
+          "name": "runId",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Bumped on every restart"
+        },
+        {
+          "name": "time",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds, scaled by speed (slow motion while dragging)"
+        },
+        {
+          "name": "speed",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "default": 1,
+          "doc": "Game speed: 1 normal, 0.05 while a finger drags an item"
+        },
+        {
+          "name": "wave",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Waves started so far (0 before the first)"
+        },
+        {
+          "name": "lives",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "gold",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "goldFrac",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Fractional gold from swarm kills, paid out as whole coins"
+        },
+        {
+          "name": "wallsBuilt",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Walls bought this run (the first FREE_WALLS are free)"
+        },
+        {
+          "name": "nextWaveAt",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "group",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Spawn group of the current wave"
+        },
+        {
+          "name": "groupSpawned",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "spawnAt",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "spawning",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "alive",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "kills",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "bossSteps",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Steps left of the boss intro beat"
+        },
+        {
+          "name": "placements",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "refusals",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "shots",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "booms",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "baseHits",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "bosses",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "nestTurn",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Round-robin counter: which open nest the next ant leaves from"
+        },
+        {
+          "name": "nestsOpen",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Nests open so far (presentation plays the opening)"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "TrayIcon",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "slot",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "TrayLabel",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "slot",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "TraySlot",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "slot",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "shownVersion",
+          "kind": "i32",
+          "scalar": "i32",
+          "lanes": 1,
+          "default": -1
+        },
+        {
+          "name": "shownPrice",
+          "kind": "i16",
+          "scalar": "i16",
+          "lanes": 1,
+          "default": -2
+        },
+        {
+          "name": "affordable",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "WaveStarted",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "wave",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        },
+        {
+          "name": "boss",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "Signal: a wave started."
     }
   ],
   "commands": [],
@@ -58,28 +1047,535 @@ export const schemaIr = {
 } as const;
 registerSchema(schemaIr);
 
-export interface BubbleViews {
-  radius: Float32Array;
-  /** Units per step */
+export const BlockShape = {
+  b1x1: 0,
+  b2x2: 1,
+  b2x1: 2,
+  b1x2: 3,
+  b3x1: 4,
+  b1x3: 5,
+} as const;
+export type BlockShapeName = 'b1x1' | 'b2x2' | 'b2x1' | 'b1x2' | 'b3x1' | 'b1x3';
+
+export const EnemyKind = {
+  ant: 0,
+  fast: 1,
+  beetle: 2,
+  boss: 3,
+} as const;
+export type EnemyKindName = 'ant' | 'fast' | 'beetle' | 'boss';
+
+export const FxKind = {
+  dust: 0,
+  pop: 1,
+  boom: 2,
+  hit: 3,
+  baseHit: 4,
+} as const;
+export type FxKindName = 'dust' | 'pop' | 'boom' | 'hit' | 'baseHit';
+
+export const ItemKind = {
+  none: 0,
+  wall: 1,
+  tower: 2,
+  cannon: 3,
+} as const;
+export type ItemKindName = 'none' | 'wall' | 'tower' | 'cannon';
+
+export const PlaceReason = {
+  ok: 0,
+  offBoard: 1,
+  occupied: 2,
+  blocks: 3,
+  gold: 4,
+  enemy: 5,
+  noBlock: 6,
+  fixed: 7,
+} as const;
+export type PlaceReasonName = 'ok' | 'offBoard' | 'occupied' | 'blocks' | 'gold' | 'enemy' | 'noBlock' | 'fixed';
+
+export const RunPhase = {
+  playing: 0,
+  won: 1,
+  lost: 2,
+} as const;
+export type RunPhaseName = 'playing' | 'won' | 'lost';
+
+export type BaseViews = Record<string, never>;
+export type BaseValue = Record<string, never>;
+/** Base (tag, sim) */
+export const Base = typeToken<BaseViews, BaseValue>('Base', 'tag');
+
+export type BigViews = Record<string, never>;
+export type BigValue = Record<string, never>;
+/** Big (tag, sim) */
+export const Big = typeToken<BigViews, BigValue>('Big', 'tag');
+
+export interface BlockViews {
+  shape: Uint8Array;
+  /** Top-left cell */
+  cell: Uint8Array;
+  placedAt: Float32Array;
+  /** Shake left after a refused pick-up (blocks never move) */
+  denySteps: Uint8Array;
+}
+export interface BlockValue {
+  shape: BlockShapeName | number;
+  /** Top-left cell */
+  cell: number;
+  placedAt: number;
+  /** Shake left after a refused pick-up (blocks never move) */
+  denySteps: number;
+}
+/** Block (component, sim) */
+export const Block = typeToken<BlockViews, BlockValue>('Block', 'component', { sig: 'shape:enum:1,cell:u8:1,placedAt:f32:1,denySteps:u8:1', read: (v: BlockViews, i: number, o: Record<string, unknown>) => { o.shape = $r.enm('BlockShape', v.shape[i]!); o.cell = v.cell[i]; o.placedAt = v.placedAt[i]; o.denySteps = v.denySteps[i]; return o; } });
+
+export interface BoardViews {
+  /** 1 where a block stands (blocks the ants), 0 free */
+  cells: Uint8Array;
+  /** Weapon kind index standing on the block of each cell (0 none) */
+  weapons: Uint8Array;
+  /** Steps to the base per cell, -1 unreachable or blocked */
+  dist: Int16Array;
+  /** Cells of the path from the nest to the base */
+  path: Uint8Array;
+  pathLen: Uint8Array;
+  version: Uint32Array;
+}
+export interface BoardValue {
+  /** 1 where a block stands (blocks the ants), 0 free */
+  cells: number[];
+  /** Weapon kind index standing on the block of each cell (0 none) */
+  weapons: number[];
+  /** Steps to the base per cell, -1 unreachable or blocked */
+  dist: number[];
+  /** Cells of the path from the nest to the base */
+  path: number[];
+  pathLen: number;
+  version: number;
+}
+/** Board (resource, sim) */
+export const Board = typeToken<BoardViews, BoardValue>('Board', 'resource', { sig: 'cells:array:77,weapons:array:77,dist:array:77,path:array:77,pathLen:u8:1,version:u32:1', read: (v: BoardViews, i: number, o: Record<string, unknown>) => { o.cells = $r.lanes(v.cells, i, 77, o.cells); o.weapons = $r.lanes(v.weapons, i, 77, o.weapons); o.dist = $r.lanes(v.dist, i, 77, o.dist); o.path = $r.lanes(v.path, i, 77, o.path); o.pathLen = v.pathLen[i]; o.version = v.version[i]; return o; } });
+
+export type BoardTileViews = Record<string, never>;
+export type BoardTileValue = Record<string, never>;
+/** BoardTile (tag, sim) */
+export const BoardTile = typeToken<BoardTileViews, BoardTileValue>('BoardTile', 'tag');
+
+export interface EnemyViews {
+  kind: Uint8Array;
+  hp: Float32Array;
+  maxHp: Float32Array;
+  /** Cells per game second */
+  speed: Float32Array;
+  /** Gold per kill (fractional at swarm scale) */
+  reward: Float32Array;
+  /** Lives lost when it reaches the base */
+  damage: Uint32Array;
+  /** Facing, unit vector x (smoothed; no trig per step) */
+  hx: Float32Array;
+  /** Facing, unit vector y */
+  hy: Float32Array;
+  /** Path length left to the base, for targeting */
+  remaining: Float32Array;
+  flashSteps: Uint8Array;
+  /** Sideways offset in its column, cells (spreads the swarm) */
+  lane: Float32Array;
+  bornAt: Float32Array;
+}
+export interface EnemyValue {
+  kind: EnemyKindName | number;
+  hp: number;
+  maxHp: number;
+  /** Cells per game second */
+  speed: number;
+  /** Gold per kill (fractional at swarm scale) */
+  reward: number;
+  /** Lives lost when it reaches the base */
+  damage: number;
+  /** Facing, unit vector x (smoothed; no trig per step) */
+  hx: number;
+  /** Facing, unit vector y */
+  hy: number;
+  /** Path length left to the base, for targeting */
+  remaining: number;
+  flashSteps: number;
+  /** Sideways offset in its column, cells (spreads the swarm) */
+  lane: number;
+  bornAt: number;
+}
+/** Enemy (component, sim) */
+export const Enemy = typeToken<EnemyViews, EnemyValue>('Enemy', 'component', { sig: 'kind:enum:1,hp:f32:1,maxHp:f32:1,speed:f32:1,reward:f32:1,damage:u32:1,hx:f32:1,hy:f32:1,remaining:f32:1,flashSteps:u8:1,lane:f32:1,bornAt:f32:1', read: (v: EnemyViews, i: number, o: Record<string, unknown>) => { o.kind = $r.enm('EnemyKind', v.kind[i]!); o.hp = v.hp[i]; o.maxHp = v.maxHp[i]; o.speed = v.speed[i]; o.reward = v.reward[i]; o.damage = v.damage[i]; o.hx = v.hx[i]; o.hy = v.hy[i]; o.remaining = v.remaining[i]; o.flashSteps = v.flashSteps[i]; o.lane = v.lane[i]; o.bornAt = v.bornAt[i]; return o; } });
+
+export interface EnemyKilledViews {
+  x: Float32Array;
+  y: Float32Array;
+  gold: Uint32Array;
+  kind: Uint8Array;
+}
+export interface EnemyKilledValue {
+  x: number;
+  y: number;
+  gold: number;
+  kind: EnemyKindName | number;
+}
+/** Signal: an enemy died; gold flies to the counter. (event, sim) */
+export const EnemyKilled = typeToken<EnemyKilledViews, EnemyKilledValue>('EnemyKilled', 'event', { sig: 'x:f32:1,y:f32:1,gold:u32:1,kind:enum:1', read: (v: EnemyKilledViews, i: number, o: Record<string, unknown>) => { o.x = v.x[i]; o.y = v.y[i]; o.gold = v.gold[i]; o.kind = $r.enm('EnemyKind', v.kind[i]!); return o; } });
+
+export interface FlowCellViews {
+  cell: Uint8Array;
+  dist: Int16Array;
+  next: Int16Array;
+}
+export interface FlowCellValue {
+  cell: number;
+  dist: number;
+  next: number;
+}
+/** FlowCell (component, sim) */
+export const FlowCell = typeToken<FlowCellViews, FlowCellValue>('FlowCell', 'component', { sig: 'cell:u8:1,dist:i16:1,next:i16:1', read: (v: FlowCellViews, i: number, o: Record<string, unknown>) => { o.cell = v.cell[i]; o.dist = v.dist[i]; o.next = v.next[i]; return o; } });
+
+export interface FxHostViews {
+  kind: Uint8Array;
+}
+export interface FxHostValue {
+  kind: FxKindName | number;
+}
+/** FxHost (component, sim) */
+export const FxHost = typeToken<FxHostViews, FxHostValue>('FxHost', 'component', { sig: 'kind:enum:1', read: (v: FxHostViews, i: number, o: Record<string, unknown>) => { o.kind = $r.enm('FxKind', v.kind[i]!); return o; } });
+
+export interface ItemViews {
+  kind: Uint8Array;
+  cell: Uint8Array;
+  /** Game seconds before it can be moved again */
+  cooldown: Float32Array;
+  /** Game seconds before it fires again */
+  reload: Float32Array;
+  /** Barrel angle, radians */
+  aim: Float32Array;
+  /** Run.time of its last drop (squash and stretch) */
+  placedAt: Float32Array;
+  /** Shake left after a refused pick-up */
+  denySteps: Uint8Array;
+  /** Picked up by the finger right now */
+  held: Uint8Array;
+}
+export interface ItemValue {
+  kind: ItemKindName | number;
+  cell: number;
+  /** Game seconds before it can be moved again */
+  cooldown: number;
+  /** Game seconds before it fires again */
+  reload: number;
+  /** Barrel angle, radians */
+  aim: number;
+  /** Run.time of its last drop (squash and stretch) */
+  placedAt: number;
+  /** Shake left after a refused pick-up */
+  denySteps: number;
+  /** Picked up by the finger right now */
+  held: boolean;
+}
+/** Item (component, sim) */
+export const Item = typeToken<ItemViews, ItemValue>('Item', 'component', { sig: 'kind:enum:1,cell:u8:1,cooldown:f32:1,reload:f32:1,aim:f32:1,placedAt:f32:1,denySteps:u8:1,held:bool:1', read: (v: ItemViews, i: number, o: Record<string, unknown>) => { o.kind = $r.enm('ItemKind', v.kind[i]!); o.cell = v.cell[i]; o.cooldown = v.cooldown[i]; o.reload = v.reload[i]; o.aim = v.aim[i]; o.placedAt = v.placedAt[i]; o.denySteps = v.denySteps[i]; o.held = v.held[i] !== 0; return o; } });
+
+export interface ItemPlacedViews {
+  kind: Uint8Array;
+  shape: Uint8Array;
+  cell: Uint8Array;
+  moved: Uint8Array;
+  cost: Uint32Array;
+}
+export interface ItemPlacedValue {
+  kind: ItemKindName | number;
+  shape: BlockShapeName | number;
+  cell: number;
+  moved: boolean;
+  cost: number;
+}
+/** Signal: an item was dropped on the board. (event, sim) */
+export const ItemPlaced = typeToken<ItemPlacedViews, ItemPlacedValue>('ItemPlaced', 'event', { sig: 'kind:enum:1,shape:enum:1,cell:u8:1,moved:bool:1,cost:u32:1', read: (v: ItemPlacedViews, i: number, o: Record<string, unknown>) => { o.kind = $r.enm('ItemKind', v.kind[i]!); o.shape = $r.enm('BlockShape', v.shape[i]!); o.cell = v.cell[i]; o.moved = v.moved[i] !== 0; o.cost = v.cost[i]; return o; } });
+
+export interface NestLabelViews {
+  index: Uint8Array;
+}
+export interface NestLabelValue {
+  index: number;
+}
+/** NestLabel (component, sim) */
+export const NestLabel = typeToken<NestLabelViews, NestLabelValue>('NestLabel', 'component', { sig: 'index:u8:1', read: (v: NestLabelViews, i: number, o: Record<string, unknown>) => { o.index = v.index[i]; return o; } });
+
+export interface NestOpenedViews {
+  nest: Uint8Array;
+  wave: Uint32Array;
+}
+export interface NestOpenedValue {
+  nest: number;
+  wave: number;
+}
+/** Signal: a new nest opened. (event, sim) */
+export const NestOpened = typeToken<NestOpenedViews, NestOpenedValue>('NestOpened', 'event', { sig: 'nest:u8:1,wave:u32:1', read: (v: NestOpenedViews, i: number, o: Record<string, unknown>) => { o.nest = v.nest[i]; o.wave = v.wave[i]; return o; } });
+
+export interface NestSpotViews {
+  index: Uint8Array;
+  open: Uint8Array;
+}
+export interface NestSpotValue {
+  index: number;
+  open: boolean;
+}
+/** NestSpot (component, sim) */
+export const NestSpot = typeToken<NestSpotViews, NestSpotValue>('NestSpot', 'component', { sig: 'index:u8:1,open:bool:1', read: (v: NestSpotViews, i: number, o: Record<string, unknown>) => { o.index = v.index[i]; o.open = v.open[i] !== 0; return o; } });
+
+export interface OfferViews {
+  /** ItemKind index per offer slot */
+  kinds: Uint8Array;
+  /** BlockShape index per offer slot (blocks) */
+  shapes: Uint8Array;
+  /** 1 once bought; the slot stays empty until the next set */
+  sold: Uint8Array;
+  /** Sets drawn this run */
+  sets: Uint32Array;
+  /** Rerolls bought this run (the price rises with each) */
+  rerolls: Uint32Array;
+  /** Bumped on every new set or purchase, so the tray redraws */
+  version: Uint32Array;
+}
+export interface OfferValue {
+  /** ItemKind index per offer slot */
+  kinds: number[];
+  /** BlockShape index per offer slot (blocks) */
+  shapes: number[];
+  /** 1 once bought; the slot stays empty until the next set */
+  sold: number[];
+  /** Sets drawn this run */
+  sets: number;
+  /** Rerolls bought this run (the price rises with each) */
+  rerolls: number;
+  /** Bumped on every new set or purchase, so the tray redraws */
+  version: number;
+}
+/** Offer (resource, sim) */
+export const Offer = typeToken<OfferViews, OfferValue>('Offer', 'resource', { sig: 'kinds:array:3,shapes:array:3,sold:array:3,sets:u32:1,rerolls:u32:1,version:u32:1', read: (v: OfferViews, i: number, o: Record<string, unknown>) => { o.kinds = $r.lanes(v.kinds, i, 3, o.kinds); o.shapes = $r.lanes(v.shapes, i, 3, o.shapes); o.sold = $r.lanes(v.sold, i, 3, o.sold); o.sets = v.sets[i]; o.rerolls = v.rerolls[i]; o.version = v.version[i]; return o; } });
+
+export interface OfferRerolledViews {
+  price: Uint32Array;
+}
+export interface OfferRerolledValue {
+  price: number;
+}
+/** Signal: the player paid for a new offer. (event, sim) */
+export const OfferRerolled = typeToken<OfferRerolledViews, OfferRerolledValue>('OfferRerolled', 'event', { sig: 'price:u32:1', read: (v: OfferRerolledViews, i: number, o: Record<string, unknown>) => { o.price = v.price[i]; return o; } });
+
+export interface PlacementViews {
+  active: Uint8Array;
+  kind: Uint8Array;
+  shape: Uint8Array;
+  /** The placed item being moved, or none for a tray pick */
+  fromItem: Uint32Array;
+  fromCell: Int8Array;
+  /** Tray slot it came from */
+  slot: Int8Array;
+  x: Float32Array;
+  y: Float32Array;
+  /** Hovered cell (a block: its top-left cell), -1 off the board */
+  cell: Int8Array;
+  valid: Uint8Array;
+  reason: Uint8Array;
+  /** Flow field if the hovered drop happened (each nest preview path is traced from it) */
+  previewDist: Int16Array;
+  /** 1 when previewDist holds a valid preview */
+  previewLen: Uint8Array;
+  returnSteps: Uint8Array;
+  retFromX: Float32Array;
+  retFromY: Float32Array;
+  retToX: Float32Array;
+  retToY: Float32Array;
+  retKind: Uint8Array;
+  retShape: Uint8Array;
+}
+export interface PlacementValue {
+  active: boolean;
+  kind: ItemKindName | number;
+  shape: BlockShapeName | number;
+  /** The placed item being moved, or none for a tray pick */
+  fromItem: EntityId;
+  fromCell: number;
+  /** Tray slot it came from */
+  slot: number;
+  x: number;
+  y: number;
+  /** Hovered cell (a block: its top-left cell), -1 off the board */
+  cell: number;
+  valid: boolean;
+  reason: PlaceReasonName | number;
+  /** Flow field if the hovered drop happened (each nest preview path is traced from it) */
+  previewDist: number[];
+  /** 1 when previewDist holds a valid preview */
+  previewLen: number;
+  returnSteps: number;
+  retFromX: number;
+  retFromY: number;
+  retToX: number;
+  retToY: number;
+  retKind: ItemKindName | number;
+  retShape: BlockShapeName | number;
+}
+/** Placement (resource, sim) */
+export const Placement = typeToken<PlacementViews, PlacementValue>('Placement', 'resource', { sig: 'active:bool:1,kind:enum:1,shape:enum:1,fromItem:entity:2,fromCell:i8:1,slot:i8:1,x:f32:1,y:f32:1,cell:i8:1,valid:bool:1,reason:enum:1,previewDist:array:77,previewLen:u8:1,returnSteps:u8:1,retFromX:f32:1,retFromY:f32:1,retToX:f32:1,retToY:f32:1,retKind:enum:1,retShape:enum:1', read: (v: PlacementViews, i: number, o: Record<string, unknown>) => { o.active = v.active[i] !== 0; o.kind = $r.enm('ItemKind', v.kind[i]!); o.shape = $r.enm('BlockShape', v.shape[i]!); o.fromItem = $r.ent(v.fromItem, i); o.fromCell = v.fromCell[i]; o.slot = v.slot[i]; o.x = v.x[i]; o.y = v.y[i]; o.cell = v.cell[i]; o.valid = v.valid[i] !== 0; o.reason = $r.enm('PlaceReason', v.reason[i]!); o.previewDist = $r.lanes(v.previewDist, i, 77, o.previewDist); o.previewLen = v.previewLen[i]; o.returnSteps = v.returnSteps[i]; o.retFromX = v.retFromX[i]; o.retFromY = v.retFromY[i]; o.retToX = v.retToX[i]; o.retToY = v.retToY[i]; o.retKind = $r.enm('ItemKind', v.retKind[i]!); o.retShape = $r.enm('BlockShape', v.retShape[i]!); return o; } });
+
+export interface PlacementRefusedViews {
+  reason: Uint8Array;
+}
+export interface PlacementRefusedValue {
+  reason: PlaceReasonName | number;
+}
+/** Signal: a drop was refused. (event, sim) */
+export const PlacementRefused = typeToken<PlacementRefusedViews, PlacementRefusedValue>('PlacementRefused', 'event', { sig: 'reason:enum:1', read: (v: PlacementRefusedViews, i: number, o: Record<string, unknown>) => { o.reason = $r.enm('PlaceReason', v.reason[i]!); return o; } });
+
+export interface ProjectileViews {
+  kind: Uint8Array;
+  target: Uint32Array;
+  tx: Float32Array;
+  ty: Float32Array;
+  damage: Float32Array;
+  splash: Float32Array;
   speed: Float32Array;
 }
-export interface BubbleValue {
-  radius: number;
-  /** Units per step */
+export interface ProjectileValue {
+  kind: ItemKindName | number;
+  target: EntityId;
+  tx: number;
+  ty: number;
+  damage: number;
+  splash: number;
   speed: number;
 }
-/** Bubble (component, sim) */
-export const Bubble = typeToken<BubbleViews, BubbleValue>('Bubble', 'component', { sig: 'radius:f32:1,speed:f32:1', read: (v: BubbleViews, i: number, o: Record<string, unknown>) => { o.radius = v.radius[i]; o.speed = v.speed[i]; return o; } });
+/** Projectile (component, sim) */
+export const Projectile = typeToken<ProjectileViews, ProjectileValue>('Projectile', 'component', { sig: 'kind:enum:1,target:entity:2,tx:f32:1,ty:f32:1,damage:f32:1,splash:f32:1,speed:f32:1', read: (v: ProjectileViews, i: number, o: Record<string, unknown>) => { o.kind = $r.enm('ItemKind', v.kind[i]!); o.target = $r.ent(v.target, i); o.tx = v.tx[i]; o.ty = v.ty[i]; o.damage = v.damage[i]; o.splash = v.splash[i]; o.speed = v.speed[i]; return o; } });
 
-export interface GameViews {
-  /** Bubbles popped */
-  score: Uint32Array;
-  spawned: Uint32Array;
+export type RestartRequestedViews = Record<string, never>;
+export type RestartRequestedValue = Record<string, never>;
+/** The player pressed Restart on the end screen. (event, sim) */
+export const RestartRequested = typeToken<RestartRequestedViews, RestartRequestedValue>('RestartRequested', 'event');
+
+export interface RunViews {
+  phase: Uint8Array;
+  /** Bumped on every restart */
+  runId: Uint32Array;
+  /** Game seconds, scaled by speed (slow motion while dragging) */
+  time: Float32Array;
+  /** Game speed: 1 normal, 0.05 while a finger drags an item */
+  speed: Float32Array;
+  /** Waves started so far (0 before the first) */
+  wave: Uint32Array;
+  lives: Uint32Array;
+  gold: Uint32Array;
+  /** Fractional gold from swarm kills, paid out as whole coins */
+  goldFrac: Float32Array;
+  /** Walls bought this run (the first FREE_WALLS are free) */
+  wallsBuilt: Uint32Array;
+  nextWaveAt: Float32Array;
+  /** Spawn group of the current wave */
+  group: Uint32Array;
+  groupSpawned: Uint32Array;
+  spawnAt: Float32Array;
+  spawning: Uint8Array;
+  alive: Uint32Array;
+  kills: Uint32Array;
+  /** Steps left of the boss intro beat */
+  bossSteps: Uint32Array;
+  placements: Uint32Array;
+  refusals: Uint32Array;
+  shots: Uint32Array;
+  booms: Uint32Array;
+  baseHits: Uint32Array;
+  bosses: Uint32Array;
+  /** Round-robin counter: which open nest the next ant leaves from */
+  nestTurn: Uint32Array;
+  /** Nests open so far (presentation plays the opening) */
+  nestsOpen: Uint32Array;
 }
-export interface GameValue {
-  /** Bubbles popped */
-  score: number;
-  spawned: number;
+export interface RunValue {
+  phase: RunPhaseName | number;
+  /** Bumped on every restart */
+  runId: number;
+  /** Game seconds, scaled by speed (slow motion while dragging) */
+  time: number;
+  /** Game speed: 1 normal, 0.05 while a finger drags an item */
+  speed: number;
+  /** Waves started so far (0 before the first) */
+  wave: number;
+  lives: number;
+  gold: number;
+  /** Fractional gold from swarm kills, paid out as whole coins */
+  goldFrac: number;
+  /** Walls bought this run (the first FREE_WALLS are free) */
+  wallsBuilt: number;
+  nextWaveAt: number;
+  /** Spawn group of the current wave */
+  group: number;
+  groupSpawned: number;
+  spawnAt: number;
+  spawning: boolean;
+  alive: number;
+  kills: number;
+  /** Steps left of the boss intro beat */
+  bossSteps: number;
+  placements: number;
+  refusals: number;
+  shots: number;
+  booms: number;
+  baseHits: number;
+  bosses: number;
+  /** Round-robin counter: which open nest the next ant leaves from */
+  nestTurn: number;
+  /** Nests open so far (presentation plays the opening) */
+  nestsOpen: number;
 }
-/** Game (resource, sim) */
-export const Game = typeToken<GameViews, GameValue>('Game', 'resource', { sig: 'score:u32:1,spawned:u32:1', read: (v: GameViews, i: number, o: Record<string, unknown>) => { o.score = v.score[i]; o.spawned = v.spawned[i]; return o; } });
+/** Run (resource, sim) */
+export const Run = typeToken<RunViews, RunValue>('Run', 'resource', { sig: 'phase:enum:1,runId:u32:1,time:f32:1,speed:f32:1,wave:u32:1,lives:u32:1,gold:u32:1,goldFrac:f32:1,wallsBuilt:u32:1,nextWaveAt:f32:1,group:u32:1,groupSpawned:u32:1,spawnAt:f32:1,spawning:bool:1,alive:u32:1,kills:u32:1,bossSteps:u32:1,placements:u32:1,refusals:u32:1,shots:u32:1,booms:u32:1,baseHits:u32:1,bosses:u32:1,nestTurn:u32:1,nestsOpen:u32:1', read: (v: RunViews, i: number, o: Record<string, unknown>) => { o.phase = $r.enm('RunPhase', v.phase[i]!); o.runId = v.runId[i]; o.time = v.time[i]; o.speed = v.speed[i]; o.wave = v.wave[i]; o.lives = v.lives[i]; o.gold = v.gold[i]; o.goldFrac = v.goldFrac[i]; o.wallsBuilt = v.wallsBuilt[i]; o.nextWaveAt = v.nextWaveAt[i]; o.group = v.group[i]; o.groupSpawned = v.groupSpawned[i]; o.spawnAt = v.spawnAt[i]; o.spawning = v.spawning[i] !== 0; o.alive = v.alive[i]; o.kills = v.kills[i]; o.bossSteps = v.bossSteps[i]; o.placements = v.placements[i]; o.refusals = v.refusals[i]; o.shots = v.shots[i]; o.booms = v.booms[i]; o.baseHits = v.baseHits[i]; o.bosses = v.bosses[i]; o.nestTurn = v.nestTurn[i]; o.nestsOpen = v.nestsOpen[i]; return o; } });
+
+export interface TrayIconViews {
+  slot: Uint8Array;
+}
+export interface TrayIconValue {
+  slot: number;
+}
+/** TrayIcon (component, sim) */
+export const TrayIcon = typeToken<TrayIconViews, TrayIconValue>('TrayIcon', 'component', { sig: 'slot:u8:1', read: (v: TrayIconViews, i: number, o: Record<string, unknown>) => { o.slot = v.slot[i]; return o; } });
+
+export interface TrayLabelViews {
+  slot: Uint8Array;
+}
+export interface TrayLabelValue {
+  slot: number;
+}
+/** TrayLabel (component, sim) */
+export const TrayLabel = typeToken<TrayLabelViews, TrayLabelValue>('TrayLabel', 'component', { sig: 'slot:u8:1', read: (v: TrayLabelViews, i: number, o: Record<string, unknown>) => { o.slot = v.slot[i]; return o; } });
+
+export interface TraySlotViews {
+  slot: Uint8Array;
+  shownVersion: Int32Array;
+  shownPrice: Int16Array;
+  affordable: Uint8Array;
+}
+export interface TraySlotValue {
+  slot: number;
+  shownVersion: number;
+  shownPrice: number;
+  affordable: boolean;
+}
+/** TraySlot (component, sim) */
+export const TraySlot = typeToken<TraySlotViews, TraySlotValue>('TraySlot', 'component', { sig: 'slot:u8:1,shownVersion:i32:1,shownPrice:i16:1,affordable:bool:1', read: (v: TraySlotViews, i: number, o: Record<string, unknown>) => { o.slot = v.slot[i]; o.shownVersion = v.shownVersion[i]; o.shownPrice = v.shownPrice[i]; o.affordable = v.affordable[i] !== 0; return o; } });
+
+export interface WaveStartedViews {
+  wave: Uint32Array;
+  boss: Uint8Array;
+}
+export interface WaveStartedValue {
+  wave: number;
+  boss: boolean;
+}
+/** Signal: a wave started. (event, sim) */
+export const WaveStarted = typeToken<WaveStartedViews, WaveStartedValue>('WaveStarted', 'event', { sig: 'wave:u32:1,boss:bool:1', read: (v: WaveStartedViews, i: number, o: Record<string, unknown>) => { o.wave = v.wave[i]; o.boss = v.boss[i] !== 0; return o; } });

@@ -1,16 +1,13 @@
 ---
 name: spine-import
-version: 1.8.1
+version: 1.9.0
 tier: optional
 description: Spine and PSD import and export — `gameengine import spine` (JSON and .skel, Spine 3.0 and 3.4 to 4.3), `import psd` for tagged Photoshop files, `export spine`, atlases, import warnings, rig cost on phones. Use when an animator hands over Spine files or a PSD, when re-importing, or when a rig must go back to Spine.
 ---
 
 # Spine import
 
-**Covers:** Bringing Spine animations into Game Engine and back — JSON (3.0, 3.4–3.8, 4.0–4.3) or binary .skel (3.0, 3.4–3.8, 4.0–4.2) exports with loose images, `gameengine import spine` to *.skeleton2d.json, Spine 3 curves and rotations converted, rig budgets per device class, which Spine features cost most on phones (anim2d metrics), --strip-unused, --atlas to unpack a Spine atlas (--keep-pma), the report of bone weights over 4; clipping, sequences, linked meshes, two-colour tint, path, physics and slider constraints, 4.3 transform mappings and IK scaleY import and play; `gameengine import psd` turns a tagged Photoshop PSD/PSB into a skeleton and PNGs (Spine's layer tags, guides) and reimports it; `gameengine export spine` writes a rig back to Spine 4.2/4.3 JSON. Use when an animator hands over Spine files or a tagged PSD, when porting Spine data from a Unity project (often 3.x), when re-importing after a Spine change, when an import prints warnings, or when a rig must go back to Spine.
-
-The engine plays 2D skeletons from its own format, `*.skeleton2d.json` (spec:
-`docs/skeleton2d-format.md` in the engine repo). Spine files are **converted once** by the
+The engine plays 2D skeletons from its own format, `*.skeleton2d.json`. Spine files are **converted once** by the
 optional importer; the game never reads Spine data at runtime. Spine 3.0, 3.4–3.8 and 4.0–4.3
 JSON exports and 3.0 and 3.4–4.2 binary exports are supported; 3.1–3.3 exports are refused
 (re-export from Spine 3.4 or newer), and so are 4.3 binaries (export JSON).
@@ -44,8 +41,9 @@ with these options and shows the report, then opens the skeleton.
 - JSON or binary is decided by the file's content. Defaults: name from the file
   (`hero-pro.json`, `hero.skel.bytes` → `hero`), output `assets/<name>.skeleton2d.json`
   inside a project, image prefix `<name>/` (so attachment `head` is `assets/hero/head.png`).
-- Re-import after every Spine change; treat the `.skeleton2d.json` as generated from the
-  `.spine` project (edit in Spine, not by hand), unless the team moves the rig to the engine.
+- One owner per rig. While the `.spine` project is the source, re-import after every Spine change
+  and never edit the `.skeleton2d.json` (a re-import overwrites it). Once the team moves the rig
+  to the engine, stop re-importing and edit it with `gameengine anim2d` (skill `animation-2d-agent`).
 - Exit 2 with a message for 3.1–3.3 or non-Spine files.
 
 ## Spine 3.x exports (older games)
@@ -145,49 +143,7 @@ Warnings about anything else are importer bugs: report them with the Spine file.
 
 ## Photoshop (PSD) import
 
-Artists who lay a character out in Photoshop can skip Spine's own PSD step: `gameengine import
-psd` reads the `.psd`/`.psb` and applies **Spine's layer tags** (same names and meaning as Spine's
-Import PSD), writing a PNG per layer under `assets/<images>` and a `*.skeleton2d.json`.
-
-```sh
-gameengine import psd art/kid.psd                          # new skeleton assets/kid.skeleton2d.json, images under assets/kid/
-gameengine import psd art/kid.psd --dry-run --json         # what every layer becomes; writes nothing
-gameengine import psd art/kid.psd --scale 0.5 --padding 2 --no-trim --exclude-hidden
-gameengine import psd art/kid.psd --skeleton assets/kid.skeleton2d.json --prune   # reimport
-```
-
-In the editor: **Animation 2D → Tree → New → Import PSD…** (or the palette, or drop the `.psd`
-on the Project panel). The dialog previews each layer with its tags and outcome before importing.
-
-| Tag | Effect |
-|---|---|
-| `[bone]` / `[bone:name]` | the group (or layer) gets a bone at the centre of its first visible layer; an existing bone keeps its position |
-| `[slot]` / `[slot:name]` | the group's layers share one slot (it shows the first visible one) |
-| `[skin]` / `[skin:name]` | the group's layers are skin placeholders; images go under `<skin>/` |
-| `[folder]` / `[folder:a/b]` | prefixes attachment names and image paths (`/x` starts over) |
-| `[mesh]` / `[mesh:name]` | a mesh whose hull is traced from the layer's alpha (Spine's Trace; a fully opaque rectangle stays its 4 corners), or a linked mesh of the mesh whose path ends with `name` |
-| `[merge]` | the group becomes one image (normal, multiply, screen, linear dodge composited) |
-| `[overlay]` | drawn into every layer below it, inside their pixels; no image of its own |
-| `[origin]` | this layer's centre is the skeleton's 0,0 (else the first guides, else the canvas centre) |
-| `[trim]`, `[trim:false\|canvas\|mask]` | trim to pixels, keep the canvas size, or cut to the layer mask |
-| `[ignore]` | skipped with its children |
-| `[path:file]`, `[name:n]` | the image file name, the attachment name |
-| `[scale:n]`, `[pad:n]`, `[rotate:90]` | image resolution, padding and quarter turns; the attachment compensates so it looks the same |
-| `[bones]`, `[slots]`; `[!bone]`, `[!slot]`, `[!name]`, `[!path]` | tag every immediate child; opt a child out |
-
-A value with `*` on a group is a pattern for its children (`[slot:*-s]`). Layer opacity becomes the
-attachment's alpha; Normal/Multiply/Screen/Linear Dodge become the slot's blend.
-
-**Reimport** (`--skeleton`, Spine 4.3's behaviour): images, region placement and new layers
-update; bone positions, animations, and mesh vertices and weights stay. `--prune` removes the
-attachments (with their keys and PNGs) whose images the PSD no longer makes — only images an
-earlier PSD import made, when the skeleton records them (`source.images`).
-
-**Refused or not applied:** 16/32-bit and CMYK/Lab/indexed documents (convert to 8-bit RGB);
-layer effects, adjustment and fill layers, vector masks and Photoshop clipping masks are listed as
-warnings (rasterise or merge them, or use `[overlay]`); other blend modes draw as Normal. Pixels
-past the canvas edges are dropped, as Photoshop's own export drops them: a layer that bleeds off
-the canvas becomes the image of its part on the canvas, placed there.
+Artists who lay a character out in Photoshop can import the PSD straight into a rig: `gameengine import psd art/kid.psd` (in the editor: **Animation 2D → Tree → New → Import PSD…**). Layer tags, reimport and what is refused: `references/psd-import.md`.
 
 ## Check the result
 

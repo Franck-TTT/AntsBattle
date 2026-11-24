@@ -1,15 +1,13 @@
 ---
 name: video
-version: 1.2.0
+version: 1.3.0
 tier: optional
 description: Video playback — *.video.json clips, the VideoPlayer component, video:<name> textures, fullscreen cutscenes with skip and subtitles, playVideo and friends, VideoFinished and VideoCue. Use for intros, cutscenes, in-level screens, animated banners and anything that plays footage.
 ---
 
 # Video
 
-**Covers:** Video in Game Engine — *.video.json clips (a .mp4/.mov source or a synthetic test clip, cues, subtitles, alpha, audio bus, per-device transcodes), the VideoPlayer component on a sprite, the `video:<name>` texture key for sprites and UI images, fullscreen cutscenes with skip and subtitles, playVideo/pauseVideo/seekVideo/skipVideo/videoState, and reacting to VideoFinished / VideoCue in the sim. Use for intros, cutscenes, TVs and screens in a level, animated shop banners, and anything that plays footage.
-
-Video is **presentation** (ADR 0062, design.md § 7.15). A clip never changes sim state; the sim
+Video is **presentation**. A clip never changes sim state; the sim
 hears about it only through two events that arrive as recorded input on the step after the frame
 that raised them, so replays reproduce them without decoding anything:
 
@@ -36,7 +34,7 @@ that raised them, so replays reproduce them without decoding anything:
 - `width`/`height`/`fps`/`duration` are only needed when the cook has no `ffmpeg` to probe the source: headless runs (tests, CI, agents) cannot decode `.mp4`, so they play a deterministic **placeholder** of that size, rate and length — cues, ends, skips and layout are tested exactly anyway.
 - `synthetic` instead of `source` generates a test clip bit-exactly (`{ "pattern": "bars" | "counter", "width", "height", "fps", "frames", "tone": Hz, "alpha": true }`): use it for tests and goldens.
 - `alpha`: `stacked` (colour on top, alpha below in one frame; works everywhere) or `hevc` (HEVC with alpha on Apple; the cook makes a stacked copy for other devices when ffmpeg is present).
-- Subtitles: SubRip or WebVTT; the file for `text.language` is picked (then its primary subtag, then `en`).
+- Subtitles: SubRip or WebVTT; the file for the session's language (`quality.device().language`) is picked (then its primary subtag, then `en`).
 - The cook stores media uncompressed in the bundle (native players read it in place), extracts the audio track for the mixer and transcodes per `transcode` entry — with `ffmpeg` on `PATH`; without it the source ships as is and the cook says so. Videos go into collections and on-demand bundles like any asset.
 
 ## On a sprite, or anywhere a texture goes
@@ -106,4 +104,4 @@ raises its cues and end on the same steps on V8, Hermes and every machine.
 - Use `synthetic` clips (or the placeholder) in tests; real footage decodes differently per device.
 - Keep a clip's audio in the clip (or `audio.track`), not as a separate `PlaySound`: the video clock follows its own track.
 - A clip in a bundle mounted from another game (`releases.mount`) plays as `playVideo('<id>:home/loop.video')`: the cooked alias, without `.json`.
-- Not yet: 3D material textures from video, network streams, DRM, GPU zero-copy decode paths (frames upload as RGBA).
+- Not supported: 3D material textures from video, network streams, DRM, GPU zero-copy decode paths (frames upload as RGBA).

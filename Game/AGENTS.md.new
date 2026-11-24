@@ -23,7 +23,7 @@ Look a capability up before guessing flags, hand-writing engine files or writing
 
 - **mobile**: low-end phone budgets, 9:22 to 3:4 screens inside the safe area (skill `screen-fit`), touch.
 - **desktop**: resizable windows up to 21:9, keyboard and mouse.
-- **web**: export a static WebGPU game with `gameengine build web` (skill `ship-web`, ADR 0133); serve it over HTTPS or localhost. Check real browser rendering, input and tab lifecycle as well as wasm hash parity (`gameengine test --js v8,web`).
+- **web**: export a static WebGPU game with `gameengine build web` (skill `ship-web`); serve it over HTTPS or localhost. Check real browser rendering, input and tab lifecycle as well as wasm hash parity (`gameengine test --js v8,web`).
 
 ## The loop
 
@@ -31,7 +31,7 @@ Look a capability up before guessing flags, hand-writing engine files or writing
 2. `gameengine test`: logic tests (T0), fast and deterministic; `--tier t0,t1` adds render goldens.
 3. `gameengine run --headless` starts a session to inspect: `world query <Comp>`, `screenshot`, `view render <View>`. Stop each session you start when done (`gameengine session stop --session <pid>`).
 4. Prove behaviour with a test or a replay, not by reading code.
-5. `gameengine check` before you hand back: engine binaries current, typecheck, `validate`, a desktop cook and a smoke run of the cooked game (`--tests` adds the game tests on V8 and Hermes). Fix what it reports.
+5. `gameengine check` before you hand back: engine binaries current, typecheck, `validate`, a desktop cook, a smoke run of the cooked game, then the project's checks (`tools/*.check.ts` and the packages' checks; `gameengine checks list`) (`--tests` adds the game tests on V8 and Hermes). Fix what it reports. A correctness check the project needs is one `tools/<name>.check.ts` file (skill `project-tools`), never a tool listed by hand.
 
 The user may have the project open in the editor: it follows the files on disk and hot reloads, so never ask
 for a restart unless the engine's own binaries changed. Keep every save compiling, run `gameengine gen` after
@@ -63,6 +63,7 @@ least run `gameengine test --memory-class phone-low`.
 
 - Sim systems declare when they run (`runIf`, `runOn`, `{ changed: T }`; `skipUnchanged` only for pure functions of what they declare) and update what changed, never the whole board or model.
 - Heavy content gets a cheaper version for phone-low in its `overrides` block, never a sim branch.
+- An Android game with post keeps `"render": { "android": { "drawIntoWindow": true } }` (new projects have it; about 3 ms of GPU a frame on OpenGL ES phones); `gameengine check` hints when it is off. Check the picture on a device after turning it on; in a hub, the hub's own setting decides.
 
 ## Read before
 
@@ -91,6 +92,7 @@ or `.agents/skills/<name>/SKILL.md` for Codex; `gameengine skills list` names th
 | Sounds and music | `audio` |
 | A new screen, material, effect or level flow | `testing` (record `pipelines.json`: a release build refuses a stale one) |
 | Numbers from a phone | `ship-mobile`, `mobile-performance-review` |
+| Updating a shipped game without a store build, or a hub that launches games | `releases` |
 
 ## Skills, MCP and reviewer agents
 
