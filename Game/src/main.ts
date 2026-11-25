@@ -4,7 +4,7 @@
  *
  * Sim (deterministic, fixed step): src/sim/*. Presentation (LateUpdate, UI): src/present/*, src/ui/*.
  */
-export { BuildBoard, StartRun, PlaceMarkers, FitView, NestSync } from './sim/board.ts';
+export { BuildBoard, StartRun, PlaceMarkers, FitView, NestSync, BaseLives } from './sim/board.ts';
 export { DragItems, GameSpeed } from './sim/placement.ts';
 export { Waves, SyncFlow, MoveEnemies, Combat } from './sim/battle.ts';
 export { TraySync } from './sim/tray.ts';

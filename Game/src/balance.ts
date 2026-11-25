@@ -24,8 +24,8 @@ export const MAX_ENEMIES = 4096;
 export const START_GOLD = G.startGold;
 export const START_LIVES = G.startLives * SWARM;
 /**
- * Block cells that cost nothing; then each extra cell costs WALL_STEP more than the previous one
- * (a block's price is the sum over its cells).
+ * Blocks that cost nothing; then each extra block costs WALL_STEP more than the previous one,
+ * whatever its size (a 2×2 costs the same as a 1×1).
  */
 export const FREE_WALLS = G.freeWalls;
 export const WALL_STEP = G.wallStep;
@@ -49,6 +49,8 @@ export interface ItemDef {
   damage: number;
   /** Area radius in cells around the impact; 0: the target alone. */
   splash: number;
+  /** Share of the damage lost at the edge of the area (linear with distance): 0 none, 1 all. */
+  falloff: number;
   /** Projectile speed, cells per second. */
   shotSpeed: number;
   /** Push given to the ants hit, cells per second (decays fast; they walk back to their path). */
@@ -58,7 +60,7 @@ export interface ItemDef {
 }
 
 export const ITEMS: Record<Exclude<ItemKindName, 'none'>, ItemDef> = {
-  wall: { kind: 'wall', price: 0, range: 0, period: 0, damage: 0, splash: 0, shotSpeed: 0, knockback: 0, shockRadius: 0 },
+  wall: { kind: 'wall', price: 0, range: 0, period: 0, damage: 0, splash: 0, falloff: 0, shotSpeed: 0, knockback: 0, shockRadius: 0 },
   ...(Object.fromEntries(
     Object.entries(SHEET.weapons).map(([kind, stats]) => [kind, { kind: kind as WeaponKindName, ...stats }]),
   ) as Record<WeaponKindName, ItemDef>),
@@ -99,6 +101,8 @@ export interface EnemyDef {
   damage: number;
   /** Comes in swarms: N times as many at swarm scale N, each N times weaker. */
   swarms: boolean;
+  /** Share of every push it takes: 1 full knockback, 0 immune (heavy units keep walking). */
+  knockback: number;
 }
 
 export const ENEMIES: Record<EnemyKindName, EnemyDef> = SHEET.units;
@@ -127,7 +131,7 @@ export const WAVE_COUNT = WAVES.length;
 /** Swarm factor of a kind: how many come per listed one, and how much weaker each is. */
 export const swarmOf = (kind: EnemyKindName): number => (ENEMIES[kind].swarms ? SWARM : 1);
 
-/** Price of the next block cell after `wallsBuilt` cells. */
+/** Price of the next block after `wallsBuilt` blocks. */
 export function wallPrice(wallsBuilt: number): number {
   return wallsBuilt < FREE_WALLS ? 0 : (wallsBuilt - FREE_WALLS + 1) * WALL_STEP;
 }
@@ -140,7 +144,6 @@ export function shapeCells(shape: BlockShapeName): number {
 export function itemPrice(kind: ItemKindName, wallsBuilt: number, shape: BlockShapeName = 'b1x1'): number {
   if (kind === 'none') return 0;
   if (kind !== 'wall') return ITEMS[kind].price;
-  let price = 0;
-  for (let k = 0; k < shapeCells(shape); k++) price += wallPrice(wallsBuilt + k);
-  return price;
+  void shape;
+  return wallPrice(wallsBuilt);
 }

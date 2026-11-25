@@ -247,6 +247,8 @@ export const Big = tag('Big', { sim: true });
 /** One per board cell: the flow field in a form hot systems read without array views. */
 export const FlowCell = component('FlowCell', { cell: u8(), dist: i16({ default: -1 }), next: i16({ default: -1 }) }, { sim: true });
 export const Base = tag('Base', { sim: true });
+/** The lives count drawn on the base (BaseLives keeps it current). */
+export const BaseLabel = component('BaseLabel', { shown: i16({ default: -1 }) }, { sim: true });
 /** The hole of a nest slot: shown once its nest is open (Board.nestWave). */
 export const NestSpot = component('NestSpot', { index: u8(), open: bool() }, { sim: true });
 /** The mound of a nest slot: parent of its hole and label, moved onto the level's nest (or hidden). */

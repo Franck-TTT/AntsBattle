@@ -1,0 +1,23 @@
+{
+  "$type": "LevelDef",
+  "id": "size-compact-6x9",
+  "name": "Compact (6×9)",
+  "order": 22,
+  "cols": 6,
+  "rows": 9,
+  "nests": [
+    { "col": 0, "row": 0, "fromWave": 1 },
+    { "col": 5, "row": 0, "fromWave": 3 }
+  ],
+  "base": { "col": 3, "row": 8 },
+  "blocks": [
+    { "shape": "b2x1", "col": 2, "row": 4 },
+    { "shape": "b1x1", "col": 0, "row": 6 },
+    { "shape": "b1x1", "col": 5, "row": 6 }
+  ],
+  "weapons": [
+    { "kind": "cannon", "col": 2, "row": 4 },
+    { "kind": "tower", "col": 0, "row": 6 },
+    { "kind": "tower", "col": 5, "row": 6 }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "$type": "LevelDef",
+  "id": "size-small-5x7",
+  "name": "Pocket (5×7)",
+  "order": 21,
+  "cols": 5,
+  "rows": 7,
+  "nests": [{ "col": 2, "row": 0, "fromWave": 1 }],
+  "base": { "col": 2, "row": 6 },
+  "blocks": [
+    { "shape": "b1x1", "col": 1, "row": 3 },
+    { "shape": "b1x1", "col": 3, "row": 3 }
+  ],
+  "weapons": [
+    { "kind": "tower", "col": 1, "row": 3 },
+    { "kind": "tower", "col": 3, "row": 3 }
+  ]
+}

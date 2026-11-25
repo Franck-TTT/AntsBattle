@@ -1,0 +1,28 @@
+{
+  "$type": "LevelDef",
+  "id": "size-big-8x12",
+  "name": "Big (8×12)",
+  "order": 23,
+  "cols": 8,
+  "rows": 12,
+  "nests": [
+    { "col": 4, "row": 0, "fromWave": 1 },
+    { "col": 0, "row": 2, "fromWave": 4 },
+    { "col": 7, "row": 2, "fromWave": 7 }
+  ],
+  "base": { "col": 4, "row": 11 },
+  "blocks": [
+    { "shape": "b3x1", "col": 0, "row": 5 },
+    { "shape": "b3x1", "col": 5, "row": 5 },
+    { "shape": "b1x2", "col": 3, "row": 8 },
+    { "shape": "b1x1", "col": 1, "row": 9 },
+    { "shape": "b1x1", "col": 6, "row": 9 }
+  ],
+  "weapons": [
+    { "kind": "tower", "col": 1, "row": 5 },
+    { "kind": "tower", "col": 6, "row": 5 },
+    { "kind": "cannon", "col": 3, "row": 8 },
+    { "kind": "tower", "col": 1, "row": 9 },
+    { "kind": "tower", "col": 6, "row": 9 }
+  ]
+}

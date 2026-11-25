@@ -215,7 +215,7 @@ export const DragItems = defineSystem({
         const cost = itemPrice('wall', run.wallsBuilt[0]!, shape);
         const [w, h] = SHAPES[shape];
         run.gold[0] = run.gold[0]! - cost;
-        run.wallsBuilt[0] = run.wallsBuilt[0]! + shapeCells(shape);
+        run.wallsBuilt[0] = run.wallsBuilt[0]! + 1;
         spawnBlock(ctx, shape, cell, time);
         for (let k = 0; k < shapeCells(shape); k++) board.cells[footprintCell(cell, w, k)] = 1;
         recomputeBoard(ctx);

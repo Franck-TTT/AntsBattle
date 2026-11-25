@@ -87,6 +87,21 @@ export const schemaIr = {
       "package": "AntsBattle"
     },
     {
+      "name": "BaseLabel",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "shown",
+          "kind": "i16",
+          "scalar": "i16",
+          "lanes": 1,
+          "default": -1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
       "name": "Big",
       "kind": "tag",
       "sim": true,
@@ -1444,6 +1459,15 @@ export type BaseViews = Record<string, never>;
 export type BaseValue = Record<string, never>;
 /** Base (tag, sim) */
 export const Base = typeToken<BaseViews, BaseValue>('Base', 'tag');
+
+export interface BaseLabelViews {
+  shown: Int16Array;
+}
+export interface BaseLabelValue {
+  shown: number;
+}
+/** BaseLabel (component, sim) */
+export const BaseLabel = typeToken<BaseLabelViews, BaseLabelValue>('BaseLabel', 'component', { sig: 'shown:i16:1', read: (v: BaseLabelViews, i: number, o: Record<string, unknown>) => { o.shown = v.shown[i]; return o; } });
 
 export type BigViews = Record<string, never>;
 export type BigValue = Record<string, never>;

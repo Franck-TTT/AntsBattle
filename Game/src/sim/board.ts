@@ -1,20 +1,43 @@
 /**
  * The board: built once, reset on every run (its grid redrawn at the level's size), fitted to the screen. Sim code.
  */
-import { added, defineSystem, fitWorldView, query, read, teleport, withTag, write, LocalTransform, Shape, Text2D, ViewInfo, WorldView, type Commands, type SystemContext } from '@gameengine/runtime';
-import { Base, Block, Board, BoardTile, Level, TraySlot, NestLabel, NestMound, NestOpened, NestSpot, Offer, WaveStarted, Run, Placement, Item, Enemy, Projectile, RestartRequested } from '../schema.gen.ts';
+import { added, defineSystem, fitWorldView, math, query, read, teleport, withTag, write, LocalTransform, Shape, Text2D, ViewInfo, WorldView, type Commands, type EntityId, type SystemContext } from '@gameengine/runtime';
+import { Base, BaseLabel, Block, Board, BoardTile, Level, TraySlot, NestLabel, NestMound, NestOpened, NestSpot, Offer, WaveStarted, Run, Placement, Item, Enemy, Projectile, RestartRequested } from '../schema.gen.ts';
 import { CELLS, DEFAULT_BASE, DEFAULT_COLS, DEFAULT_NESTS, DEFAULT_ROWS, MAX_NESTS, REROLL_SLOT, TRAY_SLOTS, TRAY_SLOT_H, boardRect, cellX, cellY, flowField, tracePath, trayW, trayX, trayY, viewRect } from '../grid.ts';
 import { FIRST_WAVE_AT, START_GOLD, START_LIVES } from '../balance.ts';
-import { COIN, COLORS, DIE, ORDER, shapeValue } from '../looks.ts';
+import { COIN, COLORS, ORDER, REROLL_ICON, shapeValue } from '../looks.ts';
 import { drawOffer } from './offer.ts';
 import { loadLevel } from './level.ts';
 
-/** HUD bands the board stays clear of, in UI reference px (ui/hud.ui.json's top bar is 190 tall). */
-export const FIT = { reserve: { top: 200, bottom: 24, left: 16, right: 16 } } as const;
+/** Screen margins the board stays clear of, in UI reference px (the HUD sits in the world, between board and tray: grid.ts HUD_BAND). */
+export const FIT = { reserve: { top: 24, bottom: 24, left: 16, right: 16 } } as const;
 
 // Scratch buffers: fully written before every read, no state carried between runs.
 const blocked = new Uint8Array(CELLS);
 const queue = new Int16Array(CELLS);
+
+/** Two circular arrows on the Reroll button (see REROLL_ICON). */
+function spawnRerollIcon(cmd: Commands, slot: EntityId): void {
+  const { radius: r, arcs, segments: n, segment, tip } = REROLL_ICON;
+  const icon = cmd.spawn({ LocalTransform: { position: [0, 0.16, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] }, Parent: { entity: slot } });
+  const deg = math.PI / 180;
+  const rot = (a: number): [number, number, number, number] => [0, 0, math.sin(a / 2), math.cos(a / 2)];
+  for (const [from, to] of arcs) {
+    const step = ((to - from) / n) * deg;
+    const length = r * math.abs(step) * 1.25;
+    for (let i = 0; i <= n - 1; i++) {
+      const a = from * deg + step * (i + 0.5);
+      cmd.spawn({
+        LocalTransform: { position: [r * math.cos(a), r * math.sin(a), 0], rotation: rot(a + math.PI / 2), scale: [1, 1, 1] },
+        Shape: { ...shapeValue(segment, ORDER.tray + 1), size: [length, segment.size[1]] },
+        Parent: { entity: icon },
+      });
+    }
+    // The tip sits on the circle just past the arc's end and points along it (clockwise).
+    const a = (to - 12) * deg;
+    cmd.spawn({ LocalTransform: { position: [r * math.cos(a), r * math.sin(a), 0], rotation: rot(a - math.PI), scale: [1, 1, 1] }, Shape: shapeValue(tip, ORDER.tray + 2), Parent: { entity: icon } });
+  }
+}
 
 /** Recomputes the flow field and the first nest's path to the base from `Board.cells`. */
 export function recomputeBoard(ctx: SystemContext): void {
@@ -28,36 +51,35 @@ export function recomputeBoard(ctx: SystemContext): void {
 const at = (x: number, y: number) => ({ position: [x, y, 0] as [number, number, number], rotation: [0, 0, 0, 1] as [number, number, number, number], scale: [1, 1, 1] as [number, number, number] });
 
 /**
- * Space and its grid (Geometry Wars style) around a `cols` × `rows` board: a faint half-cell grid over
- * the whole screen, a brighter one on the board with cell edges stronger than the half lines, a neon
- * frame. Every piece is a BoardTile, so a new level's size can redraw them.
+ * The board's grid for a `cols` × `rows` board: one line per cell edge, a neon frame, and a faint
+ * half-cell grid over the space outside the board only. Every piece is a BoardTile, so a new level's
+ * size can redraw them.
  */
 function spawnGrid(cmd: Commands, cols: number, rows: number): void {
-  const line = (x: number, y: number, w: number, h: number, color: string, order: number) =>
+  const line = (x: number, y: number, w: number, h: number, color: string = COLORS.gridMajor, order: number = ORDER.tile) =>
     cmd.spawn({ LocalTransform: at(x, y), Shape: { kind: 'Rect', size: [w, h], radius: 0, color, order, sortingLayer: 'Default' }, BoardTile: {} });
   const r = boardRect(cols, rows);
   const hw = cols / 2;
   const hh = rows / 2;
   const FAR = 14;
-  // Far grid, outside the board only (nothing overlaps at the same order).
+  // Far grid, outside the board only: lines crossing the board are cut into the parts above and below it.
+  const far = (x: number, y: number, w: number, h: number) => line(x, y, w, h, COLORS.gridFar, ORDER.ground);
   for (let k = -FAR * 2; k <= FAR * 2; k++) {
-    const dx = k / 2;
-    const x = r.x + dx;
-    if (dx < -hw || dx > hw) line(x, r.y, 0.025, FAR * 2, COLORS.gridFar, ORDER.ground);
+    const d = k / 2;
+    if (d < -hw || d > hw) far(r.x + d, r.y, 0.025, FAR * 2);
     else {
-      line(x, r.y + (hh + FAR) / 2, 0.025, FAR - hh, COLORS.gridFar, ORDER.ground);
-      line(x, r.y - (hh + FAR) / 2, 0.025, FAR - hh, COLORS.gridFar, ORDER.ground);
+      far(r.x + d, r.y + (hh + FAR) / 2, 0.025, FAR - hh);
+      far(r.x + d, r.y - (hh + FAR) / 2, 0.025, FAR - hh);
     }
-    const y = r.y + dx;
-    if (dx < -hh || dx > hh) line(r.x, y, FAR * 2, 0.025, COLORS.gridFar, ORDER.ground);
+    if (d < -hh || d > hh) far(r.x, r.y + d, FAR * 2, 0.025);
     else {
-      line(r.x - (hw + FAR) / 2, y, FAR - hw, 0.025, COLORS.gridFar, ORDER.ground);
-      line(r.x + (hw + FAR) / 2, y, FAR - hw, 0.025, COLORS.gridFar, ORDER.ground);
+      far(r.x - (hw + FAR) / 2, r.y + d, FAR - hw, 0.025);
+      far(r.x + (hw + FAR) / 2, r.y + d, FAR - hw, 0.025);
     }
   }
   cmd.spawn({ LocalTransform: at(r.x, r.y), Shape: { kind: 'Rect', size: [cols, rows], radius: 0, color: COLORS.board, order: ORDER.ground, sortingLayer: 'Default' }, BoardTile: {} });
-  for (let k = 1; k < cols * 2; k++) line(r.x - hw + k / 2, r.y, k % 2 === 0 ? 0.04 : 0.02, rows, k % 2 === 0 ? COLORS.gridMajor : COLORS.grid, ORDER.tile);
-  for (let k = 1; k < rows * 2; k++) line(r.x, r.y - hh + k / 2, cols, k % 2 === 0 ? 0.04 : 0.02, k % 2 === 0 ? COLORS.gridMajor : COLORS.grid, ORDER.tile);
+  for (let k = 1; k < cols; k++) line(r.x - hw + k, r.y, 0.04, rows);
+  for (let k = 1; k < rows; k++) line(r.x, r.y - hh + k, cols, 0.04);
   cmd.spawn({ LocalTransform: at(r.x, r.y), Shape: { kind: 'Rect', size: [cols + 0.14, rows + 0.14], radius: 0.04, color: '#00000000', strokeColor: COLORS.frame, strokeWidth: 0.07, order: ORDER.highlight, sortingLayer: 'Default' }, BoardTile: {} });
 }
 
@@ -84,7 +106,8 @@ export const BuildBoard = defineSystem({
       VisualOffset: {},
       Base: {},
     });
-    cmd.spawn({ LocalTransform: at(0, 0), Shape: { kind: 'Polygon', sides: 6, size: [0.4, 0.4], radius: 0, color: COLORS.baseRim, order: ORDER.base + 1, sortingLayer: 'Default' }, Parent: { entity: base } });
+    // Lives left, on the base itself (BaseLives writes the number).
+    cmd.spawn({ LocalTransform: at(0, -0.03), Text2D: { text: '', size: 0.42, color: COLORS.baseRim, align: 'Center', outlineColor: '#000000', outlineWidth: 0.12, order: ORDER.base + 2, sortingLayer: 'Default' }, BaseLabel: { shown: -1 }, Parent: { entity: base } });
     // Tray: three offer slots (their icons follow the offer, see TraySync) and the Reroll button.
     // PlaceMarkers moves it under the level's board.
     for (let s = 0; s < TRAY_SLOTS; s++) {
@@ -96,9 +119,7 @@ export const BuildBoard = defineSystem({
         TraySlot: { slot: s },
       });
       if (reroll) {
-        // A tilted die: a face and five pips.
-        const die = cmd.spawn({ LocalTransform: { position: [0, 0.16, 0], rotation: DIE.rotation, scale: [1, 1, 1] }, Shape: shapeValue(DIE.face, ORDER.tray + 1), Parent: { entity: slot } });
-        for (const [px, py] of DIE.pips) cmd.spawn({ LocalTransform: at(px, py), Shape: shapeValue(DIE.pip, ORDER.tray + 2), Parent: { entity: die } });
+        spawnRerollIcon(cmd, slot);
       }
       // Price: a coin then the amount, laid out by TraySync.
       cmd.spawn({ LocalTransform: at(0, reroll ? -0.4 : -0.46), Shape: shapeValue(COIN, ORDER.tray + 4), TrayCoin: { slot: s }, Parent: { entity: slot } });
@@ -237,6 +258,25 @@ export const NestSync = defineSystem({
           run.nestsOpen[0] = run.nestsOpen[0]! + 1;
           ctx.signal(NestOpened, { nest: n, wave });
         }
+      }
+    }
+  },
+});
+
+/** Writes the lives left on the base when they change (a hit, a restart, a new board). */
+export const BaseLives = defineSystem({
+  name: 'BaseLives',
+  after: ['Combat'],
+  queries: { labels: query(write(BaseLabel)) },
+  resources: [read(Run)],
+  run(ctx, q) {
+    const lives = ctx.resource(Run).lives[0]!;
+    for (const c of q.labels.chunks()) {
+      const bl = c.col(BaseLabel);
+      for (let i = 0; i < c.length; i++) {
+        if (bl.shown[i] === lives) continue;
+        bl.shown[i] = lives;
+        ctx.commands.setField(c.entity(i), Text2D, 'text', `${lives}`);
       }
     }
   },

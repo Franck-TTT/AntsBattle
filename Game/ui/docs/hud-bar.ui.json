@@ -1,0 +1,78 @@
+{
+  "$schemaVersion": 1,
+  "guid": "cbce12a2-d0e0-4e59-979a-5551d67609ab",
+  "name": "hud-bar",
+  "title": "HUD bar",
+  "kind": "widget",
+  "properties": {
+    "wave": {
+      "type": "number",
+      "default": 1,
+      "format": "value"
+    },
+    "gold": {
+      "type": "number",
+      "default": 60,
+      "format": "value"
+    }
+  },
+  "root": "h_bar",
+  "nodes": {
+    "h_bar": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "hud_statchip",
+        "hud_statchip2"
+      ],
+      "style": {
+        "pad": [
+          4,
+          18,
+          4,
+          18
+        ],
+        "dir": "row",
+        "h": 104,
+        "gap": 12,
+        "align": "center",
+        "w": "clamp(300, 100%, 960)"
+      }
+    },
+    "hud_statchip": {
+      "type": "use",
+      "doc": "stat-chip",
+      "key": "wave",
+      "props": {
+        "caption": "WAVE",
+        "amount": {
+          "property": "wave"
+        },
+        "suffix": "/10",
+        "tone": "wave"
+      }
+    },
+    "hud_statchip2": {
+      "type": "use",
+      "doc": "stat-chip",
+      "key": "gold",
+      "props": {
+        "caption": "GOLD",
+        "amount": {
+          "property": "gold"
+        },
+        "tone": "gold"
+      }
+    }
+  },
+  "samples": {
+    "start": {
+      "wave": 1,
+      "gold": 60
+    },
+    "late": {
+      "wave": 9,
+      "gold": 1250
+    }
+  }
+}

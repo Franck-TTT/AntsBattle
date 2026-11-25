@@ -26,22 +26,20 @@ declare module '@gameengine/ui' {
       refs: 'restart' | 'menu';
     };
     /**
-     * Hud: a view (ui/docs/hud.ui.json)
+     * HUD bar: a widget (ui/docs/hud-bar.ui.json)
      *
      * Properties:
      *   - `wave`: number, default 1
      *   - `gold`: number, default 60
-     *   - `lives`: number, default 10
-     *   - `walls`: number, default 8
      * Events: none
      * Code areas: none
-     * Refs: `wave`, `wave.target`, `gold`, `gold.target`, `lives`, `lives.target`, `walls`, `walls.target`
-     * Samples (`view render doc:hud --sample …`): `start`, `late`
+     * Refs: `wave`, `wave.target`, `gold`, `gold.target`
+     * Samples (`view render doc:hud-bar --sample …`): `start`, `late`
      */
-    'hud': {
-      props: { wave: number; gold: number; lives: number; walls: number };
+    'hud-bar': {
+      props: { wave: number; gold: number };
       areas: never;
-      refs: 'wave' | 'wave.target' | 'gold' | 'gold.target' | 'lives' | 'lives.target' | 'walls' | 'walls.target';
+      refs: 'wave' | 'wave.target' | 'gold' | 'gold.target';
     };
     /**
      * Level button: a widget, button (ui/docs/level-button.ui.json)

@@ -114,8 +114,13 @@ export function trayX(slot: number, cols: number): number {
   const left = boardRect(cols, 1).x - TRAY_W / 2;
   return slot === REROLL_SLOT ? left + 3 * (TRAY_SLOT_W + TRAY_GAP) + TRAY_REROLL_W / 2 : left + TRAY_SLOT_W / 2 + slot * (TRAY_SLOT_W + TRAY_GAP);
 }
-/** Centre line of the tray, just below a `rows`-tall board. */
-export const trayY = (rows: number): number => cellY(0) + 0.5 - rows - 0.3 - TRAY_SLOT_H / 2;
+/** Band between the board and the tray where the HUD (wave and gold) sits, in world units. */
+export const HUD_BAND = 1.0;
+const HUD_GAP = 0.15;
+/** Centre line of the HUD band, just below a `rows`-tall board (the HUD view follows this point). */
+export const hudY = (rows: number): number => cellY(0) + 0.5 - rows - HUD_GAP - HUD_BAND / 2;
+/** Centre line of the tray, below the HUD band. */
+export const trayY = (rows: number): number => cellY(0) + 0.5 - rows - 2 * HUD_GAP - HUD_BAND - TRAY_SLOT_H / 2;
 
 /** The tray slot under a world point, or -1. */
 export function slotAt(x: number, y: number, cols: number, rows: number): number {

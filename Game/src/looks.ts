@@ -12,7 +12,6 @@ export const COLORS = {
   space: '#05060f',
   board: '#080a1c',
   frame: '#3f6bff',
-  grid: '#1d2a8a',
   gridMajor: '#2f45d6',
   gridFar: '#121a5c',
   preview: '#ffd84a',
@@ -48,13 +47,17 @@ export interface ShapeLook {
 export const COIN: ShapeLook = { kind: 'Circle', size: [0.24, 0.24], radius: 0.12, color: '#ffc51f', strokeColor: '#b8860b', strokeWidth: 0.045 };
 export const COIN_DIM = { color: '#5a5260', strokeColor: '#3a3440' } as const;
 
-/** The Reroll button's icon: a die, dark face, neon rim, five pips. */
-export const DIE = {
-  face: { kind: 'Rect', size: [0.5, 0.5], radius: 0.1, color: '#160a2a', strokeColor: '#ffffff', strokeWidth: 0.06 } as ShapeLook,
-  pip: { kind: 'Circle', size: [0.09, 0.09], radius: 0.045, color: '#ffffff' } as ShapeLook,
-  pips: [[-0.12, 0.12], [0.12, 0.12], [0, 0], [-0.12, -0.12], [0.12, -0.12]] as [number, number][],
-  /** About 15° of tilt, so it reads as a thrown die (a z-rotation quaternion, no trig in sim code). */
-  rotation: [0, 0, 0.1296, 0.9916] as [number, number, number, number],
+/**
+ * The Reroll button's icon: two arrows chasing each other round a circle (clockwise), each an arc
+ * of short rounded segments with a triangle tip. Angles in degrees, counter-clockwise from +x.
+ */
+export const REROLL_ICON = {
+  radius: 0.25,
+  /** Each arrow's arc, from its tail to its tip; the second is the first turned half a circle. */
+  arcs: [[148, 38], [328, 218]] as [number, number][],
+  segments: 6,
+  segment: { kind: 'Rect', size: [0.08, 0.1], radius: 0.04, color: '#ffffff' } as ShapeLook,
+  tip: { kind: 'Polygon', size: [0.27, 0.27], radius: 0.02, sides: 3, color: '#ffffff' } as ShapeLook,
 };
 
 /** Body and detail of each item; the detail turns with the barrel. Dark fill, neon rim. */

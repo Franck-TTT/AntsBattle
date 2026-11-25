@@ -27,6 +27,8 @@ const KNOCK_DAMP = 12;
 const KNOCK_MAX = 4;
 /** Share of the push along the shot; the rest points away from the impact (the shockwave). */
 const KNOCK_ALONG = 0.6;
+/** Share of a push each enemy kind takes, by EnemyKind index (the sheet's Knockback taken). */
+const KNOCK_TAKEN = ENEMY_NAMES.map((k) => ENEMIES[k].knockback);
 
 /** Spawns an enemy at (atX, atY), or around the nest at `nestCell` when no point is given. */
 export function spawnEnemy(ctx: SystemContext, kind: EnemyKindName, wave: number, time: number, atX: number | undefined, atY: number | undefined, nestCell: number): void {
@@ -295,6 +297,8 @@ const RANGE = [0, 0, ITEMS.tower.range, ITEMS.cannon.range];
 const PERIOD = [0, 0, ITEMS.tower.period, ITEMS.cannon.period];
 const DAMAGE = [0, 0, ITEMS.tower.damage, ITEMS.cannon.damage];
 const SPLASH = [0, 0, ITEMS.tower.splash, ITEMS.cannon.splash];
+/** Damage lost at the edge of the area, by ItemKind index: 0 the same everywhere, 1 none at the edge. */
+const FALLOFF = [0, 0, ITEMS.tower.falloff, ITEMS.cannon.falloff];
 const SHOT_SPEED = [0, 0, ITEMS.tower.shotSpeed, ITEMS.cannon.shotSpeed];
 const KNOCKBACK = [0, 0, ITEMS.tower.knockback, ITEMS.cannon.knockback];
 const SHOCK = [0, 0, ITEMS.tower.shockRadius, ITEMS.cannon.shockRadius];
@@ -373,8 +377,10 @@ export const Combat = defineSystem({
     const push = (j: number, px: number, py: number): void => {
       const en = chunks[echunk[j]!]!.col(Enemy);
       const row = erow[j]!;
-      let kx = en.kx[row]! + px;
-      let ky = en.ky[row]! + py;
+      const taken = KNOCK_TAKEN[en.kind[row]!]!;
+      if (taken === 0) return;
+      let kx = en.kx[row]! + px * taken;
+      let ky = en.ky[row]! + py * taken;
       const l2 = kx * kx + ky * ky;
       if (l2 > KNOCK_MAX * KNOCK_MAX) {
         const k = KNOCK_MAX / math.sqrt(l2);
@@ -515,6 +521,7 @@ export const Combat = defineSystem({
         // only its target.
         const r = pr.splash[i]! > 0 ? pr.splash[i]! : -1;
         const r2 = r * r;
+        const falloff = FALLOFF[pr.kind[i]!]!;
         const c0 = Math.max(0, colOf(hx - r));
         const c1 = Math.min(COLS - 1, colOf(hx + r));
         const r0 = Math.max(0, rowOf(hy + r));
@@ -527,8 +534,9 @@ export const Combat = defineSystem({
               const j = order[o]!;
               const ddx = ex[j]! - hx;
               const ddy = ey[j]! - hy;
-              if (ddx * ddx + ddy * ddy > r2) continue;
-              damage(j, pr.damage[i]!);
+              const d2 = ddx * ddx + ddy * ddy;
+              if (d2 > r2) continue;
+              damage(j, falloff > 0 ? pr.damage[i]! * (1 - (falloff * math.sqrt(d2)) / r) : pr.damage[i]!);
               if (j === tj) hitTarget = true;
             }
           }

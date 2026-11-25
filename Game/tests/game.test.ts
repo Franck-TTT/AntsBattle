@@ -14,7 +14,7 @@ const MARKERS = 'assets/test-data/markers-fixture.level.json';
 const SIZE_MAX = 'assets/test-data/size-max-fixture.level.json';
 const SIZE_MIN = 'assets/test-data/size-min-fixture.level.json';
 import { CELLS, COLS, DEFAULT_COLS, DEFAULT_ROWS, viewRect, DEFAULT_BASE as BASE_CELL, DEFAULT_NESTS as NESTS, REROLL_SLOT, cellX, cellY, footprintX, footprintY, nearestCell, trayX, trayY } from '../src/grid.ts';
-import { DRAG_SPEED, FREE_WALLS, GHOST_LIFT, MOVE_COOLDOWN, SHAPES, START_GOLD, START_LIVES, rerollPrice } from '../src/balance.ts';
+import { DRAG_SPEED, GHOST_LIFT, MOVE_COOLDOWN, SHAPES, START_GOLD, START_LIVES, rerollPrice, wallPrice } from '../src/balance.ts';
 
 type Ctx = Parameters<Parameters<typeof worldTest>[1]>[0];
 
@@ -59,7 +59,7 @@ worldTest('a run starts with gold, lives and an open path', async ({ world, step
   expect(world.resource(Board).pathLen).toBe(11);
 });
 
-worldTest('a 1×1 block from the tray drops on the cell under the ghost, for free', async (t) => {
+worldTest('a 1×1 block from the tray drops on the cell under the ghost, at the first block price', async (t) => {
   t.input.view(...PHONE);
   await t.step(2);
   await block(t, cell(3, 5));
@@ -67,7 +67,7 @@ worldTest('a 1×1 block from the tray drops on the cell under the ghost, for fre
   expect(blocks.length).toBe(1);
   expect(t.world.get(blocks[0]!, Block).cell).toBe(cell(3, 5));
   const run = t.world.resource(Run);
-  expect(run.gold).toBe(START_GOLD);
+  expect(run.gold).toBe(START_GOLD - wallPrice(0));
   expect(run.wallsBuilt).toBe(1);
   const b = t.world.resource(Board);
   expect(b.path.slice(0, b.pathLen).includes(cell(3, 5))).toBe(false);
@@ -83,7 +83,7 @@ worldTest('bigger blocks take every cell of their footprint', async (t) => {
   const b = t.world.resource(Board);
   for (const c of [cell(0, 2), cell(1, 2), cell(0, 3), cell(1, 3), cell(5, 3), cell(5, 4), cell(5, 5), cell(4, 8), cell(5, 8), cell(6, 8)]) expect(b.cells[c]).toBe(1);
   expect(t.world.entities(Block).length).toBe(3);
-  expect(t.world.resource(Run).wallsBuilt).toBe(10);
+  expect(t.world.resource(Run).wallsBuilt).toBe(3);
 });
 
 worldTest('time slows to 5% while the finger holds an item and comes back after', async (t) => {
@@ -113,16 +113,15 @@ worldTest('a drop that would close the last path is refused and the block goes b
   expect(t.world.resource(Board).dist[NESTS[0]!.cell]).toBeGreaterThan(0);
 });
 
-worldTest('block cells past the free ones cost more each time', async (t) => {
+worldTest('each block costs more than the last, whatever its size', async (t) => {
   t.input.view(...PHONE);
   await t.step(2);
-  await block(t, cell(0, 3), 'b2x2'); // 4 free
-  await block(t, cell(5, 3), 'b2x2'); // 4 free
-  expect(t.world.resource(Run).gold).toBe(START_GOLD);
-  await block(t, cell(0, 6), 'b2x1'); // cells 9 and 10: 5 + 10
+  await block(t, cell(0, 3), 'b2x2');
+  await block(t, cell(5, 3), 'b1x1');
+  await block(t, cell(0, 6), 'b2x1');
   const run = t.world.resource(Run);
-  expect(run.wallsBuilt).toBe(FREE_WALLS + 2);
-  expect(run.gold).toBe(START_GOLD - 15);
+  expect(run.wallsBuilt).toBe(3);
+  expect(run.gold).toBe(START_GOLD - wallPrice(0) - wallPrice(1) - wallPrice(2));
 });
 
 worldTest('weapons only drop on a free block cell', async (t) => {

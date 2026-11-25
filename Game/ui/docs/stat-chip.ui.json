@@ -12,16 +12,16 @@
       "style": {
         "dir": "row",
         "pad": [
-          10,
+          8,
           16,
-          10,
+          8,
           16
         ],
         "align": "center",
         "bg": "#1a1220dd",
         "radius": 28,
         "gap": 14,
-        "h": 118,
+        "h": 96,
         "w": 0,
         "grow": 1,
         "minW": 0
@@ -39,9 +39,9 @@
       ],
       "style": {
         "pad": 0,
-        "w": 54,
-        "h": 54,
-        "radius": 27,
+        "w": 46,
+        "h": 46,
+        "radius": 23,
         "bg": "#ffc51fff",
         "shrink": 0
       },
@@ -84,7 +84,7 @@
       "name": "Label",
       "text": "{caption}",
       "style": {
-        "fontSize": 24,
+        "fontSize": 22,
         "fitMin": 14,
         "weight": 800,
         "color": "#ffffffaa",
@@ -96,7 +96,7 @@
       "name": "Label",
       "text": "{amount}{suffix}",
       "style": {
-        "fontSize": 50,
+        "fontSize": 44,
         "fitMin": 26,
         "weight": 900,
         "color": "#ffffffff",

@@ -51,6 +51,7 @@ const WEAPON: Record<string, Field> = {
   cooldown: { key: 'period', kind: 'num' },
   'attack damage': { key: 'damage', kind: 'num' },
   'aoe size': { key: 'splash', kind: 'num' },
+  'aoe falloff': { key: 'falloff', kind: 'num' },
   'projectile speed': { key: 'shotSpeed', kind: 'num' },
   'knockback force': { key: 'knockback', kind: 'num' },
   'shockwave radius': { key: 'shockRadius', kind: 'num' },
@@ -62,6 +63,7 @@ const UNIT: Record<string, Field> = {
   'gold reward': { key: 'reward', kind: 'int' },
   'base damage': { key: 'damage', kind: 'int' },
   swarms: { key: 'swarms', kind: 'bool' },
+  'knockback taken': { key: 'knockback', kind: 'num' },
 };
 
 /** Rows of Weapons and Units for people only. */
@@ -277,8 +279,8 @@ export interface BalanceSheet {
   general: {
 ${general}
   };
-  weapons: Record<WeaponKindName, { price: number; range: number; period: number; damage: number; splash: number; shotSpeed: number; knockback: number; shockRadius: number }>;
-  units: Record<EnemyKindName, { hp: number; speed: number; reward: number; damage: number; swarms: boolean }>;
+  weapons: Record<WeaponKindName, { price: number; range: number; period: number; damage: number; splash: number; falloff: number; shotSpeed: number; knockback: number; shockRadius: number }>;
+  units: Record<EnemyKindName, { hp: number; speed: number; reward: number; damage: number; swarms: boolean; knockback: number }>;
   waves: { kind: EnemyKindName; count: number; every: number }[][];
   offers: { kind: Exclude<ItemKindName, 'none'>; shape: BlockShapeName; weight: number }[];
 }

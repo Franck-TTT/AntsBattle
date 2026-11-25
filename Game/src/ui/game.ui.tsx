@@ -5,8 +5,9 @@
  */
 import { createEffect, createSignal, defineUI, emit, onCleanup, onUiFrame, untrack, useResource, views } from '@gameengine/ui';
 import { onSignal, worldToUi } from '@gameengine/runtime';
-import { EnemyKilled, LevelPicked, MenuRequested, RestartRequested, Run, WaveStarted } from '../schema.gen.ts';
-import { FREE_WALLS, WAVE_COUNT } from '../balance.ts';
+import { Board, EnemyKilled, LevelPicked, MenuRequested, RestartRequested, Run, WaveStarted } from '../schema.gen.ts';
+import { WAVE_COUNT } from '../balance.ts';
+import { DEFAULT_COLS, DEFAULT_ROWS, boardRect, hudY } from '../grid.ts';
 import { HudView, type Flight, type HudModel } from '../views/hud.view.tsx';
 import { BannerView, type BannerModel } from '../views/banner.view.tsx';
 import { EndView } from '../views/end.view.tsx';
@@ -21,16 +22,23 @@ export const GameUI = defineUI({
   name: 'GameUI',
   root: () => {
     const run = useResource(Run);
+    const board = useResource(Board);
     const [flights, setFlights] = createSignal<readonly Flight[]>([]);
     let nextFlight = 1;
 
+    // The HUD sits in the band between the board and the tray (grid.ts HUD_BAND), at the level's size.
+    const hudPoint = (): [number, number] => {
+      const b = board();
+      const cols = b?.cols || DEFAULT_COLS;
+      const rows = b?.rows || DEFAULT_ROWS;
+      return [boardRect(cols, rows).x, hudY(rows)];
+    };
     const model = (): HudModel => {
       const r = run();
       return {
         wave: Math.max(1, r?.wave ?? 1),
         gold: r?.gold ?? 0,
-        lives: r?.lives ?? 0,
-        walls: Math.max(0, FREE_WALLS - (r?.wallsBuilt ?? 0)),
+        at: hudPoint(),
         flights: flights(),
       };
     };
