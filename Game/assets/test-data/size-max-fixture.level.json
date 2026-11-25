@@ -1,0 +1,18 @@
+{
+  "$type": "LevelDef",
+  "id": "test-size-max-fixture",
+  "name": "Test fixture: largest board",
+  "order": 0,
+  "cols": 10,
+  "rows": 14,
+  "blocks": [
+    { "shape": "b3x1", "col": 7, "row": 6 }
+  ],
+  "weapons": [
+    { "kind": "tower", "col": 9, "row": 6 }
+  ],
+  "nests": [
+    { "col": 0, "row": 0, "fromWave": 1 }
+  ],
+  "base": { "col": 9, "row": 13 }
+}

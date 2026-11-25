@@ -1,9 +1,19 @@
-import { worldTest, expect } from '@gameengine/test';
-import { LocalTransform } from '@gameengine/runtime';
-import { Block, Board, Enemy, Item, NestSpot, Offer, Placement, Run } from '../src/schema.gen.ts';
+import { expect } from '@gameengine/test';
+import { worldTest } from './play.ts';
+import { LocalTransform, Shape } from '@gameengine/runtime';
+import { Base, Block, Board, BoardTile, Enemy, Item, NestMound, NestSpot, Offer, Placement, Run, TraySlot } from '../src/schema.gen.ts';
 import { SetOffer } from '../src/offer.cheats.ts';
 import { NextWave, Swarm } from '../src/stress.cheats.ts';
-import { BASE_CELL, CELLS, COLS, NESTS, NEST_CELL, REROLL_SLOT, cellX, cellY, footprintX, footprintY, nearestCell, trayX, trayY } from '../src/grid.ts';
+import { LoadLevel } from '../src/level.cheats.ts';
+
+/** A fixed layout for tests (order 0: off the level menu); designers edit assets/levels/ freely. */
+const FIXTURE = 'assets/test-data/layout-fixture.level.json';
+/** A level with its own nests (bottom right, then left) and its base at the top. */
+const MARKERS = 'assets/test-data/markers-fixture.level.json';
+/** The largest board (10 × 14, base bottom right) and the smallest (4 × 4, default nests and base). */
+const SIZE_MAX = 'assets/test-data/size-max-fixture.level.json';
+const SIZE_MIN = 'assets/test-data/size-min-fixture.level.json';
+import { CELLS, COLS, DEFAULT_COLS, DEFAULT_ROWS, viewRect, DEFAULT_BASE as BASE_CELL, DEFAULT_NESTS as NESTS, REROLL_SLOT, cellX, cellY, footprintX, footprintY, nearestCell, trayX, trayY } from '../src/grid.ts';
 import { DRAG_SPEED, FREE_WALLS, GHOST_LIFT, MOVE_COOLDOWN, SHAPES, START_GOLD, START_LIVES, rerollPrice } from '../src/balance.ts';
 
 type Ctx = Parameters<Parameters<typeof worldTest>[1]>[0];
@@ -26,7 +36,7 @@ async function dragAt(t: Ctx, from: [number, number], x: number, y: number, hold
   await t.step(2);
 }
 
-const fromSlot = (slot: number): [number, number] => [trayX(slot), trayY(slot)];
+const fromSlot = (slot: number): [number, number] => [trayX(slot, DEFAULT_COLS), trayY(DEFAULT_ROWS)];
 const fromCell = (c: number): [number, number] => [cellX(c), cellY(c)];
 
 /** Puts `shape` on offer (slot 0) and drops it with its top-left cell at `topLeft`. */
@@ -100,7 +110,7 @@ worldTest('a drop that would close the last path is refused and the block goes b
   await block(t, cell(6, 4));
   expect(t.world.entities(Block).length).toBe(2);
   expect(t.world.resource(Run).refusals).toBe(1);
-  expect(t.world.resource(Board).dist[NEST_CELL]).toBeGreaterThan(0);
+  expect(t.world.resource(Board).dist[NESTS[0]!.cell]).toBeGreaterThan(0);
 });
 
 worldTest('block cells past the free ones cost more each time', async (t) => {
@@ -140,6 +150,142 @@ worldTest('blocks never move', async (t) => {
   expect(t.world.resource(Board).cells[cell(5, 3)]).toBe(0);
 });
 
+worldTest('a level layout starts the run with locked blocks and weapons, every nest still reaching the base', async (t) => {
+  await t.step(2);
+  expect(t.world.entities(Block).length).toBe(0);
+  await t.cheat(LoadLevel, { level: FIXTURE });
+  await t.step(2);
+  const blocks = t.world.entities(Block);
+  const items = t.world.entities(Item);
+  expect(blocks.length).toBe(8);
+  expect(items.length).toBe(7);
+  for (const e of blocks) expect(t.world.get(e, Block).locked).toBe(true);
+  for (const e of items) expect(t.world.get(e, Item).locked).toBe(true);
+  const b = t.world.resource(Board);
+  expect(Array.from(b.cells).filter((v) => v === 1).length).toBe(20);
+  expect(b.weapons[cell(4, 2)]).toBe(3); // cannon
+  expect(b.weapons[cell(2, 7)]).toBe(2); // tower
+  for (const n of NESTS) expect(b.dist[n.cell]).toBeGreaterThan(0);
+  expect(t.world.resource(Run).gold).toBe(START_GOLD);
+});
+
+worldTest('pre-placed weapons never move', async (t) => {
+  t.input.view(...PHONE);
+  await t.step(2);
+  await t.cheat(LoadLevel, { level: FIXTURE });
+  await t.step(2);
+  // The fixture's tower on the 2×2 block at (0, 4) tries to move to a free cell of the same block.
+  await dragAt(t, fromCell(cell(1, 4)), cellX(cell(0, 5)), cellY(cell(0, 5)));
+  const b = t.world.resource(Board);
+  expect(b.weapons[cell(1, 4)]).toBe(2);
+  expect(b.weapons[cell(0, 5)]).toBe(0);
+  expect(t.world.resource(Placement).active).toBe(false);
+  expect(t.world.resource(Run).refusals).toBe(1);
+});
+
+worldTest('a level places its own nests and base: the field, the markers and the ants follow them', async (t) => {
+  t.input.view(...PHONE);
+  await t.step(2);
+  await t.cheat(LoadLevel, { level: MARKERS });
+  await t.step(2);
+  const b = t.world.resource(Board);
+  expect(b.nestCount).toBe(2);
+  expect(Array.from(b.nestCell).slice(0, 2)).toEqual([cell(6, 10), cell(0, 8)]);
+  expect(Array.from(b.nestWave).slice(0, 2)).toEqual([1, 2]);
+  expect(b.baseCell).toBe(cell(3, 0));
+  expect(b.dist[cell(3, 0)]).toBe(0);
+  expect(b.path[0]).toBe(cell(6, 10));
+  expect(b.path[b.pathLen - 1]).toBe(cell(3, 0));
+  // The mounds and the base stand on the level's cells; the unused third nest slot hides.
+  for (const e of t.world.entities(NestMound)) {
+    const n = t.world.get(e, NestMound).index;
+    const [x, y] = t.world.get(e, LocalTransform).position;
+    if (n < 2) {
+      const c = b.nestCell[n]!;
+      expect(x).toBeCloseTo(cellX(c), 4);
+      expect(y).toBeCloseTo(cellY(c), 4);
+    }
+    expect(t.world.get(e, Shape).visible).toBe(n < 2);
+  }
+  const [base] = t.world.entities(Base);
+  const [bx, by] = t.world.get(base!, LocalTransform).position;
+  expect(bx).toBeCloseTo(cellX(cell(3, 0)), 4);
+  expect(by).toBeCloseTo(cellY(cell(3, 0)), 4);
+  // Nothing is built on a nest or the base.
+  await block(t, cell(6, 10));
+  await block(t, cell(3, 0));
+  expect(t.world.entities(Block).length).toBe(1);
+  // Wave 1 comes out of the first nest, at the bottom right.
+  await t.cheat(NextWave, {});
+  await t.step(60);
+  const ants = t.world.entities(Enemy).map((e) => t.world.get(e, LocalTransform).position);
+  expect(ants.length).toBeGreaterThan(0);
+  for (const [x, y] of ants) expect(y!).toBeLessThan(cellY(cell(0, 0)) + 0.6);
+  expect(ants.some(([x, y]) => Math.abs(x! - cellX(cell(6, 10))) < 1.5 && Math.abs(y! - cellY(cell(6, 10))) < 1.5)).toBe(true);
+});
+
+worldTest('a level sets its board size: the field, the grid, the tray, the camera and drops follow it', async (t) => {
+  t.input.view(...PHONE);
+  await t.step(2);
+  await t.cheat(LoadLevel, { level: SIZE_MAX });
+  await t.step(3);
+  let b = t.world.resource(Board);
+  expect([b.cols, b.rows]).toEqual([10, 14]);
+  expect(b.dist[cell(9, 13)]).toBe(0);
+  expect(b.path[0]).toBe(cell(0, 0));
+  expect(b.path[b.pathLen - 1]).toBe(cell(9, 13));
+  // The grid is redrawn at the level's size, and the tray sits under it.
+  expect(t.world.entities(BoardTile).some((e) => { const [w, h] = t.world.get(e, Shape).size; return w === 10 && h === 14; })).toBe(true);
+  for (const e of t.world.entities(TraySlot)) {
+    const [x, y] = t.world.get(e, LocalTransform).position;
+    expect(x).toBeCloseTo(trayX(t.world.get(e, TraySlot).slot, 10), 4);
+    expect(y).toBeCloseTo(trayY(14), 4);
+  }
+  // A block drops past the default board's right edge and bottom.
+  await t.cheat(SetOffer, { a: 'b1x1', b: 'tower', c: 'cannon' });
+  await dragAt(t, [trayX(0, 10), trayY(14)], cellX(cell(8, 12)), cellY(cell(8, 12)));
+  expect(t.world.resource(Board).cells[cell(8, 12)]).toBe(1);
+
+  await t.cheat(LoadLevel, { level: SIZE_MIN });
+  await t.step(3);
+  b = t.world.resource(Board);
+  expect([b.cols, b.rows]).toEqual([4, 4]);
+  // A level without nests or base gets the default ones for its size.
+  expect(b.nestCell[0]).toBe(cell(2, 0));
+  expect(b.baseCell).toBe(cell(2, 3));
+  expect(b.dist[cell(5, 2)]).toBe(-1);
+  // Off the 4 × 4 board nothing lands.
+  await t.cheat(SetOffer, { a: 'b1x1', b: 'tower', c: 'cannon' });
+  await dragAt(t, [trayX(0, 4), trayY(4)], cellX(cell(5, 2)), cellY(cell(5, 2)));
+  expect(t.world.entities(Block).length).toBe(0);
+});
+
+worldTest('the largest and smallest boards stay whole on screen, on thin phones and tablets', async (t) => {
+  // 9:22 phone with a notch, 3:4 tablet: the extremes of the portrait shapes we ship on.
+  const views: [number, number, number, [number, number, number, number]][] = [
+    [360, 880, 3, [0, 47, 0, 34]],
+    [768, 1024, 2, [0, 24, 0, 20]],
+  ];
+  for (const level of [SIZE_MAX, SIZE_MIN]) {
+    for (const view of views) {
+      t.input.view(...view);
+      await t.step(2);
+      await t.cheat(LoadLevel, { level });
+      await t.step(3);
+      const b = t.world.resource(Board);
+      const r = viewRect(b.cols, b.rows);
+      const [w, h, , [, top, , bottom]] = view;
+      for (const [x, y] of [[r.x - r.w / 2, r.y + r.h / 2], [r.x + r.w / 2, r.y - r.h / 2]] as const) {
+        const [sx, sy] = t.input.worldToScreen([x, y]);
+        expect(sx).toBeGreaterThanOrEqual(-0.5);
+        expect(sx).toBeLessThanOrEqual(w + 0.5);
+        expect(sy).toBeGreaterThanOrEqual(top - 0.5);
+        expect(sy).toBeLessThanOrEqual(h - bottom + 0.5);
+      }
+    }
+  }
+});
+
 worldTest('a moved weapon cannot move again until its cooldown ends', async (t) => {
   t.input.view(...PHONE);
   await t.step(2);
@@ -172,7 +318,7 @@ worldTest('ants reroute around a new block at once and never walk into blocked c
     await t.step(1);
     for (const e of t.world.entities(Enemy)) {
       const [x, y] = t.world.get(e, LocalTransform).position;
-      expect(t.world.resource(Board).cells[nearestCell(x!, y!)]).toBe(0);
+      expect(t.world.resource(Board).cells[nearestCell(x!, y!, DEFAULT_COLS, DEFAULT_ROWS)]).toBe(0);
     }
     reachedBase = t.world.resource(Run).baseHits;
   }
@@ -240,7 +386,7 @@ worldTest('reroll draws a new set for gold, dearer each time, refused when broke
   expect(t.world.resource(Run).refusals).toBeGreaterThan(0);
 });
 
-worldTest('every weapon hits an area: one tower shot can kill several ants', async (t) => {
+worldTest('a tower shot hits its target alone: never more kills than shots', async (t) => {
   t.input.view(...PHONE);
   await t.step(2);
   await block(t, cell(2, 1));
@@ -248,7 +394,8 @@ worldTest('every weapon hits an area: one tower shot can kill several ants', asy
   await t.cheat(Swarm, { count: 60 });
   await t.step(120);
   const run = t.world.resource(Run);
-  expect(run.kills).toBeGreaterThan(run.shots);
+  expect(run.kills).toBeGreaterThan(0);
+  expect(run.kills).toBeLessThanOrEqual(run.shots);
 });
 
 worldTest('nests open at their wave and ants leave every open nest in turn', async (t) => {
@@ -289,8 +436,13 @@ worldTest('a block that would cut off a nest that is not open yet is refused', a
   expect(t.world.resource(Run).refusals).toBe(1);
 });
 
-worldTest('the board helpers agree on the grid', async () => {
-  expect(nearestCell(cellX(BASE_CELL), cellY(BASE_CELL))).toBe(BASE_CELL);
-  expect(CELLS).toBe(77);
+worldTest('the board helpers agree on the grid', async (t) => {
+  await t.step(2);
+  expect(nearestCell(cellX(BASE_CELL), cellY(BASE_CELL), DEFAULT_COLS, DEFAULT_ROWS)).toBe(BASE_CELL);
+  // Cells are numbered on the largest board; the Board arrays hold all of them.
+  expect(CELLS).toBe(COLS * 14);
+  expect(t.world.resource(Board).cells.length).toBe(CELLS);
+  expect(t.world.resource(Board).cols).toBe(DEFAULT_COLS);
+  expect(t.world.resource(Board).rows).toBe(DEFAULT_ROWS);
 });
 worldTest.replay('tests/replays/towers_shoot_ants_and_kills_pay_gold.greplay');

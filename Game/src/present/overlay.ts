@@ -5,7 +5,7 @@
  */
 import { defineSystem, query, read, visualPool, withTag, write, LocalTransform, PointerState, RenderTime, Shape, Sprite, VisualOffset, parseColor, type Chunk, type VisualPoolFrame } from '@gameengine/runtime';
 import { Big, Board, Enemy, Item, Placement, Run } from '../schema.gen.ts';
-import { cellX, cellY, COLS, ROWS, BOARD_Y, CELLS, NESTS, footprintCell, tracePath } from '../grid.ts';
+import { cellX, cellY, CELLS, DEFAULT_COLS, DEFAULT_ROWS, boardRect, footprintCell, tracePath } from '../grid.ts';
 
 // Scratch for tracing a path: fully written by tracePath before it is read.
 const pathScratch = new Uint8Array(CELLS);
@@ -141,23 +141,24 @@ export const Overlay = defineSystem({
     const playing = run.phase[0] === 0;
 
     // The ants' paths, one colour per nest. Where flows share a segment it takes the colour of
-    // the highest-priority nest (NESTS order: white, then blue, then yellow). While a drop is
+    // the highest-priority nest (the level's nest order: white, then blue, then yellow). While a drop is
     // hovered the current paths fade and the preview shows the new ones in the same colours,
     // with bigger, brighter dots.
     if (playing) {
       const wave = Math.max(1, run.wave[0]!);
       const showPreview = dragging && p.valid[0] === 1 && p.previewLen[0]! > 0;
       claimed.fill(0);
-      for (let n = 0; n < NESTS.length; n++) {
-        if (NESTS[n]!.fromWave > wave) continue;
-        const len = tracePath(board.dist, NESTS[n]!.cell, pathScratch);
+      const nests = board.nestCount[0]!;
+      for (let n = 0; n < nests; n++) {
+        if (board.nestWave[n]! > wave) continue;
+        const len = tracePath(board.dist, board.nestCell[n]!, pathScratch);
         drawPath(f, pathScratch, len, 2, (run.time[0]! * 1.2) % 1, showPreview ? C.flowDim[n % C.flowDim.length]! : C.flow[n % C.flow.length]!, 0.13, ORDER.path, claimed);
       }
       if (showPreview) {
         claimed.fill(0);
-        for (let n = 0; n < NESTS.length; n++) {
-          if (NESTS[n]!.fromWave > wave) continue;
-          const len = tracePath(p.previewDist, NESTS[n]!.cell, pathScratch);
+        for (let n = 0; n < nests; n++) {
+          if (board.nestWave[n]! > wave) continue;
+          const len = tracePath(p.previewDist, board.nestCell[n]!, pathScratch);
           drawPath(f, pathScratch, len, 3, (s.t * 2.5) % 1, C.flowPreview[n % C.flowPreview.length]!, 0.19, ORDER.path + 1, claimed);
         }
       }
@@ -247,5 +248,5 @@ export const Overlay = defineSystem({
   },
 });
 
-// Board extents, for tests and tools.
-export const BOARD_RECT = { x: 0, y: BOARD_Y, w: COLS, h: ROWS };
+// The default board's extents, for tests and tools (a level's own: boardRect(Board.cols, Board.rows)).
+export const BOARD_RECT = boardRect(DEFAULT_COLS, DEFAULT_ROWS);

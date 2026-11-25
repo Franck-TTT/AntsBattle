@@ -1,0 +1,16 @@
+{
+  "extends": "../.gameengine/tsconfig.engine.json",
+  "compilerOptions": {
+    "jsx": "react",
+    "jsxImportSource": null,
+    "jsxFactory": "React.createElement",
+    "jsxFragmentFactory": "React.Fragment",
+    "lib": ["ES2022", "DOM"],
+    "paths": {
+      "@gameengine/editor-api": ["../.gameengine/engine/packages/editor-api/index.d.ts"],
+      "@gameengine/runtime": ["../.gameengine/engine/packages/runtime/src/index.ts"],
+      "@gameengine/runtime/*": ["../.gameengine/engine/packages/runtime/src/*"]
+    }
+  },
+  "include": ["."]
+}

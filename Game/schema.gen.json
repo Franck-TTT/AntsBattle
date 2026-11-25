@@ -31,7 +31,8 @@
         "pop",
         "boom",
         "hit",
-        "baseHit"
+        "baseHit",
+        "casing"
       ],
       "package": "AntsBattle"
     },
@@ -64,7 +65,8 @@
       "values": [
         "playing",
         "won",
-        "lost"
+        "lost",
+        "menu"
       ],
       "package": "AntsBattle"
     }
@@ -115,6 +117,13 @@
           "scalar": "u8",
           "lanes": 1,
           "doc": "Shake left after a refused pick-up (blocks never move)"
+        },
+        {
+          "name": "locked",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Pre-placed by the level: never moved, never destroyed"
         }
       ],
       "package": "AntsBattle"
@@ -128,28 +137,28 @@
           "name": "cells",
           "kind": "array",
           "scalar": "u8",
-          "lanes": 77,
+          "lanes": 140,
           "doc": "1 where a block stands (blocks the ants), 0 free"
         },
         {
           "name": "weapons",
           "kind": "array",
           "scalar": "u8",
-          "lanes": 77,
+          "lanes": 140,
           "doc": "Weapon kind index standing on the block of each cell (0 none)"
         },
         {
           "name": "dist",
           "kind": "array",
           "scalar": "i16",
-          "lanes": 77,
+          "lanes": 140,
           "doc": "Steps to the base per cell, -1 unreachable or blocked"
         },
         {
           "name": "path",
           "kind": "array",
           "scalar": "u8",
-          "lanes": 77,
+          "lanes": 140,
           "doc": "Cells of the path from the nest to the base"
         },
         {
@@ -163,6 +172,48 @@
           "kind": "u32",
           "scalar": "u32",
           "lanes": 1
+        },
+        {
+          "name": "cols",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Board width of this level (cells past it are off the board)"
+        },
+        {
+          "name": "rows",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Board height of this level"
+        },
+        {
+          "name": "nestCount",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Nests of this level (1 to MAX_NESTS)"
+        },
+        {
+          "name": "nestCell",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 5,
+          "doc": "Cell of each nest"
+        },
+        {
+          "name": "nestWave",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 5,
+          "doc": "Wave each nest opens on"
+        },
+        {
+          "name": "baseCell",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Cell of the base"
         }
       ],
       "package": "AntsBattle"
@@ -260,6 +311,20 @@
           "kind": "f32",
           "scalar": "f32",
           "lanes": 1
+        },
+        {
+          "name": "kx",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Knockback velocity x, cells per game second (decays; the walk brings it back on its path)"
+        },
+        {
+          "name": "ky",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Knockback velocity y"
         }
       ],
       "package": "AntsBattle"
@@ -400,6 +465,13 @@
           "scalar": "u8",
           "lanes": 1,
           "doc": "Picked up by the finger right now"
+        },
+        {
+          "name": "locked",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Pre-placed by the level: never moved, never destroyed"
         }
       ],
       "package": "AntsBattle"
@@ -446,7 +518,68 @@
       "doc": "Signal: an item was dropped on the board."
     },
     {
+      "name": "Level",
+      "kind": "resource",
+      "sim": true,
+      "fields": [
+        {
+          "name": "data",
+          "kind": "asset",
+          "scalar": "u32",
+          "lanes": 1,
+          "assetType": "data",
+          "doc": "The LevelDef this run starts from (none: an empty board)"
+        },
+        {
+          "name": "loads",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Bumped on every level load (menu pick, level.load cheat) so loading the same level again restarts the run"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "LevelPicked",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "index",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Position in menuLevels() (src/levels.ts), from 0"
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "The player picked a level on the level menu."
+    },
+    {
+      "name": "MenuRequested",
+      "kind": "event",
+      "sim": true,
+      "fields": [],
+      "package": "AntsBattle",
+      "doc": "The player asked for the level menu."
+    },
+    {
       "name": "NestLabel",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "index",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "NestMound",
       "kind": "component",
       "sim": true,
       "fields": [
@@ -599,8 +732,8 @@
         },
         {
           "name": "fromCell",
-          "kind": "i8",
-          "scalar": "i8",
+          "kind": "i16",
+          "scalar": "i16",
           "lanes": 1,
           "default": -1
         },
@@ -626,8 +759,8 @@
         },
         {
           "name": "cell",
-          "kind": "i8",
-          "scalar": "i8",
+          "kind": "i16",
+          "scalar": "i16",
           "lanes": 1,
           "default": -1,
           "doc": "Hovered cell (a block: its top-left cell), -1 off the board"
@@ -649,7 +782,7 @@
           "name": "previewDist",
           "kind": "array",
           "scalar": "i16",
-          "lanes": 77,
+          "lanes": 140,
           "doc": "Flow field if the hovered drop happened (each nest preview path is traced from it)"
         },
         {
@@ -769,6 +902,34 @@
           "kind": "f32",
           "scalar": "f32",
           "lanes": 1
+        },
+        {
+          "name": "knockback",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Push given on impact, cells per second"
+        },
+        {
+          "name": "shock",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Shockwave radius on impact, cells"
+        },
+        {
+          "name": "ux",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Flight direction, unit vector x (kept for the push at impact)"
+        },
+        {
+          "name": "uy",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Flight direction, unit vector y"
         }
       ],
       "package": "AntsBattle"
@@ -923,6 +1084,13 @@
           "lanes": 1
         },
         {
+          "name": "hurts",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Damage events on enemies (the camera tremor follows it)"
+        },
+        {
           "name": "baseHits",
           "kind": "u32",
           "scalar": "u32",
@@ -947,6 +1115,20 @@
           "scalar": "u32",
           "lanes": 1,
           "doc": "Nests open so far (presentation plays the opening)"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "TrayCoin",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "slot",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
         }
       ],
       "package": "AntsBattle"
@@ -1029,6 +1211,12 @@
           "kind": "bool",
           "scalar": "u8",
           "lanes": 1
+        },
+        {
+          "name": "newNest",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
         }
       ],
       "package": "AntsBattle",
@@ -1037,5 +1225,153 @@
   ],
   "commands": [],
   "protocol": [],
-  "services": []
+  "services": [],
+  "data": [
+    {
+      "name": "LevelDef",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable id saves and analytics use; never changes once shipped"
+          },
+          "name": {
+            "type": "string",
+            "description": "Shown on the level menu"
+          },
+          "order": {
+            "type": "integer",
+            "description": "Position on the level menu, from 1; 0 keeps it off the menu (test layouts)"
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "shape": {
+                  "enum": [
+                    "b1x1",
+                    "b2x2",
+                    "b2x1",
+                    "b1x2",
+                    "b3x1",
+                    "b1x3"
+                  ]
+                },
+                "col": {
+                  "type": "integer",
+                  "description": "Column of the top-left cell, 0 on the left"
+                },
+                "row": {
+                  "type": "integer",
+                  "description": "Row of the top-left cell, 0 at the top"
+                }
+              },
+              "required": [
+                "shape",
+                "col",
+                "row"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Pre-placed blocks"
+          },
+          "weapons": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "tower",
+                    "cannon"
+                  ]
+                },
+                "col": {
+                  "type": "integer",
+                  "description": "Column, 0 on the left"
+                },
+                "row": {
+                  "type": "integer",
+                  "description": "Row, 0 at the top; the cell must hold a pre-placed block"
+                }
+              },
+              "required": [
+                "kind",
+                "col",
+                "row"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Pre-placed weapons, each standing on a pre-placed block cell"
+          },
+          "cols": {
+            "type": "integer",
+            "description": "Board width in cells, 4 to 10; absent: 7"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "Board height in cells, 4 to 14; absent: 11"
+          },
+          "nests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "col": {
+                  "type": "integer",
+                  "description": "Column, 0 on the left"
+                },
+                "row": {
+                  "type": "integer",
+                  "description": "Row, 0 at the top"
+                },
+                "fromWave": {
+                  "type": "integer",
+                  "description": "Wave it opens on (1: open from the start)"
+                }
+              },
+              "required": [
+                "col",
+                "row",
+                "fromWave"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Ant nests, 1 to 5, in path-colour order; absent: the default nests (src/grid.ts)"
+          },
+          "base": {
+            "type": "object",
+            "properties": {
+              "col": {
+                "type": "integer",
+                "description": "Column, 0 on the left"
+              },
+              "row": {
+                "type": "integer",
+                "description": "Row, 0 at the top"
+              }
+            },
+            "required": [
+              "col",
+              "row"
+            ],
+            "additionalProperties": false,
+            "description": "The base to defend; absent: the default base (src/grid.ts)"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "order",
+          "blocks",
+          "weapons"
+        ],
+        "additionalProperties": false
+      },
+      "package": "AntsBattle",
+      "doc": "A level layout: its nests, its base, and what stands on the board when a run starts."
+    }
+  ]
 }

@@ -1,5 +1,6 @@
 // @generated — do not edit. Regenerate with `pnpm gen` (tools/bindgen).
-import { typeToken, rowRead as $r, registerSchema, type EntityId } from '@gameengine/runtime';
+import { typeToken, rowRead as $r, registerSchema, dataToken, type DataRecord, type EntityId } from '@gameengine/runtime';
+import './content.gen.ts';
 
 export type { EntityId };
 
@@ -37,7 +38,8 @@ export const schemaIr = {
         "pop",
         "boom",
         "hit",
-        "baseHit"
+        "baseHit",
+        "casing"
       ],
       "package": "AntsBattle"
     },
@@ -70,7 +72,8 @@ export const schemaIr = {
       "values": [
         "playing",
         "won",
-        "lost"
+        "lost",
+        "menu"
       ],
       "package": "AntsBattle"
     }
@@ -121,6 +124,13 @@ export const schemaIr = {
           "scalar": "u8",
           "lanes": 1,
           "doc": "Shake left after a refused pick-up (blocks never move)"
+        },
+        {
+          "name": "locked",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Pre-placed by the level: never moved, never destroyed"
         }
       ],
       "package": "AntsBattle"
@@ -134,28 +144,28 @@ export const schemaIr = {
           "name": "cells",
           "kind": "array",
           "scalar": "u8",
-          "lanes": 77,
+          "lanes": 140,
           "doc": "1 where a block stands (blocks the ants), 0 free"
         },
         {
           "name": "weapons",
           "kind": "array",
           "scalar": "u8",
-          "lanes": 77,
+          "lanes": 140,
           "doc": "Weapon kind index standing on the block of each cell (0 none)"
         },
         {
           "name": "dist",
           "kind": "array",
           "scalar": "i16",
-          "lanes": 77,
+          "lanes": 140,
           "doc": "Steps to the base per cell, -1 unreachable or blocked"
         },
         {
           "name": "path",
           "kind": "array",
           "scalar": "u8",
-          "lanes": 77,
+          "lanes": 140,
           "doc": "Cells of the path from the nest to the base"
         },
         {
@@ -169,6 +179,48 @@ export const schemaIr = {
           "kind": "u32",
           "scalar": "u32",
           "lanes": 1
+        },
+        {
+          "name": "cols",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Board width of this level (cells past it are off the board)"
+        },
+        {
+          "name": "rows",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Board height of this level"
+        },
+        {
+          "name": "nestCount",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Nests of this level (1 to MAX_NESTS)"
+        },
+        {
+          "name": "nestCell",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 5,
+          "doc": "Cell of each nest"
+        },
+        {
+          "name": "nestWave",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 5,
+          "doc": "Wave each nest opens on"
+        },
+        {
+          "name": "baseCell",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Cell of the base"
         }
       ],
       "package": "AntsBattle"
@@ -266,6 +318,20 @@ export const schemaIr = {
           "kind": "f32",
           "scalar": "f32",
           "lanes": 1
+        },
+        {
+          "name": "kx",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Knockback velocity x, cells per game second (decays; the walk brings it back on its path)"
+        },
+        {
+          "name": "ky",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Knockback velocity y"
         }
       ],
       "package": "AntsBattle"
@@ -406,6 +472,13 @@ export const schemaIr = {
           "scalar": "u8",
           "lanes": 1,
           "doc": "Picked up by the finger right now"
+        },
+        {
+          "name": "locked",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Pre-placed by the level: never moved, never destroyed"
         }
       ],
       "package": "AntsBattle"
@@ -452,7 +525,68 @@ export const schemaIr = {
       "doc": "Signal: an item was dropped on the board."
     },
     {
+      "name": "Level",
+      "kind": "resource",
+      "sim": true,
+      "fields": [
+        {
+          "name": "data",
+          "kind": "asset",
+          "scalar": "u32",
+          "lanes": 1,
+          "assetType": "data",
+          "doc": "The LevelDef this run starts from (none: an empty board)"
+        },
+        {
+          "name": "loads",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Bumped on every level load (menu pick, level.load cheat) so loading the same level again restarts the run"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "LevelPicked",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "index",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Position in menuLevels() (src/levels.ts), from 0"
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "The player picked a level on the level menu."
+    },
+    {
+      "name": "MenuRequested",
+      "kind": "event",
+      "sim": true,
+      "fields": [],
+      "package": "AntsBattle",
+      "doc": "The player asked for the level menu."
+    },
+    {
       "name": "NestLabel",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "index",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "NestMound",
       "kind": "component",
       "sim": true,
       "fields": [
@@ -605,8 +739,8 @@ export const schemaIr = {
         },
         {
           "name": "fromCell",
-          "kind": "i8",
-          "scalar": "i8",
+          "kind": "i16",
+          "scalar": "i16",
           "lanes": 1,
           "default": -1
         },
@@ -632,8 +766,8 @@ export const schemaIr = {
         },
         {
           "name": "cell",
-          "kind": "i8",
-          "scalar": "i8",
+          "kind": "i16",
+          "scalar": "i16",
           "lanes": 1,
           "default": -1,
           "doc": "Hovered cell (a block: its top-left cell), -1 off the board"
@@ -655,7 +789,7 @@ export const schemaIr = {
           "name": "previewDist",
           "kind": "array",
           "scalar": "i16",
-          "lanes": 77,
+          "lanes": 140,
           "doc": "Flow field if the hovered drop happened (each nest preview path is traced from it)"
         },
         {
@@ -775,6 +909,34 @@ export const schemaIr = {
           "kind": "f32",
           "scalar": "f32",
           "lanes": 1
+        },
+        {
+          "name": "knockback",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Push given on impact, cells per second"
+        },
+        {
+          "name": "shock",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Shockwave radius on impact, cells"
+        },
+        {
+          "name": "ux",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Flight direction, unit vector x (kept for the push at impact)"
+        },
+        {
+          "name": "uy",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Flight direction, unit vector y"
         }
       ],
       "package": "AntsBattle"
@@ -929,6 +1091,13 @@ export const schemaIr = {
           "lanes": 1
         },
         {
+          "name": "hurts",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Damage events on enemies (the camera tremor follows it)"
+        },
+        {
           "name": "baseHits",
           "kind": "u32",
           "scalar": "u32",
@@ -953,6 +1122,20 @@ export const schemaIr = {
           "scalar": "u32",
           "lanes": 1,
           "doc": "Nests open so far (presentation plays the opening)"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "TrayCoin",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "slot",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
         }
       ],
       "package": "AntsBattle"
@@ -1035,6 +1218,12 @@ export const schemaIr = {
           "kind": "bool",
           "scalar": "u8",
           "lanes": 1
+        },
+        {
+          "name": "newNest",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
         }
       ],
       "package": "AntsBattle",
@@ -1043,7 +1232,155 @@ export const schemaIr = {
   ],
   "commands": [],
   "protocol": [],
-  "services": []
+  "services": [],
+  "data": [
+    {
+      "name": "LevelDef",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable id saves and analytics use; never changes once shipped"
+          },
+          "name": {
+            "type": "string",
+            "description": "Shown on the level menu"
+          },
+          "order": {
+            "type": "integer",
+            "description": "Position on the level menu, from 1; 0 keeps it off the menu (test layouts)"
+          },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "shape": {
+                  "enum": [
+                    "b1x1",
+                    "b2x2",
+                    "b2x1",
+                    "b1x2",
+                    "b3x1",
+                    "b1x3"
+                  ]
+                },
+                "col": {
+                  "type": "integer",
+                  "description": "Column of the top-left cell, 0 on the left"
+                },
+                "row": {
+                  "type": "integer",
+                  "description": "Row of the top-left cell, 0 at the top"
+                }
+              },
+              "required": [
+                "shape",
+                "col",
+                "row"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Pre-placed blocks"
+          },
+          "weapons": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "tower",
+                    "cannon"
+                  ]
+                },
+                "col": {
+                  "type": "integer",
+                  "description": "Column, 0 on the left"
+                },
+                "row": {
+                  "type": "integer",
+                  "description": "Row, 0 at the top; the cell must hold a pre-placed block"
+                }
+              },
+              "required": [
+                "kind",
+                "col",
+                "row"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Pre-placed weapons, each standing on a pre-placed block cell"
+          },
+          "cols": {
+            "type": "integer",
+            "description": "Board width in cells, 4 to 10; absent: 7"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "Board height in cells, 4 to 14; absent: 11"
+          },
+          "nests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "col": {
+                  "type": "integer",
+                  "description": "Column, 0 on the left"
+                },
+                "row": {
+                  "type": "integer",
+                  "description": "Row, 0 at the top"
+                },
+                "fromWave": {
+                  "type": "integer",
+                  "description": "Wave it opens on (1: open from the start)"
+                }
+              },
+              "required": [
+                "col",
+                "row",
+                "fromWave"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Ant nests, 1 to 5, in path-colour order; absent: the default nests (src/grid.ts)"
+          },
+          "base": {
+            "type": "object",
+            "properties": {
+              "col": {
+                "type": "integer",
+                "description": "Column, 0 on the left"
+              },
+              "row": {
+                "type": "integer",
+                "description": "Row, 0 at the top"
+              }
+            },
+            "required": [
+              "col",
+              "row"
+            ],
+            "additionalProperties": false,
+            "description": "The base to defend; absent: the default base (src/grid.ts)"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "order",
+          "blocks",
+          "weapons"
+        ],
+        "additionalProperties": false
+      },
+      "package": "AntsBattle",
+      "doc": "A level layout: its nests, its base, and what stands on the board when a run starts."
+    }
+  ]
 } as const;
 registerSchema(schemaIr);
 
@@ -1071,8 +1408,9 @@ export const FxKind = {
   boom: 2,
   hit: 3,
   baseHit: 4,
+  casing: 5,
 } as const;
-export type FxKindName = 'dust' | 'pop' | 'boom' | 'hit' | 'baseHit';
+export type FxKindName = 'dust' | 'pop' | 'boom' | 'hit' | 'baseHit' | 'casing';
 
 export const ItemKind = {
   none: 0,
@@ -1098,8 +1436,9 @@ export const RunPhase = {
   playing: 0,
   won: 1,
   lost: 2,
+  menu: 3,
 } as const;
-export type RunPhaseName = 'playing' | 'won' | 'lost';
+export type RunPhaseName = 'playing' | 'won' | 'lost' | 'menu';
 
 export type BaseViews = Record<string, never>;
 export type BaseValue = Record<string, never>;
@@ -1118,6 +1457,8 @@ export interface BlockViews {
   placedAt: Float32Array;
   /** Shake left after a refused pick-up (blocks never move) */
   denySteps: Uint8Array;
+  /** Pre-placed by the level: never moved, never destroyed */
+  locked: Uint8Array;
 }
 export interface BlockValue {
   shape: BlockShapeName | number;
@@ -1126,9 +1467,11 @@ export interface BlockValue {
   placedAt: number;
   /** Shake left after a refused pick-up (blocks never move) */
   denySteps: number;
+  /** Pre-placed by the level: never moved, never destroyed */
+  locked: boolean;
 }
 /** Block (component, sim) */
-export const Block = typeToken<BlockViews, BlockValue>('Block', 'component', { sig: 'shape:enum:1,cell:u8:1,placedAt:f32:1,denySteps:u8:1', read: (v: BlockViews, i: number, o: Record<string, unknown>) => { o.shape = $r.enm('BlockShape', v.shape[i]!); o.cell = v.cell[i]; o.placedAt = v.placedAt[i]; o.denySteps = v.denySteps[i]; return o; } });
+export const Block = typeToken<BlockViews, BlockValue>('Block', 'component', { sig: 'shape:enum:1,cell:u8:1,placedAt:f32:1,denySteps:u8:1,locked:bool:1', read: (v: BlockViews, i: number, o: Record<string, unknown>) => { o.shape = $r.enm('BlockShape', v.shape[i]!); o.cell = v.cell[i]; o.placedAt = v.placedAt[i]; o.denySteps = v.denySteps[i]; o.locked = v.locked[i] !== 0; return o; } });
 
 export interface BoardViews {
   /** 1 where a block stands (blocks the ants), 0 free */
@@ -1141,6 +1484,18 @@ export interface BoardViews {
   path: Uint8Array;
   pathLen: Uint8Array;
   version: Uint32Array;
+  /** Board width of this level (cells past it are off the board) */
+  cols: Uint8Array;
+  /** Board height of this level */
+  rows: Uint8Array;
+  /** Nests of this level (1 to MAX_NESTS) */
+  nestCount: Uint8Array;
+  /** Cell of each nest */
+  nestCell: Uint8Array;
+  /** Wave each nest opens on */
+  nestWave: Uint8Array;
+  /** Cell of the base */
+  baseCell: Uint8Array;
 }
 export interface BoardValue {
   /** 1 where a block stands (blocks the ants), 0 free */
@@ -1153,9 +1508,21 @@ export interface BoardValue {
   path: number[];
   pathLen: number;
   version: number;
+  /** Board width of this level (cells past it are off the board) */
+  cols: number;
+  /** Board height of this level */
+  rows: number;
+  /** Nests of this level (1 to MAX_NESTS) */
+  nestCount: number;
+  /** Cell of each nest */
+  nestCell: number[];
+  /** Wave each nest opens on */
+  nestWave: number[];
+  /** Cell of the base */
+  baseCell: number;
 }
 /** Board (resource, sim) */
-export const Board = typeToken<BoardViews, BoardValue>('Board', 'resource', { sig: 'cells:array:77,weapons:array:77,dist:array:77,path:array:77,pathLen:u8:1,version:u32:1', read: (v: BoardViews, i: number, o: Record<string, unknown>) => { o.cells = $r.lanes(v.cells, i, 77, o.cells); o.weapons = $r.lanes(v.weapons, i, 77, o.weapons); o.dist = $r.lanes(v.dist, i, 77, o.dist); o.path = $r.lanes(v.path, i, 77, o.path); o.pathLen = v.pathLen[i]; o.version = v.version[i]; return o; } });
+export const Board = typeToken<BoardViews, BoardValue>('Board', 'resource', { sig: 'cells:array:140,weapons:array:140,dist:array:140,path:array:140,pathLen:u8:1,version:u32:1,cols:u8:1,rows:u8:1,nestCount:u8:1,nestCell:array:5,nestWave:array:5,baseCell:u8:1', read: (v: BoardViews, i: number, o: Record<string, unknown>) => { o.cells = $r.lanes(v.cells, i, 140, o.cells); o.weapons = $r.lanes(v.weapons, i, 140, o.weapons); o.dist = $r.lanes(v.dist, i, 140, o.dist); o.path = $r.lanes(v.path, i, 140, o.path); o.pathLen = v.pathLen[i]; o.version = v.version[i]; o.cols = v.cols[i]; o.rows = v.rows[i]; o.nestCount = v.nestCount[i]; o.nestCell = $r.lanes(v.nestCell, i, 5, o.nestCell); o.nestWave = $r.lanes(v.nestWave, i, 5, o.nestWave); o.baseCell = v.baseCell[i]; return o; } });
 
 export type BoardTileViews = Record<string, never>;
 export type BoardTileValue = Record<string, never>;
@@ -1182,6 +1549,10 @@ export interface EnemyViews {
   /** Sideways offset in its column, cells (spreads the swarm) */
   lane: Float32Array;
   bornAt: Float32Array;
+  /** Knockback velocity x, cells per game second (decays; the walk brings it back on its path) */
+  kx: Float32Array;
+  /** Knockback velocity y */
+  ky: Float32Array;
 }
 export interface EnemyValue {
   kind: EnemyKindName | number;
@@ -1203,9 +1574,13 @@ export interface EnemyValue {
   /** Sideways offset in its column, cells (spreads the swarm) */
   lane: number;
   bornAt: number;
+  /** Knockback velocity x, cells per game second (decays; the walk brings it back on its path) */
+  kx: number;
+  /** Knockback velocity y */
+  ky: number;
 }
 /** Enemy (component, sim) */
-export const Enemy = typeToken<EnemyViews, EnemyValue>('Enemy', 'component', { sig: 'kind:enum:1,hp:f32:1,maxHp:f32:1,speed:f32:1,reward:f32:1,damage:u32:1,hx:f32:1,hy:f32:1,remaining:f32:1,flashSteps:u8:1,lane:f32:1,bornAt:f32:1', read: (v: EnemyViews, i: number, o: Record<string, unknown>) => { o.kind = $r.enm('EnemyKind', v.kind[i]!); o.hp = v.hp[i]; o.maxHp = v.maxHp[i]; o.speed = v.speed[i]; o.reward = v.reward[i]; o.damage = v.damage[i]; o.hx = v.hx[i]; o.hy = v.hy[i]; o.remaining = v.remaining[i]; o.flashSteps = v.flashSteps[i]; o.lane = v.lane[i]; o.bornAt = v.bornAt[i]; return o; } });
+export const Enemy = typeToken<EnemyViews, EnemyValue>('Enemy', 'component', { sig: 'kind:enum:1,hp:f32:1,maxHp:f32:1,speed:f32:1,reward:f32:1,damage:u32:1,hx:f32:1,hy:f32:1,remaining:f32:1,flashSteps:u8:1,lane:f32:1,bornAt:f32:1,kx:f32:1,ky:f32:1', read: (v: EnemyViews, i: number, o: Record<string, unknown>) => { o.kind = $r.enm('EnemyKind', v.kind[i]!); o.hp = v.hp[i]; o.maxHp = v.maxHp[i]; o.speed = v.speed[i]; o.reward = v.reward[i]; o.damage = v.damage[i]; o.hx = v.hx[i]; o.hy = v.hy[i]; o.remaining = v.remaining[i]; o.flashSteps = v.flashSteps[i]; o.lane = v.lane[i]; o.bornAt = v.bornAt[i]; o.kx = v.kx[i]; o.ky = v.ky[i]; return o; } });
 
 export interface EnemyKilledViews {
   x: Float32Array;
@@ -1259,6 +1634,8 @@ export interface ItemViews {
   denySteps: Uint8Array;
   /** Picked up by the finger right now */
   held: Uint8Array;
+  /** Pre-placed by the level: never moved, never destroyed */
+  locked: Uint8Array;
 }
 export interface ItemValue {
   kind: ItemKindName | number;
@@ -1275,9 +1652,11 @@ export interface ItemValue {
   denySteps: number;
   /** Picked up by the finger right now */
   held: boolean;
+  /** Pre-placed by the level: never moved, never destroyed */
+  locked: boolean;
 }
 /** Item (component, sim) */
-export const Item = typeToken<ItemViews, ItemValue>('Item', 'component', { sig: 'kind:enum:1,cell:u8:1,cooldown:f32:1,reload:f32:1,aim:f32:1,placedAt:f32:1,denySteps:u8:1,held:bool:1', read: (v: ItemViews, i: number, o: Record<string, unknown>) => { o.kind = $r.enm('ItemKind', v.kind[i]!); o.cell = v.cell[i]; o.cooldown = v.cooldown[i]; o.reload = v.reload[i]; o.aim = v.aim[i]; o.placedAt = v.placedAt[i]; o.denySteps = v.denySteps[i]; o.held = v.held[i] !== 0; return o; } });
+export const Item = typeToken<ItemViews, ItemValue>('Item', 'component', { sig: 'kind:enum:1,cell:u8:1,cooldown:f32:1,reload:f32:1,aim:f32:1,placedAt:f32:1,denySteps:u8:1,held:bool:1,locked:bool:1', read: (v: ItemViews, i: number, o: Record<string, unknown>) => { o.kind = $r.enm('ItemKind', v.kind[i]!); o.cell = v.cell[i]; o.cooldown = v.cooldown[i]; o.reload = v.reload[i]; o.aim = v.aim[i]; o.placedAt = v.placedAt[i]; o.denySteps = v.denySteps[i]; o.held = v.held[i] !== 0; o.locked = v.locked[i] !== 0; return o; } });
 
 export interface ItemPlacedViews {
   kind: Uint8Array;
@@ -1296,6 +1675,37 @@ export interface ItemPlacedValue {
 /** Signal: an item was dropped on the board. (event, sim) */
 export const ItemPlaced = typeToken<ItemPlacedViews, ItemPlacedValue>('ItemPlaced', 'event', { sig: 'kind:enum:1,shape:enum:1,cell:u8:1,moved:bool:1,cost:u32:1', read: (v: ItemPlacedViews, i: number, o: Record<string, unknown>) => { o.kind = $r.enm('ItemKind', v.kind[i]!); o.shape = $r.enm('BlockShape', v.shape[i]!); o.cell = v.cell[i]; o.moved = v.moved[i] !== 0; o.cost = v.cost[i]; return o; } });
 
+export interface LevelViews {
+  /** The LevelDef this run starts from (none: an empty board) */
+  data: Uint32Array;
+  /** Bumped on every level load (menu pick, level.load cheat) so loading the same level again restarts the run */
+  loads: Uint32Array;
+}
+export interface LevelValue {
+  /** The LevelDef this run starts from (none: an empty board) */
+  data: string | null;
+  /** Bumped on every level load (menu pick, level.load cheat) so loading the same level again restarts the run */
+  loads: number;
+}
+/** Level (resource, sim) */
+export const Level = typeToken<LevelViews, LevelValue>('Level', 'resource', { sig: 'data:asset:1,loads:u32:1', read: (v: LevelViews, i: number, o: Record<string, unknown>) => { o.data = $r.asset(v.data[i]!); o.loads = v.loads[i]; return o; } });
+
+export interface LevelPickedViews {
+  /** Position in menuLevels() (src/levels.ts), from 0 */
+  index: Uint8Array;
+}
+export interface LevelPickedValue {
+  /** Position in menuLevels() (src/levels.ts), from 0 */
+  index: number;
+}
+/** The player picked a level on the level menu. (event, sim) */
+export const LevelPicked = typeToken<LevelPickedViews, LevelPickedValue>('LevelPicked', 'event', { sig: 'index:u8:1', read: (v: LevelPickedViews, i: number, o: Record<string, unknown>) => { o.index = v.index[i]; return o; } });
+
+export type MenuRequestedViews = Record<string, never>;
+export type MenuRequestedValue = Record<string, never>;
+/** The player asked for the level menu. (event, sim) */
+export const MenuRequested = typeToken<MenuRequestedViews, MenuRequestedValue>('MenuRequested', 'event');
+
 export interface NestLabelViews {
   index: Uint8Array;
 }
@@ -1304,6 +1714,15 @@ export interface NestLabelValue {
 }
 /** NestLabel (component, sim) */
 export const NestLabel = typeToken<NestLabelViews, NestLabelValue>('NestLabel', 'component', { sig: 'index:u8:1', read: (v: NestLabelViews, i: number, o: Record<string, unknown>) => { o.index = v.index[i]; return o; } });
+
+export interface NestMoundViews {
+  index: Uint8Array;
+}
+export interface NestMoundValue {
+  index: number;
+}
+/** NestMound (component, sim) */
+export const NestMound = typeToken<NestMoundViews, NestMoundValue>('NestMound', 'component', { sig: 'index:u8:1', read: (v: NestMoundViews, i: number, o: Record<string, unknown>) => { o.index = v.index[i]; return o; } });
 
 export interface NestOpenedViews {
   nest: Uint8Array;
@@ -1373,13 +1792,13 @@ export interface PlacementViews {
   shape: Uint8Array;
   /** The placed item being moved, or none for a tray pick */
   fromItem: Uint32Array;
-  fromCell: Int8Array;
+  fromCell: Int16Array;
   /** Tray slot it came from */
   slot: Int8Array;
   x: Float32Array;
   y: Float32Array;
   /** Hovered cell (a block: its top-left cell), -1 off the board */
-  cell: Int8Array;
+  cell: Int16Array;
   valid: Uint8Array;
   reason: Uint8Array;
   /** Flow field if the hovered drop happened (each nest preview path is traced from it) */
@@ -1422,7 +1841,7 @@ export interface PlacementValue {
   retShape: BlockShapeName | number;
 }
 /** Placement (resource, sim) */
-export const Placement = typeToken<PlacementViews, PlacementValue>('Placement', 'resource', { sig: 'active:bool:1,kind:enum:1,shape:enum:1,fromItem:entity:2,fromCell:i8:1,slot:i8:1,x:f32:1,y:f32:1,cell:i8:1,valid:bool:1,reason:enum:1,previewDist:array:77,previewLen:u8:1,returnSteps:u8:1,retFromX:f32:1,retFromY:f32:1,retToX:f32:1,retToY:f32:1,retKind:enum:1,retShape:enum:1', read: (v: PlacementViews, i: number, o: Record<string, unknown>) => { o.active = v.active[i] !== 0; o.kind = $r.enm('ItemKind', v.kind[i]!); o.shape = $r.enm('BlockShape', v.shape[i]!); o.fromItem = $r.ent(v.fromItem, i); o.fromCell = v.fromCell[i]; o.slot = v.slot[i]; o.x = v.x[i]; o.y = v.y[i]; o.cell = v.cell[i]; o.valid = v.valid[i] !== 0; o.reason = $r.enm('PlaceReason', v.reason[i]!); o.previewDist = $r.lanes(v.previewDist, i, 77, o.previewDist); o.previewLen = v.previewLen[i]; o.returnSteps = v.returnSteps[i]; o.retFromX = v.retFromX[i]; o.retFromY = v.retFromY[i]; o.retToX = v.retToX[i]; o.retToY = v.retToY[i]; o.retKind = $r.enm('ItemKind', v.retKind[i]!); o.retShape = $r.enm('BlockShape', v.retShape[i]!); return o; } });
+export const Placement = typeToken<PlacementViews, PlacementValue>('Placement', 'resource', { sig: 'active:bool:1,kind:enum:1,shape:enum:1,fromItem:entity:2,fromCell:i16:1,slot:i8:1,x:f32:1,y:f32:1,cell:i16:1,valid:bool:1,reason:enum:1,previewDist:array:140,previewLen:u8:1,returnSteps:u8:1,retFromX:f32:1,retFromY:f32:1,retToX:f32:1,retToY:f32:1,retKind:enum:1,retShape:enum:1', read: (v: PlacementViews, i: number, o: Record<string, unknown>) => { o.active = v.active[i] !== 0; o.kind = $r.enm('ItemKind', v.kind[i]!); o.shape = $r.enm('BlockShape', v.shape[i]!); o.fromItem = $r.ent(v.fromItem, i); o.fromCell = v.fromCell[i]; o.slot = v.slot[i]; o.x = v.x[i]; o.y = v.y[i]; o.cell = v.cell[i]; o.valid = v.valid[i] !== 0; o.reason = $r.enm('PlaceReason', v.reason[i]!); o.previewDist = $r.lanes(v.previewDist, i, 140, o.previewDist); o.previewLen = v.previewLen[i]; o.returnSteps = v.returnSteps[i]; o.retFromX = v.retFromX[i]; o.retFromY = v.retFromY[i]; o.retToX = v.retToX[i]; o.retToY = v.retToY[i]; o.retKind = $r.enm('ItemKind', v.retKind[i]!); o.retShape = $r.enm('BlockShape', v.retShape[i]!); return o; } });
 
 export interface PlacementRefusedViews {
   reason: Uint8Array;
@@ -1441,6 +1860,14 @@ export interface ProjectileViews {
   damage: Float32Array;
   splash: Float32Array;
   speed: Float32Array;
+  /** Push given on impact, cells per second */
+  knockback: Float32Array;
+  /** Shockwave radius on impact, cells */
+  shock: Float32Array;
+  /** Flight direction, unit vector x (kept for the push at impact) */
+  ux: Float32Array;
+  /** Flight direction, unit vector y */
+  uy: Float32Array;
 }
 export interface ProjectileValue {
   kind: ItemKindName | number;
@@ -1450,9 +1877,17 @@ export interface ProjectileValue {
   damage: number;
   splash: number;
   speed: number;
+  /** Push given on impact, cells per second */
+  knockback: number;
+  /** Shockwave radius on impact, cells */
+  shock: number;
+  /** Flight direction, unit vector x (kept for the push at impact) */
+  ux: number;
+  /** Flight direction, unit vector y */
+  uy: number;
 }
 /** Projectile (component, sim) */
-export const Projectile = typeToken<ProjectileViews, ProjectileValue>('Projectile', 'component', { sig: 'kind:enum:1,target:entity:2,tx:f32:1,ty:f32:1,damage:f32:1,splash:f32:1,speed:f32:1', read: (v: ProjectileViews, i: number, o: Record<string, unknown>) => { o.kind = $r.enm('ItemKind', v.kind[i]!); o.target = $r.ent(v.target, i); o.tx = v.tx[i]; o.ty = v.ty[i]; o.damage = v.damage[i]; o.splash = v.splash[i]; o.speed = v.speed[i]; return o; } });
+export const Projectile = typeToken<ProjectileViews, ProjectileValue>('Projectile', 'component', { sig: 'kind:enum:1,target:entity:2,tx:f32:1,ty:f32:1,damage:f32:1,splash:f32:1,speed:f32:1,knockback:f32:1,shock:f32:1,ux:f32:1,uy:f32:1', read: (v: ProjectileViews, i: number, o: Record<string, unknown>) => { o.kind = $r.enm('ItemKind', v.kind[i]!); o.target = $r.ent(v.target, i); o.tx = v.tx[i]; o.ty = v.ty[i]; o.damage = v.damage[i]; o.splash = v.splash[i]; o.speed = v.speed[i]; o.knockback = v.knockback[i]; o.shock = v.shock[i]; o.ux = v.ux[i]; o.uy = v.uy[i]; return o; } });
 
 export type RestartRequestedViews = Record<string, never>;
 export type RestartRequestedValue = Record<string, never>;
@@ -1489,6 +1924,8 @@ export interface RunViews {
   refusals: Uint32Array;
   shots: Uint32Array;
   booms: Uint32Array;
+  /** Damage events on enemies (the camera tremor follows it) */
+  hurts: Uint32Array;
   baseHits: Uint32Array;
   bosses: Uint32Array;
   /** Round-robin counter: which open nest the next ant leaves from */
@@ -1526,6 +1963,8 @@ export interface RunValue {
   refusals: number;
   shots: number;
   booms: number;
+  /** Damage events on enemies (the camera tremor follows it) */
+  hurts: number;
   baseHits: number;
   bosses: number;
   /** Round-robin counter: which open nest the next ant leaves from */
@@ -1534,7 +1973,16 @@ export interface RunValue {
   nestsOpen: number;
 }
 /** Run (resource, sim) */
-export const Run = typeToken<RunViews, RunValue>('Run', 'resource', { sig: 'phase:enum:1,runId:u32:1,time:f32:1,speed:f32:1,wave:u32:1,lives:u32:1,gold:u32:1,goldFrac:f32:1,wallsBuilt:u32:1,nextWaveAt:f32:1,group:u32:1,groupSpawned:u32:1,spawnAt:f32:1,spawning:bool:1,alive:u32:1,kills:u32:1,bossSteps:u32:1,placements:u32:1,refusals:u32:1,shots:u32:1,booms:u32:1,baseHits:u32:1,bosses:u32:1,nestTurn:u32:1,nestsOpen:u32:1', read: (v: RunViews, i: number, o: Record<string, unknown>) => { o.phase = $r.enm('RunPhase', v.phase[i]!); o.runId = v.runId[i]; o.time = v.time[i]; o.speed = v.speed[i]; o.wave = v.wave[i]; o.lives = v.lives[i]; o.gold = v.gold[i]; o.goldFrac = v.goldFrac[i]; o.wallsBuilt = v.wallsBuilt[i]; o.nextWaveAt = v.nextWaveAt[i]; o.group = v.group[i]; o.groupSpawned = v.groupSpawned[i]; o.spawnAt = v.spawnAt[i]; o.spawning = v.spawning[i] !== 0; o.alive = v.alive[i]; o.kills = v.kills[i]; o.bossSteps = v.bossSteps[i]; o.placements = v.placements[i]; o.refusals = v.refusals[i]; o.shots = v.shots[i]; o.booms = v.booms[i]; o.baseHits = v.baseHits[i]; o.bosses = v.bosses[i]; o.nestTurn = v.nestTurn[i]; o.nestsOpen = v.nestsOpen[i]; return o; } });
+export const Run = typeToken<RunViews, RunValue>('Run', 'resource', { sig: 'phase:enum:1,runId:u32:1,time:f32:1,speed:f32:1,wave:u32:1,lives:u32:1,gold:u32:1,goldFrac:f32:1,wallsBuilt:u32:1,nextWaveAt:f32:1,group:u32:1,groupSpawned:u32:1,spawnAt:f32:1,spawning:bool:1,alive:u32:1,kills:u32:1,bossSteps:u32:1,placements:u32:1,refusals:u32:1,shots:u32:1,booms:u32:1,hurts:u32:1,baseHits:u32:1,bosses:u32:1,nestTurn:u32:1,nestsOpen:u32:1', read: (v: RunViews, i: number, o: Record<string, unknown>) => { o.phase = $r.enm('RunPhase', v.phase[i]!); o.runId = v.runId[i]; o.time = v.time[i]; o.speed = v.speed[i]; o.wave = v.wave[i]; o.lives = v.lives[i]; o.gold = v.gold[i]; o.goldFrac = v.goldFrac[i]; o.wallsBuilt = v.wallsBuilt[i]; o.nextWaveAt = v.nextWaveAt[i]; o.group = v.group[i]; o.groupSpawned = v.groupSpawned[i]; o.spawnAt = v.spawnAt[i]; o.spawning = v.spawning[i] !== 0; o.alive = v.alive[i]; o.kills = v.kills[i]; o.bossSteps = v.bossSteps[i]; o.placements = v.placements[i]; o.refusals = v.refusals[i]; o.shots = v.shots[i]; o.booms = v.booms[i]; o.hurts = v.hurts[i]; o.baseHits = v.baseHits[i]; o.bosses = v.bosses[i]; o.nestTurn = v.nestTurn[i]; o.nestsOpen = v.nestsOpen[i]; return o; } });
+
+export interface TrayCoinViews {
+  slot: Uint8Array;
+}
+export interface TrayCoinValue {
+  slot: number;
+}
+/** TrayCoin (component, sim) */
+export const TrayCoin = typeToken<TrayCoinViews, TrayCoinValue>('TrayCoin', 'component', { sig: 'slot:u8:1', read: (v: TrayCoinViews, i: number, o: Record<string, unknown>) => { o.slot = v.slot[i]; return o; } });
 
 export interface TrayIconViews {
   slot: Uint8Array;
@@ -1572,10 +2020,61 @@ export const TraySlot = typeToken<TraySlotViews, TraySlotValue>('TraySlot', 'com
 export interface WaveStartedViews {
   wave: Uint32Array;
   boss: Uint8Array;
+  newNest: Uint8Array;
 }
 export interface WaveStartedValue {
   wave: number;
   boss: boolean;
+  newNest: boolean;
 }
 /** Signal: a wave started. (event, sim) */
-export const WaveStarted = typeToken<WaveStartedViews, WaveStartedValue>('WaveStarted', 'event', { sig: 'wave:u32:1,boss:bool:1', read: (v: WaveStartedViews, i: number, o: Record<string, unknown>) => { o.wave = v.wave[i]; o.boss = v.boss[i] !== 0; return o; } });
+export const WaveStarted = typeToken<WaveStartedViews, WaveStartedValue>('WaveStarted', 'event', { sig: 'wave:u32:1,boss:bool:1,newNest:bool:1', read: (v: WaveStartedViews, i: number, o: Record<string, unknown>) => { o.wave = v.wave[i]; o.boss = v.boss[i] !== 0; o.newNest = v.newNest[i] !== 0; return o; } });
+
+/** A level layout: its nests, its base, and what stands on the board when a run starts. */
+export type LevelDefData = {
+  /** Stable id saves and analytics use; never changes once shipped */
+  id: string;
+  /** Shown on the level menu */
+  name: string;
+  /** Position on the level menu, from 1; 0 keeps it off the menu (test layouts) */
+  order: number;
+  /** Pre-placed blocks */
+  blocks: {
+    shape: "b1x1" | "b2x2" | "b2x1" | "b1x2" | "b3x1" | "b1x3";
+    /** Column of the top-left cell, 0 on the left */
+    col: number;
+    /** Row of the top-left cell, 0 at the top */
+    row: number;
+  }[];
+  /** Pre-placed weapons, each standing on a pre-placed block cell */
+  weapons: {
+    kind: "tower" | "cannon";
+    /** Column, 0 on the left */
+    col: number;
+    /** Row, 0 at the top; the cell must hold a pre-placed block */
+    row: number;
+  }[];
+  /** Board width in cells, 4 to 10; absent: 7 */
+  cols?: number;
+  /** Board height in cells, 4 to 14; absent: 11 */
+  rows?: number;
+  /** Ant nests, 1 to 5, in path-colour order; absent: the default nests (src/grid.ts) */
+  nests?: {
+    /** Column, 0 on the left */
+    col: number;
+    /** Row, 0 at the top */
+    row: number;
+    /** Wave it opens on (1: open from the start) */
+    fromWave: number;
+  }[];
+  /** The base to defend; absent: the default base (src/grid.ts) */
+  base?: {
+    /** Column, 0 on the left */
+    col: number;
+    /** Row, 0 at the top */
+    row: number;
+  };
+};
+/** A loaded LevelDef as `loadData` returns it (frozen). */
+export type ReadonlyLevelDefData = DataRecord<LevelDefData>;
+export const LevelDef = dataToken<LevelDefData>('LevelDef');

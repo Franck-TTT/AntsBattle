@@ -33,9 +33,9 @@
       }
     },
     "clearColor": [
-      0.1,
-      0.13,
-      0.22,
+      0.02,
+      0.024,
+      0.06,
       1
     ],
     "sortingLayers": [
@@ -51,7 +51,7 @@
     "orientation": "portrait"
   },
   "text": {
-    "defaultFont": { "guid": "8ef6f051-c314-4d1d-a09a-e3c1f1886ff9" }
+    "defaultFont": { "guid": "4a03a64a-aed5-4392-ad71-a6e92d044143" }
   },
   "bundles": [
     {
@@ -100,5 +100,6 @@
     "manifest": {
       "url": "https://automatic-asset-bundles.tactilews.com/game-engine/{id}/{channel}/content-manifest-{platform}-{abi}.json"
     }
-  }
+  },
+  "quality": { "levels": { "medium": { "features": { "bloom": true } }, "high": { "features": { "bloom": true } } } }
 }

@@ -47,14 +47,18 @@ export interface ItemDef {
   /** Game seconds between shots. */
   period: number;
   damage: number;
-  /** Area radius in cells around the impact; every weapon hits an area. */
+  /** Area radius in cells around the impact; 0: the target alone. */
   splash: number;
   /** Projectile speed, cells per second. */
   shotSpeed: number;
+  /** Push given to the ants hit, cells per second (decays fast; they walk back to their path). */
+  knockback: number;
+  /** Radius of the impact's shockwave, cells: ants inside are pushed away, weaker at the edge. */
+  shockRadius: number;
 }
 
 export const ITEMS: Record<Exclude<ItemKindName, 'none'>, ItemDef> = {
-  wall: { kind: 'wall', price: 0, range: 0, period: 0, damage: 0, splash: 0, shotSpeed: 0 },
+  wall: { kind: 'wall', price: 0, range: 0, period: 0, damage: 0, splash: 0, shotSpeed: 0, knockback: 0, shockRadius: 0 },
   ...(Object.fromEntries(
     Object.entries(SHEET.weapons).map(([kind, stats]) => [kind, { kind: kind as WeaponKindName, ...stats }]),
   ) as Record<WeaponKindName, ItemDef>),

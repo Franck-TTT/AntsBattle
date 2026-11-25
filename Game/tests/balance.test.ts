@@ -4,9 +4,10 @@
  * go on the free block cell that covers most of the ants' path; it rerolls when nothing on offer
  * is usable. A decent player should win with lives to spare; doing nothing must lose.
  */
-import { worldTest, expect } from '@gameengine/test';
+import { expect } from '@gameengine/test';
+import { worldTest } from './play.ts';
 import { Block, Board, Item, Offer, Run } from '../src/schema.gen.ts';
-import { BASE_CELL, CELLS, COLS, REROLL_SLOT, isNest, nestsReach, ROWS, cellX, cellY, flowField, footprintCell, footprintX, footprintY, trayX, trayY } from '../src/grid.ts';
+import { CELLS, COLS, DEFAULT_BASE, DEFAULT_COLS, DEFAULT_MARKERS, DEFAULT_ROWS, REROLL_SLOT, isMarker, nestsReach, ROWS, cellX, cellY, flowField, footprintCell, footprintX, footprintY, trayX, trayY } from '../src/grid.ts';
 import { GHOST_LIFT, ITEMS, SHAPES, START_LIVES, itemPrice, rerollPrice, type BlockShapeName } from '../src/balance.ts';
 import { ITEM_NAMES, SHAPE_NAMES } from '../src/kinds.ts';
 
@@ -19,21 +20,21 @@ function blockSpot(cells: ArrayLike<number>, shape: BlockShapeName): number {
   const dist = new Int16Array(CELLS);
   const queue = new Int16Array(CELLS);
   for (const [row, gap] of BARRIERS) {
-    for (let col = 0; col + w <= COLS; col++) {
+    for (let col = 0; col + w <= DEFAULT_COLS; col++) {
       const anchor = row * COLS + col;
-      if (row + h > ROWS) continue;
+      if (row + h > DEFAULT_ROWS) continue;
       let ok = true;
       for (let k = 0; k < w * h && ok; k++) {
         const c = footprintCell(anchor, w, k);
         const r = (c / COLS) | 0;
         const gapHere = BARRIERS.some(([br, bg]) => br === r && bg === c % COLS);
-        if (cells[c] || isNest(c) || c === BASE_CELL || gapHere) ok = false;
+        if (cells[c] || isMarker(DEFAULT_MARKERS, c) || gapHere) ok = false;
       }
       if (!ok) continue;
       for (let c = 0; c < CELLS; c++) blocked[c] = cells[c] ? 1 : 0;
       for (let k = 0; k < w * h; k++) blocked[footprintCell(anchor, w, k)] = 1;
-      flowField(blocked, dist, queue);
-      if (nestsReach(dist)) return anchor;
+      flowField(blocked, dist, queue, DEFAULT_BASE, DEFAULT_COLS, DEFAULT_ROWS);
+      if (nestsReach(DEFAULT_MARKERS, dist)) return anchor;
     }
   }
   return -1;
@@ -101,14 +102,14 @@ worldTest('a scripted player taking what the offer gives wins the run', async ({
         usable = true;
         if (run.gold < itemPrice(kind, run.wallsBuilt, shape)) continue;
         const before = world.entities(Item).length + world.entities(Block).length;
-        await press([trayX(slot), trayY(slot)], target);
+        await press([trayX(slot, DEFAULT_COLS), trayY(DEFAULT_ROWS)], target);
         acted = world.entities(Item).length + world.entities(Block).length > before;
         if (acted) bought++;
       }
       if (acted) continue;
       // Nothing usable on offer: pay for a new set when it leaves a cushion.
       if (!usable && run.gold >= rerollPrice(offer.rerolls) + 30) {
-        await press([trayX(REROLL_SLOT), trayY(REROLL_SLOT)], null);
+        await press([trayX(REROLL_SLOT, DEFAULT_COLS), trayY(DEFAULT_ROWS)], null);
         rerolls++;
         continue;
       }

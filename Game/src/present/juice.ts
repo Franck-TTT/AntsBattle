@@ -3,10 +3,19 @@
  * drop, refused-pick shakes, the base's red flash, camera shakes and sounds. Presentation only.
  */
 import { audio, burstAt, defineSystem, onSignal, parseColor, query, read, shakeCamera, withTag, write, Camera, RenderTime, Shape, VisualOffset, type EntityId } from '@gameengine/runtime';
-import { Base, Big, Block, Enemy, FxHost, FxKind, Item, Placement, PlacementRefused, Run, TraySlot, WaveStarted } from '../schema.gen.ts';
+import { Base, Big, Block, Board, Enemy, FxHost, FxKind, Item, Placement, PlacementRefused, Run, TraySlot, WaveStarted } from '../schema.gen.ts';
 import { ENEMY_NAMES } from '../kinds.ts';
-import { BASE_CELL, NESTS, cellX, cellY } from '../grid.ts';
+import { cellX, cellY } from '../grid.ts';
 import { COLORS, ENEMY_LOOKS, FLASH } from '../looks.ts';
+import { ITEMS } from '../balance.ts';
+
+/** Recoil per ItemKind: how far the weapon kicks back (cells) and how fast it settles (1/s). */
+const RECOIL_KICK = [0, 0, 0.03, 0.09];
+const RECOIL_SETTLE = [1, 1, 30, 9];
+const PERIOD = [0, 0, ITEMS.tower.period, ITEMS.cannon.period];
+/** Camera tremor when enemies take damage: trauma per hit burst, at most every TREMOR_GAP seconds. */
+const TREMOR = 0.07;
+const TREMOR_GAP = 0.12;
 
 const lin = (hex: string) => parseColor(hex);
 const WHITE = lin(FLASH.hit);
@@ -40,10 +49,10 @@ export const Juice = defineSystem({
     camera: query(read(Camera)),
     fx: query(read(FxHost)),
   },
-  resources: [read(Run), read(Placement), read(RenderTime)],
+  resources: [read(Run), read(Placement), read(RenderTime), read(Board)],
   run(ctx, q) {
     const s = ctx.local(() => {
-      const st = { t: 0, runId: -1, placements: 0, refusals: 0, shots: 0, booms: 0, baseHits: 0, kills: 0, bosses: 0, nestsOpen: 0, wave: 0, active: 0, phase: 0, baseFlash: 0, slotShake: -1, slotShakeT: 0, lastShot: 0 };
+      const st = { t: 0, runId: -1, placements: 0, refusals: 0, shots: 0, booms: 0, hurts: 0, lastTremor: 0, baseHits: 0, kills: 0, bosses: 0, nestsOpen: 0, wave: 0, active: 0, phase: 0, baseFlash: 0, slotShake: -1, slotShakeT: 0, lastShot: 0 };
       onSignal(PlacementRefused, (sig) => {
         if (sig.fields.reason === 'gold') {
           st.slotShake = 1;
@@ -56,6 +65,7 @@ export const Juice = defineSystem({
     const dt = ctx.resource(RenderTime).realDelta[0]!;
     s.t += dt;
     const run = ctx.resource(Run);
+    const board = ctx.resource(Board);
     const p = ctx.resource(Placement);
     const time = run.time[0]!;
     let cam: EntityId | null = null;
@@ -64,7 +74,7 @@ export const Juice = defineSystem({
     // Counters → sounds, shakes, flashes. A restart resets them without playing anything.
     if (s.runId !== run.runId[0]) {
       s.runId = run.runId[0]!;
-      s.placements = run.placements[0]!; s.refusals = run.refusals[0]!; s.shots = run.shots[0]!; s.booms = run.booms[0]!;
+      s.placements = run.placements[0]!; s.refusals = run.refusals[0]!; s.shots = run.shots[0]!; s.booms = run.booms[0]!; s.hurts = run.hurts[0]!;
       s.baseHits = run.baseHits[0]!; s.nestsOpen = run.nestsOpen[0]!; s.kills = run.kills[0]!; s.bosses = run.bosses[0]!; s.phase = run.phase[0]!;
     }
     if (p.active[0] && !s.active) audio.play('audio/pickup', { bus: 'SFX', volume: 0.6 });
@@ -89,6 +99,14 @@ export const Juice = defineSystem({
       audio.play('audio/boom', { bus: 'SFX', volume: 0.8, pitchRandom: 0.08, maxVoices: 3 });
       if (cam) shakeCamera(cam, 0.22);
     }
+    if (run.hurts[0] !== s.hurts) {
+      // A barely-there tremor while the swarm is being hit; the boom's bigger shake rides on top.
+      s.hurts = run.hurts[0]!;
+      if (cam && s.t - s.lastTremor > TREMOR_GAP) {
+        s.lastTremor = s.t;
+        shakeCamera(cam, TREMOR);
+      }
+    }
     if (run.kills[0] !== s.kills) {
       s.kills = run.kills[0]!;
       audio.play('audio/pop', { bus: 'SFX', volume: 0.55, pitchRandom: 0.15, maxVoices: 5 });
@@ -98,7 +116,7 @@ export const Juice = defineSystem({
       s.baseFlash = 1;
       for (const c of q.fx.chunks()) {
         const k = c.col(FxHost).kind;
-        for (let i = 0; i < c.length; i++) if (k[i] === FxKind.baseHit) burstAt(c.entity(i), [[cellX(BASE_CELL), cellY(BASE_CELL)]]);
+        for (let i = 0; i < c.length; i++) if (k[i] === FxKind.baseHit) burstAt(c.entity(i), [[cellX(board.baseCell[0]!), cellY(board.baseCell[0]!)]]);
       }
       audio.play('audio/basehit', { bus: 'SFX', volume: 0.9 });
       if (cam) shakeCamera(cam, 0.3);
@@ -106,11 +124,12 @@ export const Juice = defineSystem({
     if (run.nestsOpen[0]! > s.nestsOpen) {
       // A nest opens: a shake and a burst of dirt on it.
       const wave = run.wave[0]!;
-      for (const nest of NESTS) {
-        if (nest.fromWave !== wave) continue;
+      for (let n = 0; n < board.nestCount[0]!; n++) {
+        if (board.nestWave[n] !== wave) continue;
+        const nc = board.nestCell[n]!;
         for (const c of q.fx.chunks()) {
           const k = c.col(FxHost).kind;
-          for (let i = 0; i < c.length; i++) if (k[i] === FxKind.dust || k[i] === FxKind.boom) burstAt(c.entity(i), [[cellX(nest.cell), cellY(nest.cell)]]);
+          for (let i = 0; i < c.length; i++) if (k[i] === FxKind.dust || k[i] === FxKind.boom) burstAt(c.entity(i), [[cellX(nc), cellY(nc)]]);
         }
       }
       audio.play('audio/boom', { bus: 'SFX', volume: 0.7 });
@@ -161,7 +180,16 @@ export const Juice = defineSystem({
         vo.scale[i * 3 + 1] = sy;
         vo.scale[i * 3 + 2] = 1;
         const deny = it.denySteps[i]!;
-        vo.position[i * 3] = deny > 0 ? Math.sin(deny * 1.6) * 0.09 : 0;
+        // Recoil: kicked back against the aim on each shot, then eased back into place.
+        const kind = it.kind[i]!;
+        let kick = 0;
+        if (RECOIL_KICK[kind]! > 0 && !it.held[i]) {
+          const since = PERIOD[kind]! - it.reload[i]!;
+          if (since >= 0 && since < 0.6) kick = RECOIL_KICK[kind]! * Math.exp(-since * RECOIL_SETTLE[kind]!);
+        }
+        const aim = it.aim[i]!;
+        vo.position[i * 3] = (deny > 0 ? Math.sin(deny * 1.6) * 0.09 : 0) - Math.cos(aim) * kick;
+        vo.position[i * 3 + 1] = -Math.sin(aim) * kick;
         sh.color[i * 4 + 3] = it.held[i] ? 0.35 : 1;
       }
     }

@@ -8,7 +8,7 @@ export interface EndModel {
 
 export const EndView = defineView<EndModel>({
   name: 'EndScreen',
-  description: 'Victory or defeat, with a restart button. Intents: restart.',
+  description: 'Victory or defeat, with restart and level menu buttons. Intents: restart, menu.',
   samples: {
     won: { won: true, title: 'VICTORY!', subtitle: 'All 10 waves held - 3 lives left' },
     lost: { won: false, title: 'OVERRUN', subtitle: 'They broke through on wave 6' },

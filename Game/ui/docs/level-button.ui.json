@@ -1,0 +1,110 @@
+{
+  "$schemaVersion": 1,
+  "guid": "0d18aaa3-174e-430b-b463-ec142a3c5556",
+  "name": "level-button",
+  "title": "Level button",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Level button",
+      "style": {
+        "dir": "row",
+        "h": 150,
+        "minW": 0,
+        "pad": [
+          18,
+          40,
+          18,
+          22
+        ],
+        "align": "center",
+        "justify": "start",
+        "bg": "#2a2035ff",
+        "radius": 75,
+        "w": "100%",
+        "gap": 32
+      },
+      "children": [
+        "lb_badge",
+        "label"
+      ]
+    },
+    "label": {
+      "type": "label",
+      "name": "Label",
+      "style": {
+        "fontSize": 60,
+        "fitMin": 30,
+        "weight": 900,
+        "color": "#ffffffff",
+        "textAlign": "left",
+        "grow": 1
+      },
+      "text": "Button",
+      "property": "name"
+    },
+    "lb_badge": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "lb_num"
+      ],
+      "style": {
+        "pad": 0,
+        "w": 114,
+        "h": 114,
+        "align": "center",
+        "justify": "center",
+        "bg": "#ffc51fff",
+        "radius": 57
+      }
+    },
+    "lb_num": {
+      "type": "label",
+      "name": "Label",
+      "text": "{number}",
+      "style": {
+        "fontSize": 60,
+        "fitMin": 30,
+        "weight": 900,
+        "color": "#1a1220ff"
+      }
+    }
+  },
+  "behaviour": "button",
+  "properties": {
+    "name": {
+      "type": "text",
+      "default": "Button"
+    },
+    "number": {
+      "type": "number",
+      "default": 1,
+      "format": "value"
+    }
+  },
+  "transition": {
+    "type": "back",
+    "ms": 240,
+    "overshoot": 1.4
+  },
+  "states": {
+    "pressed": {
+      "set": {
+        "root": {
+          "scale": 0.94
+        }
+      }
+    },
+    "disabled": {
+      "set": {
+        "root": {
+          "saturation": 0,
+          "opacity": 0.6
+        }
+      }
+    }
+  }
+}

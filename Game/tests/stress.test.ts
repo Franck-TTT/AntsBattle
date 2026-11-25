@@ -1,4 +1,5 @@
-import { renderTest, worldTest, expect } from '@gameengine/test';
+import { expect } from '@gameengine/test';
+import { renderTest, worldTest } from './play.ts';
 import { Swarm, Defenses } from '../src/stress.cheats.ts';
 import { Enemy } from '../src/schema.gen.ts';
 

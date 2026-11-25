@@ -1,17 +1,75 @@
-import { array, bool, component, entity, enumOf, event, f32, i16, i32, i8, resource, tag, u32, u8 } from '@gameengine/schema';
+import { array, asset, bool, component, dataAsset, entity, enumOf, event, f32, i16, i32, i8, p, resource, tag, u32, u8 } from '@gameengine/schema';
 
 // Item kinds: index 0 is "nothing". New weapons are added at the end of this list and in src/balance.ts.
 export const ITEM_KINDS = ['none', 'wall', 'tower', 'cannon'] as const;
 export const ENEMY_KINDS = ['ant', 'fast', 'beetle', 'boss'] as const;
-export const FX_KINDS = ['dust', 'pop', 'boom', 'hit', 'baseHit'] as const;
+export const FX_KINDS = ['dust', 'pop', 'boom', 'hit', 'baseHit', 'casing'] as const;
 // Block footprints, width × height in cells. New shapes go at the end (and in src/balance.ts SHAPES).
 export const BLOCK_SHAPES = ['b1x1', 'b2x2', 'b2x1', 'b1x2', 'b3x1', 'b1x3'] as const;
+/** Item kinds a weapon can be (every kind but 'none' and 'wall'). */
+const WEAPON_KINDS = ITEM_KINDS.filter((k) => k !== 'none' && k !== 'wall');
+/** Most nests a level can have (one path colour each, src/looks.ts FLOW_COLORS). */
+export const MAX_NESTS = 5;
+/** The largest board a level can have (src/grid.ts COLS, ROWS); cells are numbered row * MAX_COLS + col. */
+export const MAX_COLS = 10;
+export const MAX_ROWS = 14;
+const MAX_CELLS = MAX_COLS * MAX_ROWS;
+
+/** A level's starting layout: blocks and weapons already on the board, locked (never moved). */
+export const LevelDef = dataAsset(
+  'LevelDef',
+  {
+    id: p.str('Stable id saves and analytics use; never changes once shipped'),
+    name: p.str('Shown on the level menu'),
+    order: p.int('Position on the level menu, from 1; 0 keeps it off the menu (test layouts)'),
+    blocks: p.arr(
+      p.obj({
+        shape: p.oneOf(BLOCK_SHAPES),
+        col: p.int('Column of the top-left cell, 0 on the left'),
+        row: p.int('Row of the top-left cell, 0 at the top'),
+      }),
+      'Pre-placed blocks',
+    ),
+    weapons: p.arr(
+      p.obj({
+        kind: p.oneOf(WEAPON_KINDS),
+        col: p.int('Column, 0 on the left'),
+        row: p.int('Row, 0 at the top; the cell must hold a pre-placed block'),
+      }),
+      'Pre-placed weapons, each standing on a pre-placed block cell',
+    ),
+    cols: p.optional(p.int('Board width in cells, 4 to 10; absent: 7')),
+    rows: p.optional(p.int('Board height in cells, 4 to 14; absent: 11')),
+    nests: p.optional(
+      p.arr(
+        p.obj({
+          col: p.int('Column, 0 on the left'),
+          row: p.int('Row, 0 at the top'),
+          fromWave: p.int('Wave it opens on (1: open from the start)'),
+        }),
+        'Ant nests, 1 to 5, in path-colour order; absent: the default nests (src/grid.ts)',
+      ),
+    ),
+    base: p.optional(p.obj({ col: p.int('Column, 0 on the left'), row: p.int('Row, 0 at the top') }, 'The base to defend; absent: the default base (src/grid.ts)')),
+  },
+  { doc: 'A level layout: its nests, its base, and what stands on the board when a run starts.' },
+);
+
+/** The level this scene plays. */
+export const Level = resource(
+  'Level',
+  {
+    data: asset('data', { doc: 'The LevelDef this run starts from (none: an empty board)' }),
+    loads: u32({ doc: 'Bumped on every level load (menu pick, level.load cheat) so loading the same level again restarts the run' }),
+  },
+  { sim: true },
+);
 
 /** One run: economy, waves, lives and the counters presentation follows. */
 export const Run = resource(
   'Run',
   {
-    phase: enumOf('RunPhase', ['playing', 'won', 'lost']),
+    phase: enumOf('RunPhase', ['playing', 'won', 'lost', 'menu']),
     runId: u32({ doc: 'Bumped on every restart' }),
     time: f32({ doc: 'Game seconds, scaled by speed (slow motion while dragging)' }),
     speed: f32({ default: 1, doc: 'Game speed: 1 normal, 0.05 while a finger drags an item' }),
@@ -33,6 +91,7 @@ export const Run = resource(
     refusals: u32(),
     shots: u32(),
     booms: u32(),
+    hurts: u32({ doc: 'Damage events on enemies (the camera tremor follows it)' }),
     baseHits: u32(),
     bosses: u32(),
     nestTurn: u32({ doc: 'Round-robin counter: which open nest the next ant leaves from' }),
@@ -41,16 +100,22 @@ export const Run = resource(
   { sim: true },
 );
 
-/** The 7×11 grid: what stands on each cell, and the flow field the ants follow. Row 0 is the top. */
+/** The board, up to MAX_COLS × MAX_ROWS: the level's size, nests and base, what stands on each cell, and the flow field the ants follow. Row 0 is the top. */
 export const Board = resource(
   'Board',
   {
-    cells: array(u8(), 77, { doc: '1 where a block stands (blocks the ants), 0 free' }),
-    weapons: array(u8(), 77, { doc: 'Weapon kind index standing on the block of each cell (0 none)' }),
-    dist: array(i16(), 77, { doc: 'Steps to the base per cell, -1 unreachable or blocked' }),
-    path: array(u8(), 77, { doc: 'Cells of the path from the nest to the base' }),
+    cells: array(u8(), MAX_CELLS, { doc: '1 where a block stands (blocks the ants), 0 free' }),
+    weapons: array(u8(), MAX_CELLS, { doc: 'Weapon kind index standing on the block of each cell (0 none)' }),
+    dist: array(i16(), MAX_CELLS, { doc: 'Steps to the base per cell, -1 unreachable or blocked' }),
+    path: array(u8(), MAX_CELLS, { doc: 'Cells of the path from the nest to the base' }),
     pathLen: u8(),
     version: u32(),
+    cols: u8({ doc: 'Board width of this level (cells past it are off the board)' }),
+    rows: u8({ doc: 'Board height of this level' }),
+    nestCount: u8({ doc: 'Nests of this level (1 to MAX_NESTS)' }),
+    nestCell: array(u8(), MAX_NESTS, { doc: 'Cell of each nest' }),
+    nestWave: array(u8(), MAX_NESTS, { doc: 'Wave each nest opens on' }),
+    baseCell: u8({ doc: 'Cell of the base' }),
   },
   { sim: true },
 );
@@ -63,14 +128,14 @@ export const Placement = resource(
     kind: enumOf('ItemKind', ITEM_KINDS),
     shape: enumOf('BlockShape', BLOCK_SHAPES),
     fromItem: entity({ doc: 'The placed item being moved, or none for a tray pick' }),
-    fromCell: i8({ default: -1 }),
+    fromCell: i16({ default: -1 }),
     slot: i8({ default: -1, doc: 'Tray slot it came from' }),
     x: f32(),
     y: f32(),
-    cell: i8({ default: -1, doc: 'Hovered cell (a block: its top-left cell), -1 off the board' }),
+    cell: i16({ default: -1, doc: 'Hovered cell (a block: its top-left cell), -1 off the board' }),
     valid: bool(),
     reason: enumOf('PlaceReason', ['ok', 'offBoard', 'occupied', 'blocks', 'gold', 'enemy', 'noBlock', 'fixed']),
-    previewDist: array(i16(), 77, { doc: 'Flow field if the hovered drop happened (each nest preview path is traced from it)' }),
+    previewDist: array(i16(), MAX_CELLS, { doc: 'Flow field if the hovered drop happened (each nest preview path is traced from it)' }),
     previewLen: u8({ doc: '1 when previewDist holds a valid preview' }),
     // Snap back after a refused drop.
     returnSteps: u8(),
@@ -92,6 +157,7 @@ export const Block = component(
     cell: u8({ doc: 'Top-left cell' }),
     placedAt: f32(),
     denySteps: u8({ doc: 'Shake left after a refused pick-up (blocks never move)' }),
+    locked: bool({ doc: 'Pre-placed by the level: never moved, never destroyed' }),
   },
   { sim: true },
 );
@@ -108,6 +174,7 @@ export const Item = component(
     placedAt: f32({ doc: 'Run.time of its last drop (squash and stretch)' }),
     denySteps: u8({ doc: 'Shake left after a refused pick-up' }),
     held: bool({ doc: 'Picked up by the finger right now' }),
+    locked: bool({ doc: 'Pre-placed by the level: never moved, never destroyed' }),
   },
   { sim: true },
 );
@@ -127,6 +194,8 @@ export const Enemy = component(
     flashSteps: u8(),
     lane: f32({ doc: 'Sideways offset in its column, cells (spreads the swarm)' }),
     bornAt: f32(),
+    kx: f32({ doc: 'Knockback velocity x, cells per game second (decays; the walk brings it back on its path)' }),
+    ky: f32({ doc: 'Knockback velocity y' }),
   },
   { sim: true },
 );
@@ -141,6 +210,10 @@ export const Projectile = component(
     damage: f32(),
     splash: f32(),
     speed: f32(),
+    knockback: f32({ doc: 'Push given on impact, cells per second' }),
+    shock: f32({ doc: 'Shockwave radius on impact, cells' }),
+    ux: f32({ doc: 'Flight direction, unit vector x (kept for the push at impact)' }),
+    uy: f32({ doc: 'Flight direction, unit vector y' }),
   },
   { sim: true },
 );
@@ -162,6 +235,8 @@ export const Offer = resource(
 /** A tray slot: slots 0–2 show the offer, slot 3 is the Reroll button. */
 export const TraySlot = component('TraySlot', { slot: u8(), shownVersion: i32({ default: -1 }), shownPrice: i16({ default: -2 }), affordable: bool() }, { sim: true });
 export const TrayLabel = component('TrayLabel', { slot: u8() }, { sim: true });
+/** The coin shown left of a slot's price; hidden when the slot is sold or free. */
+export const TrayCoin = component('TrayCoin', { slot: u8() }, { sim: true });
 /** The icon shapes of an offer slot, replaced when the offer changes. */
 export const TrayIcon = component('TrayIcon', { slot: u8() }, { sim: true });
 export const OfferRerolled = event('OfferRerolled', { price: u32() }, { sim: true, doc: 'Signal: the player paid for a new offer.' });
@@ -172,13 +247,17 @@ export const Big = tag('Big', { sim: true });
 /** One per board cell: the flow field in a form hot systems read without array views. */
 export const FlowCell = component('FlowCell', { cell: u8(), dist: i16({ default: -1 }), next: i16({ default: -1 }) }, { sim: true });
 export const Base = tag('Base', { sim: true });
-/** An ant nest on the board; it opens at its wave (src/grid.ts NESTS). */
+/** The hole of a nest slot: shown once its nest is open (Board.nestWave). */
 export const NestSpot = component('NestSpot', { index: u8(), open: bool() }, { sim: true });
+/** The mound of a nest slot: parent of its hole and label, moved onto the level's nest (or hidden). */
+export const NestMound = component('NestMound', { index: u8() }, { sim: true });
 export const NestLabel = component('NestLabel', { index: u8() }, { sim: true });
 export const NestOpened = event('NestOpened', { nest: u8(), wave: u32() }, { sim: true, doc: 'Signal: a new nest opened.' });
 
 export const RestartRequested = event('RestartRequested', {}, { sim: true, doc: 'The player pressed Restart on the end screen.' });
+export const LevelPicked = event('LevelPicked', { index: u8({ doc: 'Position in menuLevels() (src/levels.ts), from 0' }) }, { sim: true, doc: 'The player picked a level on the level menu.' });
+export const MenuRequested = event('MenuRequested', {}, { sim: true, doc: 'The player asked for the level menu.' });
 export const EnemyKilled = event('EnemyKilled', { x: f32(), y: f32(), gold: u32(), kind: enumOf('EnemyKind', ENEMY_KINDS) }, { sim: true, doc: 'Signal: an enemy died; gold flies to the counter.' });
-export const WaveStarted = event('WaveStarted', { wave: u32(), boss: bool() }, { sim: true, doc: 'Signal: a wave started.' });
+export const WaveStarted = event('WaveStarted', { wave: u32(), boss: bool(), newNest: bool() }, { sim: true, doc: 'Signal: a wave started.' });
 export const ItemPlaced = event('ItemPlaced', { kind: enumOf('ItemKind', ITEM_KINDS), shape: enumOf('BlockShape', BLOCK_SHAPES), cell: u8(), moved: bool(), cost: u32() }, { sim: true, doc: 'Signal: an item was dropped on the board.' });
 export const PlacementRefused = event('PlacementRefused', { reason: enumOf('PlaceReason', ['ok', 'offBoard', 'occupied', 'blocks', 'gold', 'enemy', 'noBlock', 'fixed']) }, { sim: true, doc: 'Signal: a drop was refused.' });

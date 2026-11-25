@@ -52,6 +52,8 @@ const WEAPON: Record<string, Field> = {
   'attack damage': { key: 'damage', kind: 'num' },
   'aoe size': { key: 'splash', kind: 'num' },
   'projectile speed': { key: 'shotSpeed', kind: 'num' },
+  'knockback force': { key: 'knockback', kind: 'num' },
+  'shockwave radius': { key: 'shockRadius', kind: 'num' },
 };
 
 const UNIT: Record<string, Field> = {
@@ -275,7 +277,7 @@ export interface BalanceSheet {
   general: {
 ${general}
   };
-  weapons: Record<WeaponKindName, { price: number; range: number; period: number; damage: number; splash: number; shotSpeed: number }>;
+  weapons: Record<WeaponKindName, { price: number; range: number; period: number; damage: number; splash: number; shotSpeed: number; knockback: number; shockRadius: number }>;
   units: Record<EnemyKindName, { hp: number; speed: number; reward: number; damage: number; swarms: boolean }>;
   waves: { kind: EnemyKindName; count: number; every: number }[][];
   offers: { kind: Exclude<ItemKindName, 'none'>; shape: BlockShapeName; weight: number }[];

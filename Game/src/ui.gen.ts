@@ -15,15 +15,15 @@ declare module '@gameengine/ui' {
      *   - `result`: enum won | lost, default "won"
      *   - `title`: text, default "VICTORY!"
      *   - `subtitle`: text, default "All 10 waves held"
-     * Events: `restart`
+     * Events: `restart`, `menu`
      * Code areas: none
-     * Refs: `restart`
+     * Refs: `restart`, `menu`
      * Samples (`view render doc:end-screen --sample …`): `won`, `lost`
      */
     'end-screen': {
       props: { result: 'won' | 'lost'; title: string | TextSourceRef; subtitle: string | TextSourceRef };
       areas: never;
-      refs: 'restart';
+      refs: 'restart' | 'menu';
     };
     /**
      * Hud: a view (ui/docs/hud.ui.json)
@@ -42,6 +42,35 @@ declare module '@gameengine/ui' {
       props: { wave: number; gold: number; lives: number; walls: number };
       areas: never;
       refs: 'wave' | 'wave.target' | 'gold' | 'gold.target' | 'lives' | 'lives.target' | 'walls' | 'walls.target';
+    };
+    /**
+     * Level button: a widget, button (ui/docs/level-button.ui.json)
+     *
+     * Properties:
+     *   - `name`: text, default "Button"
+     *   - `number`: number, default 1
+     * Events: `<id>`
+     * Code areas: none
+     * Refs: none
+     */
+    'level-button': {
+      props: { name: string | TextSourceRef; number: number };
+      areas: never;
+      refs: never;
+    };
+    /**
+     * Level menu: a view, dialog (ui/docs/level-menu.ui.json)
+     *
+     * Properties:
+     *   - `levels`: list of level-button
+     * Events: `press (<item>)`
+     * Code areas: none
+     * Refs: none
+     */
+    'level-menu': {
+      props: { levels: readonly { key: string; name?: string | TextSourceRef; number?: number }[] };
+      areas: never;
+      refs: never;
     };
     /**
      * Restart button: a widget, button (ui/docs/restart-button.ui.json)

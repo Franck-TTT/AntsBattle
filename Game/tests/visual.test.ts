@@ -1,8 +1,9 @@
-import { renderTest, expect } from '@gameengine/test';
+import { expect } from '@gameengine/test';
+import { renderTest } from './play.ts';
 import { Board, Item, Placement, Run } from '../src/schema.gen.ts';
 import { SetOffer } from '../src/offer.cheats.ts';
 import { NextWave } from '../src/stress.cheats.ts';
-import { COLS, cellX, cellY, footprintX, footprintY, trayX, trayY } from '../src/grid.ts';
+import { COLS, DEFAULT_COLS, DEFAULT_ROWS, cellX, cellY, footprintX, footprintY, trayX, trayY } from '../src/grid.ts';
 import { GHOST_LIFT, START_LIVES } from '../src/balance.ts';
 
 const PHONE: [number, number, number, [number, number, number, number]] = [393, 852, 3, [0, 59, 0, 34]];
@@ -14,7 +15,7 @@ renderTest('mid-drag shows the ghost, the hovered cell and the new path', async 
   // Two blocks and a tower already on the board, bought from a chosen offer.
   await cheat(SetOffer, { a: 'b3x1', b: 'b1x1', c: 'tower' });
   for (const [slot, x, y] of [[0, footprintX(cell(0, 6), 3), footprintY(cell(0, 6), 1)], [1, cellX(cell(5, 6)), cellY(cell(5, 6))], [2, cellX(cell(1, 6)), cellY(cell(1, 6))]] as const) {
-    const [sx, sy] = input.worldToScreen([trayX(slot), trayY(slot)]);
+    const [sx, sy] = input.worldToScreen([trayX(slot, DEFAULT_COLS), trayY(DEFAULT_ROWS)]);
     const [tx, ty] = input.worldToScreen([x, y - GHOST_LIFT]);
     input.pointer('down', sx, sy);
     await step(1);
@@ -26,7 +27,7 @@ renderTest('mid-drag shows the ghost, the hovered cell and the new path', async 
   expect(world.entities(Item).length).toBe(1);
   // Hold a 2×2 block over the column.
   await cheat(SetOffer, { a: 'b2x2', b: 'cannon', c: 'b1x3' });
-  const [sx, sy] = input.worldToScreen([trayX(0), trayY(0)]);
+  const [sx, sy] = input.worldToScreen([trayX(0, DEFAULT_COLS), trayY(DEFAULT_ROWS)]);
   const [tx, ty] = input.worldToScreen([footprintX(cell(3, 8), 2), footprintY(cell(3, 8), 2) - GHOST_LIFT]);
   input.pointer('down', sx, sy);
   await step(1);
@@ -80,7 +81,7 @@ renderTest('merged flows take the colour of the highest-priority nest; the previ
   // A barrier on row 5 with its gap on the left: every flow ends up in the left column.
   const drop = async (topLeft: number, hold: boolean) => {
     await cheat(SetOffer, { a: 'b3x1', b: 'tower', c: 'cannon' });
-    const [sx, sy] = input.worldToScreen([trayX(0), trayY(0)]);
+    const [sx, sy] = input.worldToScreen([trayX(0, DEFAULT_COLS), trayY(DEFAULT_ROWS)]);
     const [tx, ty] = input.worldToScreen([footprintX(topLeft, 3), footprintY(topLeft, 1) - GHOST_LIFT]);
     input.pointer('down', sx, sy);
     await step(1);

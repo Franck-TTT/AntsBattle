@@ -1,0 +1,25 @@
+{
+  "$type": "LevelDef",
+  "id": "test-layout-fixture",
+  "name": "Test fixture",
+  "order": 0,
+  "blocks": [
+    { "shape": "b1x2", "col": 2, "row": 2 },
+    { "shape": "b2x1", "col": 4, "row": 2 },
+    { "shape": "b2x2", "col": 0, "row": 4 },
+    { "shape": "b2x2", "col": 5, "row": 4 },
+    { "shape": "b1x3", "col": 6, "row": 6 },
+    { "shape": "b1x1", "col": 2, "row": 7 },
+    { "shape": "b1x1", "col": 4, "row": 7 },
+    { "shape": "b3x1", "col": 0, "row": 9 }
+  ],
+  "weapons": [
+    { "kind": "tower", "col": 2, "row": 2 },
+    { "kind": "cannon", "col": 4, "row": 2 },
+    { "kind": "tower", "col": 1, "row": 4 },
+    { "kind": "cannon", "col": 5, "row": 5 },
+    { "kind": "cannon", "col": 6, "row": 7 },
+    { "kind": "tower", "col": 2, "row": 7 },
+    { "kind": "tower", "col": 4, "row": 7 }
+  ]
+}

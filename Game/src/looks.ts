@@ -8,25 +8,28 @@ import { SWARM, type ItemKindName, type EnemyKindName } from './balance.ts';
 export const ORDER = { ground: 0, tile: 1, path: 2, highlight: 3, base: 4, block: 5, enemy: 6, item: 7, shot: 10, tray: 11, bar: 15, ghost: 16 } as const;
 
 export const COLORS = {
-  grass: '#4d7a36',
-  dirt: '#8d6a43',
-  dirtDark: '#80603b',
-  frame: '#5c4127',
-  path: '#f6e7b8',
+  /** Neon arcade look: near-black space, a blue grid, outlined shapes that glow. */
+  space: '#05060f',
+  board: '#080a1c',
+  frame: '#3f6bff',
+  grid: '#1d2a8a',
+  gridMajor: '#2f45d6',
+  gridFar: '#121a5c',
   preview: '#ffd84a',
-  valid: '#7dffa1',
-  invalid: '#ff4d4d',
-  nest: '#4a2e17',
-  nestHole: '#1c120a',
-  base: '#3aa0ff',
-  baseRim: '#e8f4ff',
-  traySlot: '#2b2033',
+  valid: '#3dff6e',
+  invalid: '#ff2e4d',
+  nest: '#12051a',
+  nestRim: '#ff2ec8',
+  nestHole: '#ff2ec8',
+  base: '#0b1f4d',
+  baseRim: '#4fc3ff',
+  traySlot: '#0a0c1e',
   trayRim: '#ffc51f',
-  trayDisabled: '#4a4450',
-  reroll: '#3b2a55',
+  trayDisabled: '#07070d',
+  reroll: '#160a2a',
   text: '#ffffff',
-  hpBack: '#2a1a14',
-  hpFill: '#7dff6a',
+  hpBack: '#14051a',
+  hpFill: '#3dff6e',
   ring: '#ffffff',
 } as const;
 
@@ -41,53 +44,67 @@ export interface ShapeLook {
   strokeWidth?: number;
 }
 
-/** Body and detail of each item; the detail turns with the barrel. */
+/** The coin drawn left of every price in the tray (same gold as the HUD's gold chip). */
+export const COIN: ShapeLook = { kind: 'Circle', size: [0.24, 0.24], radius: 0.12, color: '#ffc51f', strokeColor: '#b8860b', strokeWidth: 0.045 };
+export const COIN_DIM = { color: '#5a5260', strokeColor: '#3a3440' } as const;
+
+/** The Reroll button's icon: a die, dark face, neon rim, five pips. */
+export const DIE = {
+  face: { kind: 'Rect', size: [0.5, 0.5], radius: 0.1, color: '#160a2a', strokeColor: '#ffffff', strokeWidth: 0.06 } as ShapeLook,
+  pip: { kind: 'Circle', size: [0.09, 0.09], radius: 0.045, color: '#ffffff' } as ShapeLook,
+  pips: [[-0.12, 0.12], [0.12, 0.12], [0, 0], [-0.12, -0.12], [0.12, -0.12]] as [number, number][],
+  /** About 15° of tilt, so it reads as a thrown die (a z-rotation quaternion, no trig in sim code). */
+  rotation: [0, 0, 0.1296, 0.9916] as [number, number, number, number],
+};
+
+/** Body and detail of each item; the detail turns with the barrel. Dark fill, neon rim. */
 export const ITEM_LOOKS: Record<Exclude<ItemKindName, 'none'>, { body: ShapeLook; detail: ShapeLook | null }> = {
   wall: {
-    body: { kind: 'Rect', size: [0.9, 0.9], radius: 0.16, color: '#a7afb8', strokeColor: '#5f6772', strokeWidth: 0.07 },
-    detail: { kind: 'Rect', size: [0.5, 0.12], radius: 0.06, color: '#c9d0d8' },
+    body: { kind: 'Rect', size: [0.9, 0.9], radius: 0.04, color: '#0b1030', strokeColor: '#3f6bff', strokeWidth: 0.06 },
+    detail: { kind: 'Rect', size: [0.5, 0.06], radius: 0, color: '#3f6bff' },
   },
   tower: {
-    body: { kind: 'Circle', size: [0.66, 0.66], radius: 0.33, color: '#2f7cf6', strokeColor: '#d8e8ff', strokeWidth: 0.07 },
-    detail: { kind: 'Rect', size: [0.56, 0.16], radius: 0.08, color: '#d8e8ff' },
+    body: { kind: 'Polygon', size: [0.62, 0.62], radius: 0.02, sides: 6, color: '#031a20', strokeColor: '#29f2ff', strokeWidth: 0.07 },
+    detail: { kind: 'Rect', size: [0.5, 0.1], radius: 0, color: '#bffcff', strokeColor: '#29f2ff', strokeWidth: 0.03 },
   },
   cannon: {
-    body: { kind: 'Polygon', size: [0.72, 0.72], radius: 0.05, sides: 8, color: '#30343f', strokeColor: '#ff9a2e', strokeWidth: 0.07 },
-    detail: { kind: 'Rect', size: [0.6, 0.28], radius: 0.14, color: '#ff9a2e' },
+    body: { kind: 'Polygon', size: [0.72, 0.72], radius: 0.02, sides: 8, color: '#1c0d03', strokeColor: '#ff8a1f', strokeWidth: 0.07 },
+    detail: { kind: 'Rect', size: [0.58, 0.22], radius: 0, color: '#1c0d03', strokeColor: '#ff8a1f', strokeWidth: 0.05 },
   },
 };
 
+/** Enemies are plain outlined shapes, one colour each; the "head" is an inner shape on big kinds. */
 export const ENEMY_LOOKS: Record<EnemyKindName, { body: ShapeLook; head: ShapeLook; headX: number }> = {
   ant: {
-    body: { kind: 'Rect', size: [0.4, 0.22], radius: 0.11, color: '#231510' },
-    head: { kind: 'Circle', size: [0.16, 0.16], radius: 0.08, color: '#5a2b1c' },
-    headX: 0.22,
+    body: { kind: 'Rect', size: [0.3, 0.3], radius: 0, color: '#1f0412', strokeColor: '#ff2e88', strokeWidth: 0.055 },
+    head: { kind: 'Rect', size: [0.1, 0.1], radius: 0, color: '#ff2e88' },
+    headX: 0,
   },
   fast: {
-    body: { kind: 'Rect', size: [0.34, 0.16], radius: 0.08, color: '#e2482a' },
-    head: { kind: 'Circle', size: [0.13, 0.13], radius: 0.065, color: '#ffb199' },
-    headX: 0.18,
+    body: { kind: 'Polygon', size: [0.34, 0.34], radius: 0, sides: 3, color: '#1f1a03', strokeColor: '#ffe02e', strokeWidth: 0.055 },
+    head: { kind: 'Circle', size: [0.1, 0.1], radius: 0.05, color: '#ffe02e' },
+    headX: 0,
   },
   beetle: {
-    body: { kind: 'Circle', size: [0.56, 0.5], radius: 0.25, color: '#2f9b5a', strokeColor: '#123d24', strokeWidth: 0.06 },
-    head: { kind: 'Circle', size: [0.2, 0.2], radius: 0.1, color: '#123d24' },
-    headX: 0.28,
+    body: { kind: 'Polygon', size: [0.56, 0.56], radius: 0, sides: 4, color: '#031f0c', strokeColor: '#3dff6e', strokeWidth: 0.07 },
+    head: { kind: 'Polygon', size: [0.24, 0.24], radius: 0, sides: 4, color: '#00000000', strokeColor: '#3dff6e', strokeWidth: 0.05 },
+    headX: 0,
   },
   boss: {
-    body: { kind: 'Circle', size: [1.05, 0.95], radius: 0.5, color: '#b0122a', strokeColor: '#ffc51f', strokeWidth: 0.09 },
-    head: { kind: 'Circle', size: [0.38, 0.38], radius: 0.19, color: '#ffc51f' },
-    headX: 0.5,
+    body: { kind: 'Polygon', size: [1.05, 1.05], radius: 0, sides: 8, color: '#1a0424', strokeColor: '#d23cff', strokeWidth: 0.1 },
+    head: { kind: 'Polygon', size: [0.5, 0.5], radius: 0, sides: 6, color: '#00000000', strokeColor: '#ffc51f', strokeWidth: 0.07 },
+    headX: 0,
   },
 };
 
 /**
  * Path colours by nest, in priority order: a segment several flows share takes the first one's.
- * Nest 1 (centre) white/grey, nest 2 blue, nest 3 yellow; a 4th nest would need a 4th colour.
+ * Ice blue, blue, yellow, amber, lavender: one per nest, so MAX_NESTS (src/grid.ts) is their count.
  */
-export const FLOW_COLORS = ['#f6e7b8', '#5ab4ff', '#ffd84a'] as const;
+export const FLOW_COLORS = ['#9ae6ff', '#3f8cff', '#ffe02e', '#ff9e3d', '#c58cff'] as const;
 
 /** Enemy body colours by EnemyKind index (restored after a hit flash). Keep in step with ENEMY_LOOKS. */
-export const ENEMY_BODY_COLORS = ['#231510', '#e2482a', '#2f9b5a', '#b0122a'] as const;
+export const ENEMY_BODY_COLORS = ['#1f0412', '#1f1a03', '#031f0c', '#1a0424'] as const;
 
 /** Enemies shrink at swarm scale so a column of hundreds still reads as a column. */
 export function enemyScale(kind: EnemyKindName): number {
@@ -95,16 +112,39 @@ export function enemyScale(kind: EnemyKindName): number {
   return kind === 'beetle' ? 0.8 : 0.62;
 }
 
-/** A w×h block: a stone slab and a lighter top, one per footprint. */
+/** A w×h block: a dark slab with a neon rim and a faint inner rim, one per footprint. */
 export function blockBody(w: number, h: number): ShapeLook {
-  return { kind: 'Rect', size: [w - 0.1, h - 0.1], radius: 0.16, color: '#a7afb8', strokeColor: '#5f6772', strokeWidth: 0.07 };
+  return { kind: 'Rect', size: [w - 0.1, h - 0.1], radius: 0.04, color: '#0b1030', strokeColor: '#3f6bff', strokeWidth: 0.06 };
 }
 export function blockTop(w: number, h: number): ShapeLook {
-  return { kind: 'Rect', size: [w - 0.4, h - 0.4], radius: 0.1, color: '#b8bfc7' };
+  return { kind: 'Rect', size: [w - 0.4, h - 0.4], radius: 0.02, color: '#00000000', strokeColor: '#3f6bff66', strokeWidth: 0.03 };
 }
 
+/**
+ * Pre-placed (locked) items read as bolted steel: a steel rim and corner rivets on blocks, a steel
+ * mounting ring under weapons. The player's own items keep the blue neon.
+ */
+export const LOCKED = { rim: '#c3cdf0', fill: '#10142a', rivet: 0.12 } as const;
+export function lockedBlockBody(w: number, h: number): ShapeLook {
+  return { kind: 'Rect', size: [w - 0.1, h - 0.1], radius: 0.04, color: LOCKED.fill, strokeColor: LOCKED.rim, strokeWidth: 0.07 };
+}
+export const LOCKED_RIVET: ShapeLook = { kind: 'Rect', size: [LOCKED.rivet, LOCKED.rivet], radius: 0.02, color: LOCKED.rim };
+/** Rivet offsets from a w×h block's centre, one per corner. */
+export function rivetOffsets(w: number, h: number): [number, number][] {
+  const x = w / 2 - 0.22;
+  const y = h / 2 - 0.22;
+  return [[-x, y], [x, y], [-x, -y], [x, -y]];
+}
+export const LOCKED_RING: ShapeLook = { kind: 'Ring', size: [0.86, 0.86], radius: 0.43, thickness: 0.05, color: LOCKED.rim };
+
+/** Projectiles: a white-hot streak with a coloured rim (tower), a glowing shell (cannon). */
+export const SHOT_LOOKS = {
+  tower: { kind: 'Rect', size: [0.34, 0.09], radius: 0.045, color: '#f2ffff', strokeColor: '#29f2ff', strokeWidth: 0.035 },
+  cannon: { kind: 'Circle', size: [0.3, 0.3], radius: 0.15, color: '#ffe0b0', strokeColor: '#ff7a1a', strokeWidth: 0.07 },
+} as const satisfies Record<string, ShapeLook>;
+
 /** Base flash and enemy flash colours. */
-export const FLASH = { hit: '#ffffff', base: '#ff3b3b' } as const;
+export const FLASH = { hit: '#ffffff', base: '#ff2e4d' } as const;
 
 export function shapeValue(l: ShapeLook, order: number, visible = true) {
   return {

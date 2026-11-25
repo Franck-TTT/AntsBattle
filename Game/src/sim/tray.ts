@@ -2,12 +2,17 @@
  * The tray follows the offer: each slot's icon is rebuilt when the offer changes, prices and
  * greyed-out slots when gold changes. Written only when something changed. Sim code.
  */
-import { added, defineSystem, query, read, write, Shape, Text2D, type EntityId, type SystemContext } from '@gameengine/runtime';
-import { EnemyKilled, ItemPlaced, Offer, OfferRerolled, RestartRequested, Run, TrayIcon, TrayLabel, TraySlot } from '../schema.gen.ts';
+import { added, defineSystem, query, read, write, LocalTransform, Shape, Text2D, type EntityId, type SystemContext } from '@gameengine/runtime';
+import { EnemyKilled, ItemPlaced, Offer, OfferRerolled, RestartRequested, Run, TrayCoin, TrayIcon, TrayLabel, TraySlot } from '../schema.gen.ts';
 import { OFFER_SIZE, SHAPES, itemPrice, rerollPrice, type BlockShapeName, type ItemKindName } from '../balance.ts';
 import { REROLL_SLOT } from '../grid.ts';
 import { ITEM_NAMES, SHAPE_NAMES } from '../kinds.ts';
-import { COLORS, ITEM_LOOKS, ORDER, blockBody, blockTop, shapeValue, type ShapeLook } from '../looks.ts';
+import { COIN, COIN_DIM, COLORS, ITEM_LOOKS, ORDER, blockBody, blockTop, shapeValue, type ShapeLook } from '../looks.ts';
+
+/** Price layout: the coin, a gap, then the amount, centred together. Digit width is an estimate of the label font at size 0.32. */
+const COIN_D = 0.24;
+const COIN_GAP = 0.05;
+const DIGIT_W = 0.2;
 
 function spawnIcons(ctx: SystemContext, parent: EntityId, slot: number, kind: Exclude<ItemKindName, 'none'>, shape: BlockShapeName): void {
   const icon = (look: ShapeLook, k: number, order: number) =>
@@ -34,7 +39,7 @@ function spawnIcons(ctx: SystemContext, parent: EntityId, slot: number, kind: Ex
 export const TraySync = defineSystem({
   name: 'TraySync',
   after: ['Combat'],
-  queries: { slots: query(write(TraySlot)), labels: query(read(TrayLabel)), icons: query(read(TrayIcon)) },
+  queries: { slots: query(write(TraySlot)), labels: query(read(TrayLabel), write(LocalTransform)), coins: query(read(TrayCoin), write(LocalTransform)), icons: query(read(TrayIcon)) },
   resources: [read(Run), read(Offer)],
   // Prices change on a kill, a drop, a reroll or a restart; icons when the offer changes.
   runIf: { any: [{ event: EnemyKilled }, { event: ItemPlaced }, { event: OfferRerolled }, { event: RestartRequested }, { changed: Offer }, { query: query(added(TraySlot)) }] },
@@ -76,12 +81,29 @@ export const TraySync = defineSystem({
         const base = slot === REROLL_SLOT ? COLORS.reroll : COLORS.traySlot;
         ctx.commands.setField(e, Shape, 'color', ok ? base : COLORS.trayDisabled);
         ctx.commands.setField(e, Shape, 'strokeColor', ok ? COLORS.trayRim : '#7a7380');
+        // A coin before every paid price; a free or sold slot shows its text alone, centred.
+        const coin = !sold && price > 0;
+        const textW = text.length * DIGIT_W;
+        const total = COIN_D + COIN_GAP + textW;
         for (const lc of q.labels.chunks()) {
           const tl = lc.col(TrayLabel);
+          const pos = lc.col(LocalTransform).position;
           for (let j = 0; j < lc.length; j++) {
             if (tl.slot[j] !== slot) continue;
+            pos[j * 3] = coin ? total / 2 - textW / 2 : 0;
             ctx.commands.setField(lc.entity(j), Text2D, 'text', text);
             ctx.commands.setField(lc.entity(j), Text2D, 'color', !ok ? '#9a93a0' : price === 0 ? '#7dffa1' : '#ffc51f');
+          }
+        }
+        for (const cc of q.coins.chunks()) {
+          const tc = cc.col(TrayCoin);
+          const pos = cc.col(LocalTransform).position;
+          for (let j = 0; j < cc.length; j++) {
+            if (tc.slot[j] !== slot) continue;
+            pos[j * 3] = -total / 2 + COIN_D / 2;
+            ctx.commands.setField(cc.entity(j), Shape, 'visible', coin);
+            ctx.commands.setField(cc.entity(j), Shape, 'color', ok ? COIN.color : COIN_DIM.color);
+            ctx.commands.setField(cc.entity(j), Shape, 'strokeColor', ok ? COIN.strokeColor! : COIN_DIM.strokeColor);
           }
         }
       }

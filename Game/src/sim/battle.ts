@@ -9,10 +9,10 @@
  */
 import { added, burstAt, defineSystem, math, query, read, write, LocalTransform, entityAt, Shape, type Chunk, type EntityId, type SystemContext } from '@gameengine/runtime';
 import { Block, Board, Enemy, EnemyKilled, FlowCell, FxHost, FxKind, Item, ItemKind, Projectile, Run, WaveStarted } from '../schema.gen.ts';
-import { BASE_CELL, CELLS, COLS, NESTS, NEST_CELL, ROWS, cellX, cellY, nearestCell, nextCell } from '../grid.ts';
+import { CELLS, COLS, ROWS, cellX, cellY, colAt, nearestCell, nextCell } from '../grid.ts';
 import { ENEMIES, ENEMY_SPEED, HP_PER_WAVE, ITEMS, MAX_ENEMIES, SWARM, WAVES, WAVE_COUNT, WAVE_GAP, swarmOf, type EnemyKindName } from '../balance.ts';
 import { ENEMY_NAMES } from '../kinds.ts';
-import { ENEMY_BODY_COLORS, ENEMY_LOOKS, ORDER, enemyScale, shapeValue } from '../looks.ts';
+import { ENEMY_BODY_COLORS, ENEMY_LOOKS, ORDER, SHOT_LOOKS, enemyScale, shapeValue } from '../looks.ts';
 
 /** Seconds of quiet after the board is cleared before the next wave comes early. */
 const CLEAR_BREAK = 5;
@@ -21,8 +21,15 @@ const BOSS_INTRO_STEPS = 80;
 /** Most spawns in one step (a fast swarm group can owe several). */
 const MAX_SPAWNS_PER_STEP = 12;
 const FLASH_STEPS = 5;
+/** Knockback damping per game second: the push dies out in a few frames, then the walk takes over. */
+const KNOCK_DAMP = 12;
+/** Fastest knockback an enemy can carry, cells per second (stacked hits never fling it far). */
+const KNOCK_MAX = 4;
+/** Share of the push along the shot; the rest points away from the impact (the shockwave). */
+const KNOCK_ALONG = 0.6;
 
-export function spawnEnemy(ctx: SystemContext, kind: EnemyKindName, wave: number, time: number, atX?: number, atY?: number, nestCell = NEST_CELL): void {
+/** Spawns an enemy at (atX, atY), or around the nest at `nestCell` when no point is given. */
+export function spawnEnemy(ctx: SystemContext, kind: EnemyKindName, wave: number, time: number, atX: number | undefined, atY: number | undefined, nestCell: number): void {
   const def = ENEMIES[kind];
   const look = ENEMY_LOOKS[kind];
   const n = swarmOf(kind);
@@ -66,7 +73,7 @@ function burstAll(hosts: Chunk[], kind: number, xs: Float32Array, ys: Float32Arr
 export const Waves = defineSystem({
   name: 'Waves',
   after: ['GameSpeed'],
-  resources: [write(Run)],
+  resources: [write(Run), read(Board)],
   runIf: [
     { resource: Run, field: 'phase', value: 'playing' },
     {
@@ -79,6 +86,8 @@ export const Waves = defineSystem({
   ],
   run(ctx) {
     const run = ctx.resource(Run);
+    const board = ctx.resource(Board);
+    const nests = board.nestCount[0]!;
     const time = run.time[0]!;
     let wave = run.wave[0]!;
     // Board cleared between waves: the next one comes after a short break.
@@ -91,7 +100,9 @@ export const Waves = defineSystem({
       run.spawnAt[0] = time + 0.6;
       run.spawning[0] = 1;
       run.nextWaveAt[0] = time + WAVE_GAP;
-      ctx.signal(WaveStarted, { wave, boss: WAVES[wave - 1]!.some((g) => g.kind === 'boss') });
+      let newNest = false;
+      for (let n = 0; n < nests; n++) if (wave > 1 && board.nestWave[n] === wave) newNest = true;
+      ctx.signal(WaveStarted, { wave, boss: WAVES[wave - 1]!.some((g) => g.kind === 'boss'), newNest });
     }
     let spawned = 0;
     while (run.spawning[0] && time >= run.spawnAt[0]! && spawned < MAX_SPAWNS_PER_STEP) {
@@ -100,13 +111,13 @@ export const Waves = defineSystem({
       const n = swarmOf(g.kind);
       // Ants leave the open nests in turn.
       let open = 0;
-      for (const nest of NESTS) if (nest.fromWave <= wave) open++;
+      for (let k = 0; k < nests; k++) if (board.nestWave[k]! <= wave) open++;
       let pick = run.nestTurn[0]! % Math.max(1, open);
-      let nestCell = NEST_CELL;
-      for (const nest of NESTS) {
-        if (nest.fromWave > wave) continue;
+      let nestCell = board.nestCell[0]!;
+      for (let k = 0; k < nests; k++) {
+        if (board.nestWave[k]! > wave) continue;
         if (pick === 0) {
-          nestCell = nest.cell;
+          nestCell = board.nestCell[k]!;
           break;
         }
         pick--;
@@ -149,7 +160,7 @@ export const SyncFlow = defineSystem({
       for (let i = 0; i < c.length; i++) {
         const cell = f.cell[i]!;
         f.dist[i] = dist[cell]!;
-        f.next[i] = cell === BASE_CELL ? BASE_CELL : nextCell(dist, cell);
+        f.next[i] = dist[cell] === 0 ? cell : nextCell(dist, cell);
       }
     }
   },
@@ -175,8 +186,11 @@ export const MoveEnemies = defineSystem({
         dist[f.cell[i]!] = f.dist[i]!;
       }
     }
-    const bx = cellX(BASE_CELL);
-    const by = cellY(BASE_CELL);
+    // The base is the cell at distance 0 of the field.
+    let baseCell = -1;
+    for (let c = 0; c < CELLS; c++) if (dist[c] === 0) baseCell = c;
+    const bx = cellX(baseCell);
+    const by = cellY(baseCell);
     let baseHits = 0;
     for (const c of q.enemies.chunks()) {
       const en = c.col(Enemy);
@@ -189,8 +203,8 @@ export const MoveEnemies = defineSystem({
         }
         const x = tr.position[i * 3]!;
         const y = tr.position[i * 3 + 1]!;
-        const cell = nearestCell(x, y);
-        if (cell === BASE_CELL && (x - bx) * (x - bx) + (y - by) * (y - by) < 0.16) {
+        const cell = nearestCell(x, y, COLS, ROWS);
+        if (cell === baseCell && (x - bx) * (x - bx) + (y - by) * (y - by) < 0.16) {
           // Reached the base.
           en.remaining[i] = -1;
           ctx.commands.despawn(c.entity(i));
@@ -204,7 +218,7 @@ export const MoveEnemies = defineSystem({
         // Walk to the next cell's centre, offset sideways along the ant's own lane.
         const hx = en.hx[i]!;
         const hy = en.hy[i]!;
-        const lane = goal === BASE_CELL ? 0 : en.lane[i]!;
+        const lane = goal === baseCell ? 0 : en.lane[i]!;
         const dx = cellX(goal) - hy * lane - x;
         const dy = cellY(goal) + hx * lane - y;
         const len = math.sqrt(dx * dx + dy * dy);
@@ -226,6 +240,24 @@ export const MoveEnemies = defineSystem({
             tr.rotation[i * 4 + 2] = (ny >= 0 ? 1 : -1) * math.sqrt(Math.max(0, (1 - nx) * 0.5));
             tr.rotation[i * 4 + 3] = math.sqrt(Math.max(0, (1 + nx) * 0.5));
           }
+        }
+        // Knockback: drift along the push while it dies out; the walk above steers back to the lane.
+        const kx = en.kx[i]!;
+        const ky = en.ky[i]!;
+        if (kx !== 0 || ky !== 0) {
+          const px = tr.position[i * 3]! + kx * dt;
+          const py = tr.position[i * 3 + 1]! + ky * dt;
+          // Never pushed onto a cell the field does not cross (a block).
+          if (dist[nearestCell(px, py, COLS, ROWS)]! >= 0) {
+            tr.position[i * 3] = px;
+            tr.position[i * 3 + 1] = py;
+          }
+          const damp = Math.max(0, 1 - KNOCK_DAMP * dt);
+          const nkx = kx * damp;
+          const nky = ky * damp;
+          const still = nkx * nkx + nky * nky < 1e-4;
+          en.kx[i] = still ? 0 : nkx;
+          en.ky[i] = still ? 0 : nky;
         }
         en.remaining[i] = (dist[cell]! < 0 ? 50 : dist[cell]!) + len;
       }
@@ -254,12 +286,18 @@ const hitX = new Float32Array(64);
 const hitY = new Float32Array(64);
 const boomX = new Float32Array(64);
 const boomY = new Float32Array(64);
+const casingX = new Float32Array(64);
+const casingY = new Float32Array(64);
+const casingDX = new Float32Array(64);
+const casingDY = new Float32Array(64);
 
 const RANGE = [0, 0, ITEMS.tower.range, ITEMS.cannon.range];
 const PERIOD = [0, 0, ITEMS.tower.period, ITEMS.cannon.period];
 const DAMAGE = [0, 0, ITEMS.tower.damage, ITEMS.cannon.damage];
 const SPLASH = [0, 0, ITEMS.tower.splash, ITEMS.cannon.splash];
 const SHOT_SPEED = [0, 0, ITEMS.tower.shotSpeed, ITEMS.cannon.shotSpeed];
+const KNOCKBACK = [0, 0, ITEMS.tower.knockback, ITEMS.cannon.knockback];
+const SHOCK = [0, 0, ITEMS.tower.shockRadius, ITEMS.cannon.shockRadius];
 
 export const Combat = defineSystem({
   name: 'Combat',
@@ -300,7 +338,7 @@ export const Combat = defineSystem({
         erem[n] = en.remaining[i]!;
         echunk[n] = ci;
         erow[n] = i;
-        const cell = nearestCell(x, y);
+        const cell = nearestCell(x, y, COLS, ROWS);
         ecell[n] = cell;
         cellFill[cell] = cellFill[cell]! + 1;
         n++;
@@ -316,19 +354,39 @@ export const Combat = defineSystem({
       order[cellFill[cell]!] = j;
       cellFill[cell] = cellFill[cell]! + 1;
     }
-    const colOf = (x: number) => Math.floor(x + COLS / 2);
+    // Enemies are bucketed on the largest grid (cells past the level's board stay empty).
+    const colOf = colAt;
     const rowOf = (y: number) => Math.floor(cellY(0) + 0.5 - y);
 
+    let hurts = 0;
     const damage = (j: number, amount: number): void => {
       const c = chunks[echunk[j]!]!;
       const row = erow[j]!;
       const en = c.col(Enemy);
+      hurts++;
       en.hp[row] = en.hp[row]! - amount;
       if (en.flashSteps[row] === 0) ctx.commands.setField(c.entity(row), Shape, 'color', '#ffffff');
       en.flashSteps[row] = FLASH_STEPS;
     };
 
+    /** Adds a push to enemy j, capped at KNOCK_MAX. */
+    const push = (j: number, px: number, py: number): void => {
+      const en = chunks[echunk[j]!]!.col(Enemy);
+      const row = erow[j]!;
+      let kx = en.kx[row]! + px;
+      let ky = en.ky[row]! + py;
+      const l2 = kx * kx + ky * ky;
+      if (l2 > KNOCK_MAX * KNOCK_MAX) {
+        const k = KNOCK_MAX / math.sqrt(l2);
+        kx *= k;
+        ky *= k;
+      }
+      en.kx[row] = kx;
+      en.ky[row] = ky;
+    };
+
     // 2. Weapons: move cooldown, reload, aim at the nearest-to-base enemy in range, fire.
+    let casings = 0;
     for (const c of q.items.chunks()) {
       const it = c.col(Item);
       const tr = c.col(LocalTransform);
@@ -378,12 +436,19 @@ export const Combat = defineSystem({
         it.reload[i] = PERIOD[kind]!;
         const cannon = kind === ItemKind.cannon;
         const target = chunks[echunk[best]!]!.entity(erow[best]!);
+        // A spent casing flies out of the barrel's right side, a little backwards.
+        if (casings < 64) {
+          casingX[casings] = ix + ux * 0.1;
+          casingY[casings] = iy + uy * 0.1;
+          casingDX[casings] = uy - ux * 0.35;
+          casingDY[casings] = -ux - uy * 0.35;
+          casings++;
+        }
         ctx.commands.spawn({
-          LocalTransform: { position: [ix + ux * 0.38, iy + uy * 0.38, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
-          Shape: cannon
-            ? { kind: 'Circle', size: [0.3, 0.3], radius: 0.15, color: '#1b1d24', strokeColor: '#ff9a2e', strokeWidth: 0.06, order: ORDER.shot, sortingLayer: 'Default' }
-            : { kind: 'Circle', size: [0.16, 0.16], radius: 0.08, color: '#fff3a0', strokeColor: '#ffb200', strokeWidth: 0.04, order: ORDER.shot, sortingLayer: 'Default' },
-          Projectile: { kind: cannon ? 'cannon' : 'tower', target, tx: bx, ty: by, damage: DAMAGE[kind]!, splash: SPLASH[kind]!, speed: SHOT_SPEED[kind]! },
+          // Same turn as the barrel: the tower's streak points along its flight.
+          LocalTransform: { position: [ix + ux * 0.38, iy + uy * 0.38, 0], rotation: [0, 0, tr.rotation[i * 4 + 2]!, tr.rotation[i * 4 + 3]!], scale: [1, 1, 1] },
+          Shape: shapeValue(cannon ? SHOT_LOOKS.cannon : SHOT_LOOKS.tower, ORDER.shot),
+          Projectile: { kind: cannon ? 'cannon' : 'tower', target, tx: bx, ty: by, damage: DAMAGE[kind]!, splash: SPLASH[kind]!, speed: SHOT_SPEED[kind]!, knockback: KNOCKBACK[kind]!, shock: SHOCK[kind]!, ux, uy },
         });
         run.shots[0] = run.shots[0]! + 1;
       }
@@ -396,12 +461,13 @@ export const Combat = defineSystem({
     for (const c of q.shots.chunks()) {
       const pr = c.col(Projectile);
       const pos = c.col(LocalTransform).position;
+      const rot = c.col(LocalTransform).rotation;
       for (let i = 0; i < c.length; i++) {
         const cannon = pr.kind[i] === ItemKind.cannon;
         let tj = -1;
         if (!cannon) {
           const target: EntityId = entityAt(pr.target, i);
-          const tcell = nearestCell(pr.tx[i]!, pr.ty[i]!);
+          const tcell = nearestCell(pr.tx[i]!, pr.ty[i]!, COLS, ROWS);
           const tc = tcell % COLS;
           const trw = (tcell / COLS) | 0;
           for (let row = Math.max(0, trw - 1); row <= Math.min(ROWS - 1, trw + 1) && tj < 0; row++) {
@@ -428,23 +494,33 @@ export const Combat = defineSystem({
         const len = math.sqrt(dx * dx + dy * dy);
         const stepLen = pr.speed[i]! * dt;
         if (stepLen < len) {
-          pos[i * 3] = x + (dx / len) * stepLen;
-          pos[i * 3 + 1] = y + (dy / len) * stepLen;
+          const nx = dx / len;
+          const ny = dy / len;
+          pos[i * 3] = x + nx * stepLen;
+          pos[i * 3 + 1] = y + ny * stepLen;
+          pr.ux[i] = nx;
+          pr.uy[i] = ny;
+          if (!cannon) {
+            // A homing streak turns with its target.
+            rot[i * 4 + 2] = (ny >= 0 ? 1 : -1) * math.sqrt(Math.max(0, (1 - nx) * 0.5));
+            rot[i * 4 + 3] = math.sqrt(Math.max(0, (1 + nx) * 0.5));
+          }
           continue;
         }
         // Impact.
         ctx.commands.despawn(c.entity(i));
         const hx = pr.tx[i]!;
         const hy = pr.ty[i]!;
-        // Every weapon hits an area around the impact (the tower's is small, the cannon's wide).
-        const r = pr.splash[i]!;
+        // A weapon with splash hits an area around the impact (the cannon); without (the tower),
+        // only its target.
+        const r = pr.splash[i]! > 0 ? pr.splash[i]! : -1;
         const r2 = r * r;
         const c0 = Math.max(0, colOf(hx - r));
         const c1 = Math.min(COLS - 1, colOf(hx + r));
         const r0 = Math.max(0, rowOf(hy + r));
         const r1 = Math.min(ROWS - 1, rowOf(hy - r));
         let hitTarget = false;
-        for (let row = r0; row <= r1; row++) {
+        for (let row = r0; r > 0 && row <= r1; row++) {
           for (let col = c0; col <= c1; col++) {
             const cell = row * COLS + col;
             for (let o = cellStart[cell]!; o < cellStart[cell + 1]!; o++) {
@@ -459,6 +535,39 @@ export const Combat = defineSystem({
         }
         // A homing shot always hurts its target, even at the edge of its area.
         if (tj >= 0 && !hitTarget) damage(tj, pr.damage[i]!);
+        // Shockwave: every enemy inside the radius is pushed, along the shot and away from the
+        // impact, weaker towards the edge. The target always takes the full push along the shot.
+        const force = pr.knockback[i]!;
+        const sr = pr.shock[i]!;
+        const sux = pr.ux[i]!;
+        const suy = pr.uy[i]!;
+        let pushedTarget = false;
+        if (force > 0 && sr > 0) {
+          const sr2 = sr * sr;
+          const s0 = Math.max(0, colOf(hx - sr));
+          const s1 = Math.min(COLS - 1, colOf(hx + sr));
+          const t0 = Math.max(0, rowOf(hy + sr));
+          const t1 = Math.min(ROWS - 1, rowOf(hy - sr));
+          for (let row = t0; row <= t1; row++) {
+            for (let col = s0; col <= s1; col++) {
+              const cell = row * COLS + col;
+              for (let o = cellStart[cell]!; o < cellStart[cell + 1]!; o++) {
+                const j = order[o]!;
+                const ddx = ex[j]! - hx;
+                const ddy = ey[j]! - hy;
+                const d2 = ddx * ddx + ddy * ddy;
+                if (d2 > sr2) continue;
+                const d = math.sqrt(d2);
+                const f = force * (1 - d / sr);
+                const rx = d > 1e-4 ? ddx / d : sux;
+                const ry = d > 1e-4 ? ddy / d : suy;
+                push(j, f * (sux * KNOCK_ALONG + rx * (1 - KNOCK_ALONG)), f * (suy * KNOCK_ALONG + ry * (1 - KNOCK_ALONG)));
+                if (j === tj) pushedTarget = true;
+              }
+            }
+          }
+        }
+        if (force > 0 && tj >= 0 && !pushedTarget) push(tj, force * sux, force * suy);
         if (cannon) {
           if (booms < 64) {
             boomX[booms] = hx;
@@ -475,6 +584,7 @@ export const Combat = defineSystem({
       }
     }
     run.booms[0] = run.booms[0]! + booms;
+    if (hurts > 0) run.hurts[0] = run.hurts[0]! + hurts;
 
     // 4. Deaths: gold (fractional at swarm scale), one pop per death, coins for whole gold.
     let pops = 0;
@@ -504,12 +614,20 @@ export const Combat = defineSystem({
       run.alive[0] = run.alive[0]! - kills;
       run.kills[0] = run.kills[0]! + kills;
     }
-    if (pops + hits + booms > 0) {
+    if (pops + hits + booms + casings > 0) {
       const hosts: Chunk[] = [];
       for (const c of q.fx.chunks()) hosts.push(c);
       burstAll(hosts, FxKind.pop, popX, popY, pops);
       burstAll(hosts, FxKind.hit, hitX, hitY, Math.min(hits, 64));
       burstAll(hosts, FxKind.boom, boomX, boomY, Math.min(booms, 64));
+      if (casings > 0) {
+        const at: number[][] = [];
+        for (let k = 0; k < casings; k++) at.push([casingX[k]!, casingY[k]!, casingDX[k]!, casingDY[k]!]);
+        for (const c of hosts) {
+          const fk = c.col(FxHost).kind;
+          for (let k = 0; k < c.length; k++) if (fk[k] === FxKind.casing) burstAt(c.entity(k), at);
+        }
+      }
     }
   },
 });

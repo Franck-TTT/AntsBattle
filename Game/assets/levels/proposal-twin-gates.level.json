@@ -1,0 +1,19 @@
+{
+  "$type": "LevelDef",
+  "id": "proposal-twin-gates",
+  "name": "Twin Gates",
+  "order": 11,
+  "nests": [
+    { "col": 0, "row": 0, "fromWave": 1 },
+    { "col": 6, "row": 0, "fromWave": 3 }
+  ],
+  "base": { "col": 3, "row": 10 },
+  "blocks": [
+    { "shape": "b1x1", "col": 3, "row": 4 },
+    { "shape": "b1x1", "col": 3, "row": 7 }
+  ],
+  "weapons": [
+    { "kind": "cannon", "col": 3, "row": 4 },
+    { "kind": "tower", "col": 3, "row": 7 }
+  ]
+}

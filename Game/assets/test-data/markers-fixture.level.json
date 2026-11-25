@@ -1,0 +1,15 @@
+{
+  "$type": "LevelDef",
+  "id": "test-markers-fixture",
+  "name": "Test fixture: moved nests and base",
+  "order": 0,
+  "blocks": [
+    { "shape": "b3x1", "col": 2, "row": 4 }
+  ],
+  "weapons": [],
+  "nests": [
+    { "col": 6, "row": 10, "fromWave": 1 },
+    { "col": 0, "row": 8, "fromWave": 2 }
+  ],
+  "base": { "col": 3, "row": 0 }
+}

@@ -1,0 +1,8 @@
+{
+  "$type": "LevelDef",
+  "id": "level-01",
+  "name": "Open Field",
+  "order": 1,
+  "blocks": [],
+  "weapons": []
+}

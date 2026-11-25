@@ -3,9 +3,9 @@ import { read, write } from '@gameengine/runtime';
 import { defineCheat } from '@gameengine/runtime/cheats';
 import { Board, Run } from './schema.gen.ts';
 import { spawnEnemy } from './sim/battle.ts';
-import { spawnBlock, spawnItem } from './sim/placement.ts';
+import { spawnBlock, spawnItem } from './sim/spawn.ts';
 import { recomputeBoard } from './sim/board.ts';
-import { cellX, cellY } from './grid.ts';
+import { COLS, cellX, cellY } from './grid.ts';
 
 export const Swarm = defineCheat({
   id: 'swarm.spawn',
@@ -19,7 +19,7 @@ export const Swarm = defineCheat({
     const len = b.pathLen[0]!;
     for (let i = 0; i < count; i++) {
       const c = b.path[ctx.rng.range(0, Math.max(1, len - 1))]!;
-      spawnEnemy(ctx, 'ant', 1, run.time[0]!, cellX(c) + ctx.rng.between(-0.4, 0.4), cellY(c) + ctx.rng.between(-0.4, 0.4));
+      spawnEnemy(ctx, 'ant', 1, run.time[0]!, cellX(c) + ctx.rng.between(-0.4, 0.4), cellY(c) + ctx.rng.between(-0.4, 0.4), b.nestCell[0]!);
     }
     run.alive[0] = run.alive[0]! + count;
     run.lives[0] = 100000;
@@ -36,7 +36,7 @@ export const Defenses = defineCheat({
     const t = ctx.resource(Run).time[0]!;
     for (let row = 1; row < 10; row++) {
       for (const col of [2, 4]) {
-        const cell = row * 7 + col;
+        const cell = row * COLS + col;
         const kind = row % 3 === 0 ? 'cannon' : 'tower';
         spawnBlock(ctx, 'b1x1', cell, t);
         spawnItem(ctx, kind, cell, t);

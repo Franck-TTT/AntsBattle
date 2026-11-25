@@ -1,0 +1,23 @@
+{
+ "$schemaVersion": 1,
+ "name": "casing",
+ "emitters": [
+  {
+   "name": "shell",
+   "capacity": 64,
+   "bursts": [{ "at": 0, "count": 1 }],
+   "loop": false,
+   "shape": { "kind": "cone", "radius": 0.02, "angle": 0.45 },
+   "lifetime": [0.4, 0.55],
+   "speed": [2.2, 3.2],
+   "drag": 6,
+   "size": [0.055, 0.065],
+   "aspect": 2.2,
+   "rotation": [0, 6.28],
+   "spin": [-16, 16],
+   "color": [1, 0.8, 0.32, 1],
+   "colorOverLife": [[0, 1, 1, 1, 1], [0.7, 1, 1, 1, 1], [1, 0.6, 0.5, 0.4, 0]],
+   "blend": "alpha"
+  }
+ ]
+}

@@ -1,15 +1,17 @@
 /**
  * The game's UI controller: fills the HUD from the Run resource, shows the wave and boss
- * banners, flies coins from kills to the gold counter and opens the end screen. Presentation.
+ * banners, flies coins from kills to the gold counter and opens the level menu and the end screen.
+ * Presentation.
  */
 import { createEffect, createSignal, defineUI, emit, onCleanup, onUiFrame, untrack, useResource, views } from '@gameengine/ui';
 import { onSignal, worldToUi } from '@gameengine/runtime';
-import { EnemyKilled, RestartRequested, Run, WaveStarted } from '../schema.gen.ts';
+import { EnemyKilled, LevelPicked, MenuRequested, RestartRequested, Run, WaveStarted } from '../schema.gen.ts';
 import { FREE_WALLS, WAVE_COUNT } from '../balance.ts';
-import { NESTS } from '../grid.ts';
 import { HudView, type Flight, type HudModel } from '../views/hud.view.tsx';
 import { BannerView, type BannerModel } from '../views/banner.view.tsx';
 import { EndView } from '../views/end.view.tsx';
+import { LevelMenuView } from '../views/level-menu.view.tsx';
+import { menuLevels } from '../levels.ts';
 
 const BANNER_SECONDS = 1.5;
 /** Most coins in the air at once. */
@@ -62,7 +64,7 @@ export const GameUI = defineUI({
     onCleanup(
       onSignal(WaveStarted, (s) => {
         const n = s.fields.wave;
-        const newNest = n > 1 && NESTS.some((nest) => nest.fromWave === n);
+        const newNest = s.fields.newNest;
         banner({ title: `WAVE ${n}`, subtitle: newNest ? 'A new nest opened!' : n === WAVE_COUNT ? 'Final wave' : n === 1 ? 'Build the maze!' : 'Here they come', boss: false });
       }),
     );
@@ -73,10 +75,29 @@ export const GameUI = defineUI({
       bosses = b;
     });
 
-    // End screen.
+    // Level menu (the game opens on it) and end screen.
+    const levels = menuLevels();
+    let menu: { close(): void } | null = null;
     let end: { close(): void } | null = null;
     createEffect(() => {
       const phase = run()?.phase;
+      if (phase === 'menu') {
+        end?.close();
+        end = null;
+        menu ??= views.push(
+          LevelMenuView,
+          { levels: levels.map((l, i) => ({ key: l.id, number: i + 1, name: l.name })) },
+          {
+            onIntent: (name, id) => {
+              const index = levels.findIndex((l) => l.id === id);
+              if (name === 'pick' && index >= 0) emit(LevelPicked, { index });
+            },
+          },
+        );
+        return;
+      }
+      menu?.close();
+      menu = null;
       if (phase === 'playing') {
         end?.close();
         end = null;
@@ -94,7 +115,12 @@ export const GameUI = defineUI({
           title: won ? 'VICTORY!' : 'OVERRUN',
           subtitle: won ? `All ${WAVE_COUNT} waves held - ${r.lives} ${r.lives === 1 ? 'life' : 'lives'} left` : `They broke through on wave ${r.wave}`,
         },
-        { onIntent: (name) => name === 'restart' && emit(RestartRequested) },
+        {
+          onIntent: (name) => {
+            if (name === 'restart') emit(RestartRequested);
+            if (name === 'menu') emit(MenuRequested);
+          },
+        },
       );
     });
     return [];

@@ -1,4 +1,5 @@
-import { worldTest, expect } from '@gameengine/test';
+import { expect } from '@gameengine/test';
+import { worldTest } from './play.ts';
 import { Run } from '../src/schema.gen.ts';
 
 // Regression: the flow field must be filled before any placement, or the first ants never leave the nest.

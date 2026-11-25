@@ -1,0 +1,23 @@
+{
+  "$type": "LevelDef",
+  "id": "proposal-side-base",
+  "name": "Corner Hold",
+  "order": 14,
+  "nests": [
+    { "col": 6, "row": 0, "fromWave": 1 },
+    { "col": 6, "row": 6, "fromWave": 3 },
+    { "col": 0, "row": 0, "fromWave": 6 }
+  ],
+  "base": { "col": 0, "row": 10 },
+  "blocks": [
+    { "shape": "b1x3", "col": 3, "row": 3 },
+    { "shape": "b1x1", "col": 2, "row": 8 },
+    { "shape": "b1x1", "col": 4, "row": 6 },
+    { "shape": "b1x1", "col": 1, "row": 3 }
+  ],
+  "weapons": [
+    { "kind": "cannon", "col": 2, "row": 8 },
+    { "kind": "tower", "col": 4, "row": 6 },
+    { "kind": "tower", "col": 1, "row": 3 }
+  ]
+}

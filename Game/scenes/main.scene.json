@@ -2,11 +2,12 @@
   "$schemaVersion": 2,
   "guid": "76b5586a-1c06-4634-8801-f405a3facf6f",
   "id": "main",
+  "resources": { "Level": { "data": { "guid": "171147a9-b5ba-4b2c-a703-3bd9228f2e6a" } } },
   "entities": [
     {
       "name": "Camera",
       "id": "camera",
-      "Camera": { "clearColor": "#4d7a36ff" },
+      "Camera": { "clearColor": "#05060fff", "postProfile": { "guid": "6e210f72-6c34-4729-9650-eb640d9b8c4b" } },
       "CameraShake": { "decay": 1.8, "maxOffset": [0.18, 0.18, 0], "maxAngle": 0.01, "frequency": 22 },
       "LocalTransform": {},
       "VisualOffset": {}
@@ -50,6 +51,13 @@
           "FxHost": { "kind": "baseHit" },
           "LocalTransform": {},
           "ParticleSystem": { "effect": { "guid": "e05d5282-3a07-427a-a8e4-4595262cc1e8" }, "emitting": false }
+        },
+        {
+          "name": "Fx casing",
+          "id": "fx-casing",
+          "FxHost": { "kind": "casing" },
+          "LocalTransform": {},
+          "ParticleSystem": { "effect": { "guid": "9fa6e141-7fd9-48e0-8073-99021989e126" }, "emitting": false }
         }
       ]
     }

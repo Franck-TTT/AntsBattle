@@ -7,12 +7,12 @@
  */
 import { burstAt, defineSystem, entityAt, query, read, teleport, write, LocalTransform, NO_ENTITY, PointerDown, PointerState, PointerUp, type EntityId, type Query, type SystemContext } from '@gameengine/runtime';
 import { Block, Board, Enemy, FxHost, Item, ItemPlaced, Offer, OfferRerolled, Placement, PlacementRefused, Run } from '../schema.gen.ts';
-import { BASE_CELL, CELLS, cellAt, isNest, nestsReach, cellX, cellY, flowField, footprintAt, footprintCell, footprintX, footprintY, nearestCell, REROLL_SLOT, slotAt, trayX, trayY } from '../grid.ts';
+import { CELLS, cellAt, isMarker, nestsReach, cellX, cellY, flowField, footprintAt, footprintCell, footprintX, footprintY, nearestCell, REROLL_SLOT, slotAt, trayX, trayY } from '../grid.ts';
 import { DRAG_SPEED, GHOST_LIFT, MOVE_COOLDOWN, SHAPES, itemPrice, rerollPrice, shapeCells, type BlockShapeName, type ItemKindName } from '../balance.ts';
 import { ITEM_NAMES as ITEM_KINDS, FX_NAMES as FX_KINDS, SHAPE_NAMES } from '../kinds.ts';
-import { ITEM_LOOKS, ORDER, blockBody, blockTop, shapeValue } from '../looks.ts';
 import { recomputeBoard } from './board.ts';
 import { drawOffer, sellOffer } from './offer.ts';
+import { spawnBlock, spawnItem } from './spawn.ts';
 
 const blocked = new Uint8Array(CELLS);
 const dist = new Int16Array(CELLS);
@@ -22,44 +22,6 @@ const REASONS = ['ok', 'offBoard', 'occupied', 'blocks', 'gold', 'enemy', 'noBlo
 type Reason = (typeof REASONS)[number];
 const RETURN_STEPS = 16;
 const WALL = ITEM_KINDS.indexOf('wall');
-
-type WeaponKind = Exclude<ItemKindName, 'none' | 'wall'>;
-
-/** Spawns a block of `shape` whose top-left cell is `cell`. */
-export function spawnBlock(ctx: SystemContext, shape: BlockShapeName, cell: number, time: number): EntityId {
-  const [w, h] = SHAPES[shape];
-  const e = ctx.commands.spawn({
-    LocalTransform: { position: [footprintX(cell, w), footprintY(cell, h), 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
-    Shape: shapeValue(blockBody(w, h), ORDER.block),
-    VisualOffset: {},
-    Block: { shape, cell, placedAt: time },
-  });
-  ctx.commands.spawn({
-    LocalTransform: { position: [0, 0.04, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
-    Shape: shapeValue(blockTop(w, h), ORDER.block),
-    Parent: { entity: e },
-  });
-  return e;
-}
-
-/** Spawns a weapon standing on the block cell `cell`. */
-export function spawnItem(ctx: SystemContext, kind: WeaponKind, cell: number, time: number): EntityId {
-  const look = ITEM_LOOKS[kind];
-  const e = ctx.commands.spawn({
-    LocalTransform: { position: [cellX(cell), cellY(cell), 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
-    Shape: shapeValue(look.body, ORDER.item),
-    VisualOffset: {},
-    Item: { kind, cell, cooldown: 0, reload: 0.4, aim: Math.PI / 2, placedAt: time },
-  });
-  if (look.detail) {
-    ctx.commands.spawn({
-      LocalTransform: { position: [0.16, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
-      Shape: shapeValue(look.detail, ORDER.item + 1),
-      Parent: { entity: e },
-    });
-  }
-  return e;
-}
 
 /** Plays `fx` once at (x, y) from the scene's host of that kind. */
 export function fxAt(ctx: SystemContext, hosts: Query, fx: (typeof FX_KINDS)[number], x: number, y: number): void {
@@ -89,6 +51,8 @@ export const DragItems = defineSystem({
     const p = ctx.resource(Placement);
     const run = ctx.resource(Run);
     const board = ctx.resource(Board);
+    const cols = board.cols[0]!;
+    const rows = board.rows[0]!;
     if (p.returnSteps[0]! > 0) p.returnSteps[0] = p.returnSteps[0]! - 1;
 
     const refuse = (reason: Reason): void => {
@@ -104,18 +68,18 @@ export const DragItems = defineSystem({
       const n = shapeCells(shape);
       for (let k = 0; k < n; k++) {
         const c = footprintCell(cell, w, k);
-        if (isNest(c) || c === BASE_CELL || board.cells[c]! > 0) return 'occupied';
+        if (isMarker(board, c) || board.cells[c]! > 0) return 'occupied';
       }
       if (run.gold[0]! < itemPrice('wall', run.wallsBuilt[0]!, shape)) return 'gold';
       for (let c = 0; c < CELLS; c++) blocked[c] = board.cells[c]! > 0 ? 1 : 0;
       for (let k = 0; k < n; k++) blocked[footprintCell(cell, w, k)] = 1;
-      flowField(blocked, dist, queue);
+      flowField(blocked, dist, queue, board.baseCell[0]!, cols, rows);
       // Every nest, open or not yet, must keep a way to the base.
-      if (!nestsReach(dist)) return 'blocks';
+      if (!nestsReach(board, dist)) return 'blocks';
       for (const c of q.enemies.chunks()) {
         const pos = c.col(LocalTransform).position;
         for (let i = 0; i < c.length; i++) {
-          const ec = nearestCell(pos[i * 3]!, pos[i * 3 + 1]!);
+          const ec = nearestCell(pos[i * 3]!, pos[i * 3 + 1]!, cols, rows);
           if (blocked[ec] && board.cells[ec] === 0) return 'enemy';
           if (dist[ec]! < 0) return 'blocks';
         }
@@ -137,9 +101,9 @@ export const DragItems = defineSystem({
     };
 
     const hoverCell = (kind: number, shape: BlockShapeName, gx: number, gy: number): number => {
-      if (kind !== WALL) return cellAt(gx, gy);
+      if (kind !== WALL) return cellAt(gx, gy, cols, rows);
       const [w, h] = SHAPES[shape];
-      return footprintAt(gx, gy, w, h);
+      return footprintAt(gx, gy, w, h, cols, rows);
     };
     const evaluate = (kind: number, shape: BlockShapeName, cell: number, fromCell: number): Reason =>
       kind === WALL ? evaluateBlock(shape, cell) : evaluateWeapon(kind, cell, fromCell);
@@ -151,7 +115,7 @@ export const DragItems = defineSystem({
     // Pick up.
     if (!p.active[0]) {
       for (const d of ctx.events.read(PointerDown)) {
-        const slot = slotAt(d.world[0], d.world[1]);
+        const slot = slotAt(d.world[0], d.world[1], cols, rows);
         if (slot === REROLL_SLOT) {
           // Reroll: pay for a new set of three.
           const offer = ctx.resource(Offer);
@@ -180,15 +144,18 @@ export const DragItems = defineSystem({
           ctx.set(Placement, { active: true, kind, shape, fromItem: NO_ENTITY, fromCell: -1, slot, cell: -2, valid: false, returnSteps: 0 });
           break;
         }
-        const cell = cellAt(d.world[0], d.world[1]);
+        const cell = cellAt(d.world[0], d.world[1], cols, rows);
         if (cell < 0 || board.cells[cell] === 0) continue;
         if (board.weapons[cell]! > 0) {
-          // A weapon: movable once its cooldown is over.
+          // A weapon: movable once its cooldown is over, unless the level pre-placed it.
           for (const c of q.items.chunks()) {
             const it = c.col(Item);
             for (let i = 0; i < c.length; i++) {
               if (it.cell[i] !== cell) continue;
-              if (it.cooldown[i]! > 0) {
+              if (it.locked[i]) {
+                c.setField(Item, i, 'denySteps', 14);
+                refuse('fixed');
+              } else if (it.cooldown[i]! > 0) {
                 c.setField(Item, i, 'denySteps', 14);
                 refuse('occupied');
               } else {
@@ -291,8 +258,8 @@ export const DragItems = defineSystem({
     p.retShape[0] = p.shape[0]!;
     p.retFromX[0] = gx;
     p.retFromY[0] = gy;
-    p.retToX[0] = fromCell >= 0 ? cellX(fromCell) : trayX(p.slot[0]!);
-    p.retToY[0] = fromCell >= 0 ? cellY(fromCell) : trayY(p.slot[0]!);
+    p.retToX[0] = fromCell >= 0 ? cellX(fromCell) : trayX(p.slot[0]!, cols);
+    p.retToY[0] = fromCell >= 0 ? cellY(fromCell) : trayY(rows);
     if (r !== 'offBoard') refuse(r);
   },
 });

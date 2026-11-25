@@ -1,0 +1,10 @@
+{
+  "$type": "LevelDef",
+  "id": "test-size-min-fixture",
+  "name": "Test fixture: smallest board",
+  "order": 0,
+  "cols": 4,
+  "rows": 4,
+  "blocks": [],
+  "weapons": []
+}
