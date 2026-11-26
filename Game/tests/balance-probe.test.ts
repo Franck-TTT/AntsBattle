@@ -5,7 +5,7 @@
  * - novice: looks every 3 s, building its maze from the top-left (first weapons far from the path).
  */
 import { worldTest } from './play.ts';
-import { Block, Board, Enemy, Item, Offer, Run } from '../src/schema.gen.ts';
+import { Block, Board, Enemy, Item, Offer, Run, Panel } from '../src/schema.gen.ts';
 import { CELLS, COLS, DEFAULT_BASE, DEFAULT_COLS, DEFAULT_MARKERS, DEFAULT_ROWS, REROLL_SLOT, isMarker, nestsReach, cellX, cellY, flowField, footprintCell, footprintX, footprintY, trayX, trayY } from '../src/grid.ts';
 import { GHOST_LIFT, ITEMS, SHAPES, START_LIVES, itemPrice, rerollPrice, type BlockShapeName } from '../src/balance.ts';
 import { ITEM_NAMES, SHAPE_NAMES } from '../src/kinds.ts';
@@ -142,13 +142,13 @@ function probeRun(profile: string, every: number, reroll: boolean, novice: boole
           usable = true;
           if (run.gold < itemPrice(kind, run.wallsBuilt, shape)) continue;
           const before = world.entities(Item).length + world.entities(Block).length;
-          await press([trayX(slot, DEFAULT_COLS), trayY(DEFAULT_ROWS)], target);
+          await press([trayX(slot, world.resource(Panel)), trayY(world.resource(Panel))], target);
           acted = world.entities(Item).length + world.entities(Block).length > before;
           if (acted) bought++;
         }
         if (acted) continue;
         if (reroll && !usable && run.gold >= rerollPrice(offer.rerolls) + 30) {
-          await press([trayX(REROLL_SLOT, DEFAULT_COLS), trayY(DEFAULT_ROWS)], null);
+          await press([trayX(REROLL_SLOT, world.resource(Panel)), trayY(world.resource(Panel))], null);
           rerolls++;
           continue;
         }

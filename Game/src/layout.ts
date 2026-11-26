@@ -3,7 +3,7 @@
  * Level Layout editor widget. Pure functions over plain data: no runtime imports.
  */
 import { CELLS, COLS, DEFAULT_COLS, DEFAULT_ROWS, MAX_NESTS, MIN_COLS, MIN_ROWS, ROWS, defaultBase, defaultNests, flowField, footprintCell, tracePath, type Markers, type NestDef } from './grid.ts';
-import { SHAPES } from './balance.ts';
+import { ON_GROUND, SHAPES, type ItemKindName } from './balance.ts';
 
 export interface LayoutBlock {
   readonly shape: string;
@@ -164,7 +164,13 @@ export function checkLayout(layout: Layout): LayoutResult {
       return;
     }
     const c = w.row * COLS + w.col;
-    if (!cells[c]) {
+    if (ON_GROUND.has(w.kind as ItemKindName)) {
+      // Mines and boost pads lie on a free ground cell, where the ants walk.
+      if (cells[c] || isMarkerCell(c)) {
+        issues.push({ message: `Weapon ${w.kind} at ${where(w.col, w.row)} must lie on a free ground cell (not a block, a nest or the base)`, cells: [c], entry });
+        return;
+      }
+    } else if (!cells[c]) {
       issues.push({ message: `Weapon ${w.kind} at ${where(w.col, w.row)} does not stand on a block`, cells: [c], entry });
       return;
     }

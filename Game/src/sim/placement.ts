@@ -1,14 +1,17 @@
 /**
  * Drag and drop. Blocks (1×1 to 2×2 and 1×3 footprints) come from the tray, drop on free cells,
  * block the ants and never move again. Weapons come from the tray or off a block, drop only on a
- * free block cell, and can be moved again after their cooldown. A hovered drop gets a live
+ * free block cell (mines and boost pads: on a free ground cell, where the ants walk), and can be moved again after their cooldown. A hovered drop gets a live
  * validity check and path preview; a refused one snaps back. Sim code: the pointer arrives as
  * recorded input, so a replay reproduces every placement.
  */
 import { burstAt, defineSystem, entityAt, query, read, teleport, write, LocalTransform, NO_ENTITY, PointerDown, PointerState, PointerUp, type EntityId, type Query, type SystemContext } from '@gameengine/runtime';
-import { Block, Board, Enemy, FxHost, Item, ItemPlaced, Offer, OfferRerolled, Placement, PlacementRefused, Run } from '../schema.gen.ts';
-import { CELLS, cellAt, isMarker, nestsReach, cellX, cellY, flowField, footprintAt, footprintCell, footprintX, footprintY, nearestCell, REROLL_SLOT, slotAt, trayX, trayY } from '../grid.ts';
-import { DRAG_SPEED, GHOST_LIFT, MOVE_COOLDOWN, SHAPES, itemPrice, rerollPrice, shapeCells, type BlockShapeName, type ItemKindName } from '../balance.ts';
+import { Block, Board, Boost, Enemy, FxHost, Item, ItemPlaced, Offer, OfferRerolled, Panel, Placement, PlacementRefused, Run } from '../schema.gen.ts';
+import { CELLS, cellAt, isMarker, nestsReach, cellX, cellY, flowField, footprintAt, footprintCell, footprintX, footprintY, nearestCell, REROLL_SLOT, slotAt, trayX, type PanelLayout } from '../grid.ts';
+
+/** Scratch copy of the Panel resource: fully written before every read. */
+const panel: PanelLayout = { x: 0, trayY: 0, hudY: 0, scale: 1 };
+import { DRAG_SPEED, GHOST_LIFT, MOVE_COOLDOWN, ON_GROUND, SHAPES, itemPrice, rerollPrice, shapeCells, type BlockShapeName, type ItemKindName } from '../balance.ts';
 import { ITEM_NAMES as ITEM_KINDS, FX_NAMES as FX_KINDS, SHAPE_NAMES } from '../kinds.ts';
 import { recomputeBoard } from './board.ts';
 import { drawOffer, sellOffer } from './offer.ts';
@@ -22,6 +25,8 @@ const REASONS = ['ok', 'offBoard', 'occupied', 'blocks', 'gold', 'enemy', 'noBlo
 type Reason = (typeof REASONS)[number];
 const RETURN_STEPS = 16;
 const WALL = ITEM_KINDS.indexOf('wall');
+/** Weapons laid on the ground, where the ants walk, instead of on a block. */
+const GROUND = ITEM_KINDS.map((k) => ON_GROUND.has(k));
 
 /** Plays `fx` once at (x, y) from the scene's host of that kind. */
 export function fxAt(ctx: SystemContext, hosts: Query, fx: (typeof FX_KINDS)[number], x: number, y: number): void {
@@ -41,7 +46,7 @@ export const DragItems = defineSystem({
     enemies: query(read(Enemy), read(LocalTransform)),
     fx: query(read(FxHost)),
   },
-  resources: [write(Placement), write(Run), write(Board), write(Offer), read(PointerState)],
+  resources: [write(Placement), write(Run), write(Board), write(Offer), read(Panel), read(PointerState), read(Boost)],
   events: [PointerDown, PointerUp],
   runIf: [
     { resource: Run, field: 'phase', value: 'playing' },
@@ -51,8 +56,15 @@ export const DragItems = defineSystem({
     const p = ctx.resource(Placement);
     const run = ctx.resource(Run);
     const board = ctx.resource(Board);
+    const boost = ctx.resource(Boost);
+    const freeWalls = boost.freeWalls[0]!;
     const cols = board.cols[0]!;
     const rows = board.rows[0]!;
+    const pr = ctx.resource(Panel);
+    panel.x = pr.x[0]!;
+    panel.trayY = pr.trayY[0]!;
+    panel.hudY = pr.hudY[0]!;
+    panel.scale = pr.scale[0]!;
     if (p.returnSteps[0]! > 0) p.returnSteps[0] = p.returnSteps[0]! - 1;
 
     const refuse = (reason: Reason): void => {
@@ -68,9 +80,9 @@ export const DragItems = defineSystem({
       const n = shapeCells(shape);
       for (let k = 0; k < n; k++) {
         const c = footprintCell(cell, w, k);
-        if (isMarker(board, c) || board.cells[c]! > 0) return 'occupied';
+        if (isMarker(board, c) || board.cells[c]! > 0 || board.weapons[c]! > 0) return 'occupied';
       }
-      if (run.gold[0]! < itemPrice('wall', run.wallsBuilt[0]!, shape)) return 'gold';
+      if (run.gold[0]! < itemPrice('wall', run.wallsBuilt[0]!, shape, freeWalls)) return 'gold';
       for (let c = 0; c < CELLS; c++) blocked[c] = board.cells[c]! > 0 ? 1 : 0;
       for (let k = 0; k < n; k++) blocked[footprintCell(cell, w, k)] = 1;
       flowField(blocked, dist, queue, board.baseCell[0]!, cols, rows);
@@ -89,12 +101,14 @@ export const DragItems = defineSystem({
       return 'ok';
     };
 
-    /** A weapon on `cell`: only on a block cell without a weapon. */
+    /** A weapon on `cell`: only on a block cell without a weapon; a mine or a boost pad only on a free ground cell. */
     const evaluateWeapon = (kind: number, cell: number, fromCell: number): Reason => {
       p.previewLen[0] = 0;
       if (cell < 0) return 'offBoard';
       if (cell === fromCell) return 'ok';
-      if (board.cells[cell] === 0) return 'noBlock';
+      if (GROUND[kind]) {
+        if (board.cells[cell]! > 0 || isMarker(board, cell)) return 'occupied';
+      } else if (board.cells[cell] === 0) return 'noBlock';
       if (board.weapons[cell]! > 0) return 'occupied';
       if (fromCell < 0 && run.gold[0]! < itemPrice(ITEM_KINDS[kind]!, run.wallsBuilt[0]!)) return 'gold';
       return 'ok';
@@ -115,18 +129,20 @@ export const DragItems = defineSystem({
     // Pick up.
     if (!p.active[0]) {
       for (const d of ctx.events.read(PointerDown)) {
-        const slot = slotAt(d.world[0], d.world[1], cols, rows);
+        const slot = slotAt(d.world[0], d.world[1], panel);
         if (slot === REROLL_SLOT) {
           // Reroll: pay for a new set of three.
           const offer = ctx.resource(Offer);
-          const price = rerollPrice(offer.rerolls[0]!);
+          const price = rerollPrice(offer.rerolls[0]!, offer.freeRerolls[0]!);
           p.slot[0] = slot;
           if (run.gold[0]! < price) {
             refuse('gold');
             break;
           }
           run.gold[0] = run.gold[0]! - price;
-          offer.rerolls[0] = offer.rerolls[0]! + 1;
+          // A free reroll (upgrade) leaves the price curve where it is.
+          if (offer.freeRerolls[0]! > 0) offer.freeRerolls[0] = offer.freeRerolls[0]! - 1;
+          else offer.rerolls[0] = offer.rerolls[0]! + 1;
           drawOffer(ctx);
           ctx.signal(OfferRerolled, { price });
           break;
@@ -145,7 +161,8 @@ export const DragItems = defineSystem({
           break;
         }
         const cell = cellAt(d.world[0], d.world[1], cols, rows);
-        if (cell < 0 || board.cells[cell] === 0) continue;
+        // A free cell holds nothing to pick up, unless a mine or a boost pad lies on it.
+        if (cell < 0 || (board.cells[cell] === 0 && board.weapons[cell] === 0)) continue;
         if (board.weapons[cell]! > 0) {
           // A weapon: movable once its cooldown is over, unless the level pre-placed it.
           for (const c of q.items.chunks()) {
@@ -179,7 +196,7 @@ export const DragItems = defineSystem({
         break;
       }
       if (!p.active[0]) return;
-      run.speed[0] = DRAG_SPEED;
+      run.speed[0] = DRAG_SPEED * boost.drag[0]!;
     }
 
     // Follow the finger: the ghost sits above it, the hovered cell is the one under the ghost.
@@ -212,7 +229,7 @@ export const DragItems = defineSystem({
     if (r === 'ok' && cell !== fromCell) {
       const time = run.time[0]!;
       if (kindName === 'wall') {
-        const cost = itemPrice('wall', run.wallsBuilt[0]!, shape);
+        const cost = itemPrice('wall', run.wallsBuilt[0]!, shape, freeWalls);
         const [w, h] = SHAPES[shape];
         run.gold[0] = run.gold[0]! - cost;
         run.wallsBuilt[0] = run.wallsBuilt[0]! + 1;
@@ -258,8 +275,8 @@ export const DragItems = defineSystem({
     p.retShape[0] = p.shape[0]!;
     p.retFromX[0] = gx;
     p.retFromY[0] = gy;
-    p.retToX[0] = fromCell >= 0 ? cellX(fromCell) : trayX(p.slot[0]!, cols);
-    p.retToY[0] = fromCell >= 0 ? cellY(fromCell) : trayY(rows);
+    p.retToX[0] = fromCell >= 0 ? cellX(fromCell) : trayX(p.slot[0]!, panel);
+    p.retToY[0] = fromCell >= 0 ? cellY(fromCell) : panel.trayY;
     if (r !== 'offBoard') refuse(r);
   },
 });
@@ -268,11 +285,11 @@ export const DragItems = defineSystem({
 export const GameSpeed = defineSystem({
   name: 'GameSpeed',
   after: ['DragItems'],
-  resources: [write(Run), read(Placement)],
+  resources: [write(Run), read(Placement), read(Boost)],
   runIf: [{ resource: Run, field: 'phase', value: 'playing' }],
   run(ctx) {
     const run = ctx.resource(Run);
-    let target = ctx.resource(Placement).active[0] ? DRAG_SPEED : 1;
+    let target = ctx.resource(Placement).active[0] ? DRAG_SPEED * ctx.resource(Boost).drag[0]! : 1;
     if (run.bossSteps[0]! > 0) {
       run.bossSteps[0] = run.bossSteps[0]! - 1;
       target = Math.min(target, 0.25);

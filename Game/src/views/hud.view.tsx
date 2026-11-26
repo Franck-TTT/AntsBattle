@@ -11,14 +11,14 @@ export interface Flight {
 export interface HudModel {
   wave: number;
   gold: number;
-  /** World point the bar is centred on: the band between the board and the tray. */
+  /** World point the bar is centred on: above the tray (Panel.hudY). */
   at: [number, number];
   flights: readonly Flight[];
 }
 
 export const HudView = defineView<HudModel>({
   name: 'Hud',
-  description: 'Wave and gold, in the band between the board and the tray (lives are shown on the base); coins fly from kills to the gold counter. Intents: coinLanded (payload: flight id).',
+  description: 'Wave and gold, just above the tray in the bottom panel (lives are shown on the base); coins fly from kills to the gold counter. Intents: coinLanded (payload: flight id).',
   samples: {
     start: { wave: 1, gold: 60, at: [0, 0], flights: [] },
     late: { wave: 9, gold: 1250, at: [0, 0], flights: [] },

@@ -137,3 +137,21 @@ worldTest('board size: within limits, and everything must fit in it', async () =
   }
 });
 
+
+worldTest('mines and boost pads lie on a free ground cell, never on a block, a nest or the base', async () => {
+  const r = checkLayout({
+    blocks: [{ shape: 'b1x1', col: 2, row: 5 }],
+    weapons: [
+      { kind: 'boostPad', col: 3, row: 5 }, // free ground
+      { kind: 'mine', col: 3, row: 7 }, // free ground
+      { kind: 'boostPad', col: 2, row: 5 }, // on the block
+      { kind: 'mine', col: 3, row: 0 }, // the first nest
+    ],
+  });
+  expect(messages(r)).toEqual([
+    'Weapon boostPad at (2, 5) must lie on a free ground cell (not a block, a nest or the base)',
+    'Weapon mine at (3, 0) must lie on a free ground cell (not a block, a nest or the base)',
+  ]);
+  expect(r.weaponAt[cell(3, 5)]).toBe(0);
+  expect(r.cells[cell(3, 5)]).toBe(0);
+});

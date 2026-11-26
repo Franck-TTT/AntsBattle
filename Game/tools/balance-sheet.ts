@@ -20,6 +20,9 @@ export const TABS = {
   units: { name: 'Units', gid: 358514479 },
   waves: { name: 'Waves', gid: 1100000001 },
   offers: { name: 'Offers', gid: 1100000002 },
+  meta: { name: 'Meta', gid: 1100000003 },
+  rarities: { name: 'Rarities', gid: 1100000004 },
+  upgrades: { name: 'Upgrades', gid: 1100000005 },
 } as const;
 export type TabKey = keyof typeof TABS;
 export type Grid = string[][];
@@ -45,8 +48,30 @@ const GENERAL: Record<string, Field> = {
   'speed recovery': { key: 'speedRecovery', kind: 'num' },
 };
 
+/** Meta (the progression between runs): sheet label → field. */
+const META: Record<string, Field> = {
+  'coins per win': { key: 'winCoins', kind: 'int' },
+  'coins per star': { key: 'starCoins', kind: 'int' },
+  'coins per wave survived': { key: 'waveCoins', kind: 'int' },
+  '3 stars lives left': { key: 'star3', kind: 'num' },
+  '2 stars lives left': { key: 'star2', kind: 'num' },
+  'roll base cost': { key: 'rollBase', kind: 'int' },
+  'roll cost step': { key: 'rollStep', kind: 'int' },
+  'stars per luxury roll': { key: 'starsPerLuxury', kind: 'int' },
+};
+
+const RARITY: Record<string, Field> = {
+  'roll odds': { key: 'odds', kind: 'num' },
+  'luxury odds': { key: 'luxuryOdds', kind: 'num' },
+  'max level': { key: 'maxLevel', kind: 'int' },
+  'power weight': { key: 'power', kind: 'int' },
+};
+
 const WEAPON: Record<string, Field> = {
   price: { key: 'price', kind: 'int' },
+  lootable: { key: 'lootable', kind: 'bool' },
+  'min wave': { key: 'minWave', kind: 'int' },
+  'max wave': { key: 'maxWave', kind: 'int' },
   'attack range': { key: 'range', kind: 'num' },
   cooldown: { key: 'period', kind: 'num' },
   'attack damage': { key: 'damage', kind: 'num' },
@@ -55,6 +80,19 @@ const WEAPON: Record<string, Field> = {
   'projectile speed': { key: 'shotSpeed', kind: 'num' },
   'knockback force': { key: 'knockback', kind: 'num' },
   'shockwave radius': { key: 'shockRadius', kind: 'num' },
+  slow: { key: 'slow', kind: 'num' },
+  'slow duration': { key: 'slowTime', kind: 'num' },
+  haste: { key: 'haste', kind: 'num' },
+  'haste duration': { key: 'hasteTime', kind: 'num' },
+  'puddle damage': { key: 'puddle', kind: 'num' },
+  'puddle size': { key: 'puddleSize', kind: 'num' },
+  'puddle duration': { key: 'puddleTime', kind: 'num' },
+  'burn damage': { key: 'burn', kind: 'num' },
+  'burn duration': { key: 'burnTime', kind: 'num' },
+  'cone angle': { key: 'cone', kind: 'num' },
+  'aura range bonus': { key: 'auraRange', kind: 'num' },
+  'aura fire rate bonus': { key: 'auraRate', kind: 'num' },
+  'gold per wave': { key: 'waveGold', kind: 'int' },
 };
 
 const UNIT: Record<string, Field> = {
@@ -69,7 +107,7 @@ const UNIT: Record<string, Field> = {
 /** Rows of Weapons and Units for people only. */
 const INFO_ROWS = new Set(['name', 'description']);
 
-export interface Enums { ItemKind: string[]; EnemyKind: string[]; BlockShape: string[] }
+export interface Enums { ItemKind: string[]; EnemyKind: string[]; BlockShape: string[]; UpgradeKind: string[]; Rarity: string[] }
 
 /** The schema's enums, from schema.gen.json (written by `gameengine gen`). */
 export function readEnums(schemaGenJson: string): Enums {
@@ -79,7 +117,7 @@ export function readEnums(schemaGenJson: string): Enums {
     if (!e) throw new Error(`schema.gen.json has no enum ${name}: run gameengine gen`);
     return e.values;
   };
-  return { ItemKind: get('ItemKind'), EnemyKind: get('EnemyKind'), BlockShape: get('BlockShape') };
+  return { ItemKind: get('ItemKind'), EnemyKind: get('EnemyKind'), BlockShape: get('BlockShape'), UpgradeKind: get('UpgradeKind'), Rarity: get('Rarity') };
 }
 
 const norm = (label: string) => label.replace(/\(.*?\)/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -124,19 +162,18 @@ function oneOf(raw: string | undefined, allowed: readonly string[], enumName: st
   return text;
 }
 
-function parseGeneral(grid: Grid, errs: Errors) {
-  const tab = TABS.general.name;
+function parseGeneral(grid: Grid, errs: Errors, tab: string = TABS.general.name, fields: Record<string, Field> = GENERAL) {
   const out: Record<string, number> = {};
   grid.forEach((row, i) => {
     const label = row[0] ?? '';
     if (isTitle(label)) return;
-    const f = GENERAL[norm(label)];
+    const f = fields[norm(label)];
     if (!f) return errs.add(`${tab} row ${i + 1}: unknown parameter "${label}" (the game does not read it yet)`);
     if (f.key in out) return errs.add(`${tab} row ${i + 1}: "${label}" is there twice`);
     out[f.key] = value(row[1], f.kind, `${tab} "${label}"`, errs) as number;
   });
   const general: Record<string, number> = {};
-  for (const [label, f] of Object.entries(GENERAL)) {
+  for (const [label, f] of Object.entries(fields)) {
     if (!(f.key in out)) errs.add(`${tab}: missing parameter "${label}"`);
     general[f.key] = out[f.key] ?? 0;
   }
@@ -207,6 +244,9 @@ export interface SheetData {
   units: Record<string, Record<string, number | boolean>>;
   waves: { kind: string; count: number; every: number }[][];
   offers: { kind: string; shape: string; weight: number }[];
+  meta: Record<string, number>;
+  rarities: Record<string, Record<string, number | boolean>>;
+  upgrades: { kind: string; name: string; rarity: string; perLevel: number; unit: string; stat: string }[];
 }
 
 export function parseSheet(tabs: Record<TabKey, Grid>, enums: Enums): SheetData {
@@ -254,9 +294,42 @@ export function parseSheet(tabs: Record<TabKey, Grid>, enums: Enums): SheetData 
     offers.push(offer);
   }
   if (!offers.some((o) => o.kind === 'wall')) errs.add(`${offerTab}: needs at least one wall (every offer holds a block)`);
+  if (!offers.some((o) => o.kind !== 'wall' && weapons[o.kind]?.lootable === true)) errs.add(`${offerTab}: needs at least one Lootable weapon (Weapons tab)`);
+  // Min Wave / Max Wave: a sane window per weapon, and something to offer on every wave.
+  for (const [id, w] of Object.entries(weapons)) {
+    const min = w.minWave as number;
+    const max = w.maxWave as number;
+    if (max > 0 && max < Math.max(1, min)) errs.add(`${TABS.weapons.name} ${id}: Max Wave ${max} is before Min Wave ${min} (0 = no limit)`);
+  }
+  const offeredAt = (kind: string, wave: number) => {
+    const w = weapons[kind];
+    return !!w && w.lootable === true && Math.max(1, w.minWave as number) <= wave && ((w.maxWave as number) === 0 || wave <= (w.maxWave as number));
+  };
+  for (let wave = 1; wave <= waves.length; wave++) {
+    if (!offers.some((o) => o.kind !== 'wall' && offeredAt(o.kind, wave))) errs.add(`${offerTab}: no weapon can be offered on wave ${wave} (check Min Wave / Max Wave and Lootable in ${TABS.weapons.name})`);
+  }
+
+  const meta = parseGeneral(tabs.meta, errs, TABS.meta.name, META);
+  const rarities = parseColumns(tabs.rarities, TABS.rarities.name, RARITY, enums.Rarity, 'Rarity', errs);
+  const upTab = TABS.upgrades.name;
+  const upgrades: SheetData['upgrades'] = [];
+  for (const { row, cells } of parseRows(tabs.upgrades, upTab, ['upgrade', 'name', 'rarity', 'per level', 'unit', 'stat'], errs)) {
+    const where = `${upTab} row ${row}`;
+    const kind = oneOf(cells.upgrade, enums.UpgradeKind, 'UpgradeType', `${where} Upgrade`, errs);
+    if (upgrades.some((u) => u.kind === kind)) errs.add(`${where}: "${kind}" is there twice`);
+    upgrades.push({
+      kind,
+      name: (cells.name ?? '').trim() || kind,
+      rarity: oneOf(cells.rarity, enums.Rarity, 'Rarity', `${where} Rarity`, errs),
+      perLevel: value(cells['per level'], 'num', `${where} Per level`, errs) as number,
+      unit: (cells.unit ?? '').trim(),
+      stat: (cells.stat ?? '').trim(),
+    });
+  }
+  for (const k of enums.UpgradeKind) if (!upgrades.some((u) => u.kind === k)) errs.add(`${upTab}: no row for "${k}" (every UpgradeType needs one)`);
 
   errs.throwIfAny();
-  return { general, weapons, units, waves, offers };
+  return { general, weapons, units, waves, offers, meta, rarities, upgrades };
 }
 
 // ---- The generated file ----
@@ -267,11 +340,12 @@ const canonical = (data: unknown) => JSON.stringify(data, null, 2);
 export function render(data: SheetData): string {
   const json = canonical(data);
   const general = Object.values(GENERAL).map((f) => `    ${f.key}: number;`).join('\n');
+  const meta = Object.values(META).map((f) => `    ${f.key}: number;`).join('\n');
   return `// GENERATED by \`gameengine tool sheet-sync\` from the balancing Google Sheet:
 // ${SHEET_URL}
 // Do not edit: change the sheet, then run the tool. The game/balance-sheet check fails on hand edits.
 // sheet-hash: ${hashOf(json)}
-import type { BlockShapeName, EnemyKindName, ItemKindName } from './kinds.ts';
+import type { BlockShapeName, EnemyKindName, ItemKindName, RarityName, UpgradeKindName } from './kinds.ts';
 
 export type WeaponKindName = Exclude<ItemKindName, 'none' | 'wall'>;
 
@@ -279,10 +353,15 @@ export interface BalanceSheet {
   general: {
 ${general}
   };
-  weapons: Record<WeaponKindName, { price: number; range: number; period: number; damage: number; splash: number; falloff: number; shotSpeed: number; knockback: number; shockRadius: number }>;
+  weapons: Record<WeaponKindName, { price: number; lootable: boolean; minWave: number; maxWave: number; range: number; period: number; damage: number; splash: number; falloff: number; shotSpeed: number; knockback: number; shockRadius: number; slow: number; slowTime: number; haste: number; hasteTime: number; puddle: number; puddleSize: number; puddleTime: number; burn: number; burnTime: number; cone: number; auraRange: number; auraRate: number; waveGold: number }>;
   units: Record<EnemyKindName, { hp: number; speed: number; reward: number; damage: number; swarms: boolean; knockback: number }>;
   waves: { kind: EnemyKindName; count: number; every: number }[][];
   offers: { kind: Exclude<ItemKindName, 'none'>; shape: BlockShapeName; weight: number }[];
+  meta: {
+${meta}
+  };
+  rarities: Record<RarityName, { odds: number; luxuryOdds: number; maxLevel: number; power: number }>;
+  upgrades: { kind: UpgradeKindName; name: string; rarity: RarityName; perLevel: number; unit: string; stat: string }[];
 }
 
 export const SHEET: BalanceSheet = ${json};

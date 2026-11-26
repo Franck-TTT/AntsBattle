@@ -41,7 +41,7 @@ const COLORS = {
   base: '#1e7a4a',
   ok: '#3fd17a',
   bad: '#ff4d5e',
-  weapon: { tower: '#ffc51f', cannon: '#ff7a3f' } as Record<string, string>,
+  weapon: { tower: '#ffc51f', cannon: '#ff7a3f', frost: '#3fc8ff', mine: '#ff3b5c', boostPad: '#ffb020', mortar: '#4caf3f', flamethrower: '#ff5a1f', radar: '#5ee8ff', bank: '#ffc51f' } as Record<string, string>,
 };
 
 /** The file's text: its keys in their order, one list entry per line, so diffs stay readable. */
