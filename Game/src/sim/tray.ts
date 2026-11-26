@@ -3,11 +3,11 @@
  * greyed-out slots when gold changes. Written only when something changed. Sim code.
  */
 import { added, defineSystem, query, read, write, LocalTransform, Shape, Text2D, type EntityId, type SystemContext } from '@gameengine/runtime';
-import { EnemyKilled, ItemPlaced, Offer, OfferRerolled, RestartRequested, Run, TrayCoin, TrayIcon, TrayLabel, TraySlot } from '../schema.gen.ts';
+import { Boost, EnemyKilled, ItemPlaced, Offer, OfferRerolled, RestartRequested, Run, TrayCoin, TrayIcon, TrayLabel, TraySlot } from '../schema.gen.ts';
 import { OFFER_SIZE, SHAPES, itemPrice, rerollPrice, type BlockShapeName, type ItemKindName } from '../balance.ts';
 import { REROLL_SLOT } from '../grid.ts';
 import { ITEM_NAMES, SHAPE_NAMES } from '../kinds.ts';
-import { COIN, COIN_DIM, COLORS, ITEM_LOOKS, ORDER, blockBody, blockTop, shapeValue, type ShapeLook } from '../looks.ts';
+import { BLOCK_TONES, COIN, COIN_DIM, COLORS, ITEM_LOOKS, ORDER, blockBuildings, blockPad, buildingLayers, shapeValue, type ShapeLook } from '../looks.ts';
 
 /** Price layout: the coin, a gap, then the amount, centred together. Digit width is an estimate of the label font at size 0.32. */
 const COIN_D = 0.24;
@@ -15,9 +15,9 @@ const COIN_GAP = 0.05;
 const DIGIT_W = 0.2;
 
 function spawnIcons(ctx: SystemContext, parent: EntityId, slot: number, kind: Exclude<ItemKindName, 'none'>, shape: BlockShapeName): void {
-  const icon = (look: ShapeLook, k: number, order: number) =>
+  const icon = (look: ShapeLook, k: number, order: number, x = 0, y = 0) =>
     ctx.commands.spawn({
-      LocalTransform: { position: [0, 0.16, 0], rotation: [0, 0, 0, 1], scale: [k, k, 1] },
+      LocalTransform: { position: [x * k, 0.16 + y * k, 0], rotation: [0, 0, 0, 1], scale: [k, k, 1] },
       Shape: shapeValue(look, order),
       Parent: { entity: parent },
       TrayIcon: { slot },
@@ -25,13 +25,15 @@ function spawnIcons(ctx: SystemContext, parent: EntityId, slot: number, kind: Ex
   if (kind === 'wall') {
     const [w, h] = SHAPES[shape];
     const k = Math.min(0.78 / h, 1.4 / w);
-    icon(blockBody(w, h), k, ORDER.tray + 1);
-    icon(blockTop(w, h), k, ORDER.tray + 2);
+    icon(blockPad(w, h), k, ORDER.tray + 1);
+    for (const b of blockBuildings(0, w, h)) {
+      for (const l of buildingLayers(b, BLOCK_TONES.player)) icon(l.look, k, ORDER.tray + 2 + l.layer, l.x, l.y);
+    }
     return;
   }
   // A weapon is shown on a small block: it only drops on blocks.
   const look = ITEM_LOOKS[kind];
-  icon(blockBody(1, 1), 0.78, ORDER.tray + 1);
+  icon(blockPad(1, 1), 0.78, ORDER.tray + 1);
   icon(look.body, 0.78, ORDER.tray + 2);
   if (look.detail) icon(look.detail, 0.78, ORDER.tray + 3);
 }
@@ -40,7 +42,7 @@ export const TraySync = defineSystem({
   name: 'TraySync',
   after: ['Combat'],
   queries: { slots: query(write(TraySlot)), labels: query(read(TrayLabel), write(LocalTransform)), coins: query(read(TrayCoin), write(LocalTransform)), icons: query(read(TrayIcon)) },
-  resources: [read(Run), read(Offer)],
+  resources: [read(Run), read(Offer), read(Boost)],
   // Prices change on a kill, a drop, a reroll or a restart; icons when the offer changes.
   runIf: { any: [{ event: EnemyKilled }, { event: ItemPlaced }, { event: OfferRerolled }, { event: RestartRequested }, { changed: Offer }, { query: query(added(TraySlot)) }] },
   run(ctx, q) {
@@ -57,13 +59,13 @@ export const TraySync = defineSystem({
         let sold = false;
         let text = '';
         if (slot === REROLL_SLOT) {
-          price = rerollPrice(offer.rerolls[0]!);
+          price = rerollPrice(offer.rerolls[0]!, offer.freeRerolls[0]!);
           text = `${price}`;
         } else if (slot < OFFER_SIZE) {
           sold = offer.sold[slot] === 1;
           const kind = ITEM_NAMES[offer.kinds[slot]!]! as Exclude<ItemKindName, 'none'>;
           const shape = SHAPE_NAMES[offer.shapes[slot]!]!;
-          price = itemPrice(kind, run.wallsBuilt[0]!, shape);
+          price = itemPrice(kind, run.wallsBuilt[0]!, shape, ctx.resource(Boost).freeWalls[0]!);
           text = sold ? '' : price === 0 ? 'FREE' : `${price}`;
           if (ts.shownVersion[i] !== version) {
             for (const ic of q.icons.chunks()) {

@@ -1,0 +1,453 @@
+{
+  "$schemaVersion": 1,
+  "guid": "96a1f7dc-b00d-441f-ac58-36b94013a978",
+  "name": "roll-button",
+  "title": "Roll button",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Roll button",
+      "style": {
+        "dir": "column",
+        "h": 290,
+        "minW": 0,
+        "pad": 5,
+        "align": "center",
+        "justify": "center",
+        "bg": "#ffc93cff",
+        "radius": 40,
+        "w": "100%",
+        "gap": 0
+      },
+      "children": [
+        "rb_glow",
+        "rb_in",
+        "rb_badge"
+      ]
+    },
+    "label": {
+      "type": "label",
+      "name": "Label",
+      "style": {
+        "fontSize": 76,
+        "fitMin": 30,
+        "weight": 900,
+        "color": "#15171bff",
+        "textAlign": "center",
+        "shadowX": 0,
+        "shadowY": 0,
+        "shadowColor": "#00000000",
+        "shadowSoft": 0,
+        "font": {
+          "guid": "95b2641e-e699-4217-9291-f759580ab645"
+        }
+      },
+      "text": "Button",
+      "property": "label"
+    },
+    "rb_kicker": {
+      "type": "label",
+      "name": "Label",
+      "text": "{kicker}",
+      "style": {
+        "fontSize": 30,
+        "fitMin": 16,
+        "weight": 800,
+        "letterSpacing": 3,
+        "color": "#15171bb3",
+        "font": {
+          "guid": "95b2641e-e699-4217-9291-f759580ab645"
+        }
+      }
+    },
+    "rb_sub": {
+      "type": "label",
+      "name": "Label",
+      "text": "{sub}",
+      "style": {
+        "fontSize": 36,
+        "fitMin": 20,
+        "weight": 800,
+        "color": "#15171bff",
+        "font": {
+          "guid": "95b2641e-e699-4217-9291-f759580ab645"
+        }
+      }
+    },
+    "rb_in": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "rb_kicker",
+        "label",
+        "rb_cost",
+        "rb_lux"
+      ],
+      "style": {
+        "pad": [
+          16,
+          24,
+          16,
+          24
+        ],
+        "w": "100%",
+        "h": "100%",
+        "dir": "column",
+        "align": "center",
+        "justify": "center",
+        "gap": 10,
+        "radius": 36,
+        "bg": "#ffc93cff"
+      }
+    },
+    "rb_cost": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "rb_coin",
+        "rb_sub"
+      ],
+      "style": {
+        "pad": [
+          8,
+          26,
+          8,
+          26
+        ],
+        "dir": "row",
+        "align": "center",
+        "gap": 10,
+        "radius": 34,
+        "bg": "#15171b33"
+      }
+    },
+    "rb_coin": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "0b776a12-c65a-4362-b361-9939ca892c0a"
+        },
+        "w": 40,
+        "h": 40,
+        "tint": "#15171bff",
+        "tintMode": "multiply"
+      }
+    },
+    "rb_lux": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "rb_steps",
+        "rb_luxtext",
+        "rb_luxstar"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "row",
+        "align": "center",
+        "gap": 12,
+        "w": "100%",
+        "hide": true
+      }
+    },
+    "rb_steps": {
+      "type": "use",
+      "doc": "lux-steps",
+      "key": "steps",
+      "props": {
+        "steps": {
+          "property": "steps"
+        },
+        "progress": {
+          "property": "progress"
+        }
+      },
+      "style": {
+        "grow": 1,
+        "w": 0,
+        "h": 14
+      }
+    },
+    "rb_luxtext": {
+      "type": "label",
+      "name": "Label",
+      "text": "{sub}",
+      "style": {
+        "fontSize": 32,
+        "fitMin": 18,
+        "weight": 800,
+        "color": "#ffffffff",
+        "font": {
+          "guid": "95b2641e-e699-4217-9291-f759580ab645"
+        }
+      }
+    },
+    "rb_luxstar": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "550620fc-7d0e-4e5c-a7dd-ac8a55b53375"
+        },
+        "w": 32,
+        "h": 32,
+        "tint": "#ffc93cff",
+        "tintMode": "multiply"
+      }
+    },
+    "rb_badge": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "rb_badge_t"
+      ],
+      "style": {
+        "pad": 0,
+        "position": "anchored",
+        "anchor": [
+          1,
+          0
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "offset": [
+          -20,
+          20
+        ],
+        "attach": true,
+        "w": 60,
+        "h": 60,
+        "radius": 30,
+        "bg": "#5cff8aff",
+        "align": "center",
+        "justify": "center"
+      },
+      "show": "hasBadge"
+    },
+    "rb_badge_t": {
+      "type": "label",
+      "name": "Label",
+      "text": "{badge}",
+      "style": {
+        "fontSize": 38,
+        "weight": 900,
+        "color": "#15171bff",
+        "font": {
+          "guid": "45be2b88-6a50-4995-8bcb-b8615868b12a"
+        }
+      }
+    },
+    "rb_glow": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "6406a689-a28c-47b5-8559-a54b668baec2"
+        },
+        "tint": "#ffc93cff",
+        "tintMode": "multiply",
+        "imageAlpha": 0.18,
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%",
+        "sliceScale": 1
+      }
+    }
+  },
+  "behaviour": "button",
+  "properties": {
+    "label": {
+      "type": "text",
+      "default": "Button"
+    },
+    "sub": {
+      "type": "text",
+      "default": "150 coins"
+    },
+    "kicker": {
+      "type": "text",
+      "default": "ANY RARITY"
+    },
+    "accent": {
+      "type": "enum",
+      "values": [
+        "gold",
+        "purple",
+        "gold-off",
+        "purple-off"
+      ],
+      "default": "gold",
+      "poses": {
+        "purple": {
+          "set": {
+            "root": {
+              "bg": "#e0338fff"
+            },
+            "label": {
+              "color": "#e6dcffff",
+              "shadowColor": "#d9b3ff33",
+              "shadowSoft": 14
+            },
+            "rb_sub": {
+              "color": "#ffffffff"
+            },
+            "rb_kicker": {
+              "color": "#c9b6e8ff"
+            },
+            "rb_in": {
+              "bg": "#1d1a22ff"
+            },
+            "rb_cost": {
+              "hide": true
+            },
+            "rb_lux": {
+              "hide": false
+            },
+            "rb_glow": {
+              "tint": "#e0338fff"
+            },
+            "rb_luxtext": {
+              "color": "#ffc93cff"
+            }
+          }
+        },
+        "gold-off": {
+          "set": {
+            "root": {
+              "bg": "#3b4049ff"
+            },
+            "rb_in": {
+              "bg": "#1b1d22ff"
+            },
+            "rb_glow": {
+              "hide": true
+            },
+            "label": {
+              "color": "#8a919cff"
+            },
+            "rb_kicker": {
+              "color": "#8a919cff"
+            },
+            "rb_sub": {
+              "color": "#8a919cff"
+            },
+            "rb_cost": {
+              "bg": "#2c303880"
+            },
+            "rb_coin": {
+              "tint": "#8a919cff"
+            }
+          }
+        },
+        "purple-off": {
+          "set": {
+            "root": {
+              "bg": "#6b3d96ff"
+            },
+            "rb_in": {
+              "bg": "#1d1a22ff"
+            },
+            "rb_glow": {
+              "hide": true
+            },
+            "rb_cost": {
+              "hide": true
+            },
+            "rb_lux": {
+              "hide": false,
+              "opacity": 0.55
+            },
+            "label": {
+              "color": "#9d92bdff",
+              "shadowColor": "#00000000",
+              "shadowSoft": 0
+            },
+            "rb_kicker": {
+              "color": "#7d7299ff"
+            },
+            "rb_luxtext": {
+              "color": "#ffc93cff"
+            },
+            "rb_sub": {
+              "color": "#ffffffff"
+            }
+          }
+        }
+      }
+    },
+    "steps": {
+      "type": "number",
+      "default": 10,
+      "format": "value"
+    },
+    "progress": {
+      "type": "number",
+      "default": 2,
+      "format": "value"
+    },
+    "badge": {
+      "type": "text",
+      "default": "1"
+    },
+    "hasBadge": {
+      "type": "yesno",
+      "default": false
+    }
+  },
+  "transition": {
+    "type": "back",
+    "ms": 240,
+    "overshoot": 1.4
+  },
+  "states": {
+    "pressed": {
+      "set": {
+        "root": {
+          "scale": 0.94
+        }
+      }
+    },
+    "disabled": {
+      "set": {
+        "root": {
+          "saturation": 0,
+          "opacity": 0.6
+        }
+      }
+    }
+  },
+  "samples": {
+    "roll": {
+      "label": "ROLL",
+      "kicker": "ANY RARITY",
+      "sub": "150 coins",
+      "accent": "gold"
+    },
+    "luxury": {
+      "label": "LUXURY",
+      "kicker": "RARE OR BETTER",
+      "sub": "2/10 stars",
+      "accent": "purple"
+    }
+  }
+}

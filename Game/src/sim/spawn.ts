@@ -3,8 +3,8 @@
  */
 import { type EntityId, type SystemContext } from '@gameengine/runtime';
 import { cellX, cellY, footprintX, footprintY } from '../grid.ts';
-import { SHAPES, type BlockShapeName, type ItemKindName } from '../balance.ts';
-import { ITEM_LOOKS, LOCKED_RING, LOCKED_RIVET, ORDER, blockBody, blockTop, lockedBlockBody, rivetOffsets, shapeValue, type ShapeLook } from '../looks.ts';
+import { ON_GROUND, SHAPES, type BlockShapeName, type ItemKindName } from '../balance.ts';
+import { BLOCK_TONES, ITEM_LOOKS, LOCKED_RING, ORDER, blockBuildings, blockPad, buildingLayers, shapeValue, type ShapeLook } from '../looks.ts';
 
 export type WeaponKind = Exclude<ItemKindName, 'none' | 'wall'>;
 
@@ -16,31 +16,44 @@ const child = (ctx: SystemContext, parent: EntityId, x: number, y: number, look:
   });
 };
 
-/** Spawns a block of `shape` whose top-left cell is `cell`. `locked`: pre-placed by the level (steel, riveted). */
+/** Draw order of a block building's shadow, face, roof and rim. */
+export const BLOCK_LAYER_ORDER = [ORDER.base, ORDER.block, ORDER.enemy, ORDER.item] as const;
+
+/** Spawns a block of `shape` whose top-left cell is `cell`: a pad and its buildings. `locked`: pre-placed by the level (grey ruins). */
 export function spawnBlock(ctx: SystemContext, shape: BlockShapeName, cell: number, time: number, locked = false): EntityId {
   const [w, h] = SHAPES[shape];
   const e = ctx.commands.spawn({
     LocalTransform: { position: [footprintX(cell, w), footprintY(cell, h), 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
-    Shape: shapeValue(locked ? lockedBlockBody(w, h) : blockBody(w, h), ORDER.block),
+    Shape: shapeValue(blockPad(w, h, locked), ORDER.highlight),
     VisualOffset: {},
     Block: { shape, cell, placedAt: time, locked },
   });
-  // Rivets and rings draw above the opaque block body (ants never walk on blocks, so sharing their order is safe).
-  if (locked) for (const [x, y] of rivetOffsets(w, h)) child(ctx, e, x, y, LOCKED_RIVET, ORDER.enemy);
-  else child(ctx, e, 0, 0.04, blockTop(w, h), ORDER.block);
+  // Shadow on the pad, then face, roof and rim. Roofs share the enemies' order and rims the items':
+  // ants never walk on blocks, and a weapon's body leaves its block's north rim uncovered.
+  const tone = locked ? BLOCK_TONES.locked : BLOCK_TONES.player;
+  for (const b of blockBuildings(cell, w, h)) {
+    for (const l of buildingLayers(b, tone)) child(ctx, e, l.x, l.y, l.look, BLOCK_LAYER_ORDER[l.layer]);
+  }
   return e;
 }
 
-/** Spawns a weapon standing on the block cell `cell`. `locked`: pre-placed by the level (steel mounting ring), never moved. */
+/**
+ * Spawns a weapon standing on the block cell `cell` (a mine or a boost pad: lying on the ground cell, under the ants).
+ * `locked`: pre-placed by the level (steel mounting ring), never moved.
+ */
 export function spawnItem(ctx: SystemContext, kind: WeaponKind, cell: number, time: number, locked = false): EntityId {
   const look = ITEM_LOOKS[kind];
+  const ground = ON_GROUND.has(kind);
+  const order = ground ? ORDER.base : ORDER.item;
   const e = ctx.commands.spawn({
     LocalTransform: { position: [cellX(cell), cellY(cell), 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
-    Shape: shapeValue(look.body, ORDER.item),
+    Shape: shapeValue(look.body, order),
     VisualOffset: {},
-    Item: { kind, cell, cooldown: 0, reload: 0.4, aim: Math.PI / 2, placedAt: time, locked },
+    Item: { kind, cell, cooldown: 0, reload: ground ? 0 : 0.4, aim: Math.PI / 2, placedAt: time, locked },
   });
-  if (look.detail) child(ctx, e, 0.16, 0, look.detail, ORDER.item + 1);
+  // A barrel sits off-centre and turns with the aim; ground and support items keep their detail centred.
+  const centred = ground || kind === 'radar' || kind === 'bank';
+  if (look.detail) child(ctx, e, centred ? 0 : 0.16, 0, look.detail, order + 1);
   if (locked) child(ctx, e, 0, 0, LOCKED_RING, ORDER.enemy);
   return e;
 }

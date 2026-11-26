@@ -5,7 +5,8 @@ import { Board, Run } from './schema.gen.ts';
 import { spawnEnemy } from './sim/battle.ts';
 import { spawnBlock, spawnItem } from './sim/spawn.ts';
 import { recomputeBoard } from './sim/board.ts';
-import { COLS, cellX, cellY } from './grid.ts';
+import { COLS, cellX, cellY, footprintCell } from './grid.ts';
+import { SHAPES, type BlockShapeName } from './balance.ts';
 
 export const Swarm = defineCheat({
   id: 'swarm.spawn',
@@ -57,5 +58,25 @@ export const NextWave = defineCheat({
     const run = ctx.resource(Run);
     run.nextWaveAt[0] = run.time[0]!;
     run.lives[0] = 100000;
+  },
+});
+
+/** Art review: one player block of each shape on both sides of the default column. */
+export const Walls = defineCheat({
+  id: 'swarm.walls',
+  group: 'Stress',
+  title: 'Place one block of each shape beside the column',
+  resources: [write(Board), read(Run)],
+  run(ctx) {
+    const b = ctx.resource(Board);
+    const t = ctx.resource(Run).time[0]!;
+    const put: [BlockShapeName, number, number][] = [['b2x2', 0, 2], ['b1x2', 0, 5], ['b2x1', 0, 8], ['b1x3', 5, 2], ['b3x1', 4, 6], ['b1x1', 5, 8], ['b1x1', 2, 9]];
+    for (const [shape, col, row] of put) {
+      const cell = row * COLS + col;
+      const [w, h] = SHAPES[shape];
+      spawnBlock(ctx, shape, cell, t);
+      for (let k = 0; k < w * h; k++) b.cells[footprintCell(cell, w, k)] = 1;
+    }
+    recomputeBoard(ctx);
   },
 });

@@ -1,0 +1,91 @@
+{
+  "$schemaVersion": 1,
+  "guid": "2a9fe6d1-51b5-4954-bd98-d948364130b5",
+  "name": "bottom-nav",
+  "title": "Element",
+  "kind": "widget",
+  "properties": {
+    "upBadge": {
+      "type": "text",
+      "default": "1"
+    },
+    "upReady": {
+      "type": "yesno",
+      "default": false
+    },
+    "upActive": {
+      "type": "yesno",
+      "default": false
+    },
+    "mapActive": {
+      "type": "yesno",
+      "default": true
+    }
+  },
+  "root": "hm_nav_rim",
+  "nodes": {
+    "hm_nav_rim": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "hm_nav"
+      ],
+      "style": {
+        "pad": 4,
+        "w": "100%",
+        "radius": 44,
+        "bg": "#3b4049ff"
+      }
+    },
+    "hm_nav": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "hm_nav_up",
+        "hm_nav_map"
+      ],
+      "style": {
+        "pad": 12,
+        "dir": "row",
+        "gap": 14,
+        "radius": 40,
+        "bg": "#1a1d24ff",
+        "w": "100%"
+      }
+    },
+    "hm_nav_up": {
+      "type": "use",
+      "doc": "nav-button",
+      "key": "upgrades",
+      "props": {
+        "label": "Upgrades",
+        "icon": {
+          "guid": "08280257-c237-4b96-83f3-e5146ed66ba4"
+        },
+        "active": {
+          "property": "upActive"
+        },
+        "badge": {
+          "property": "upBadge"
+        },
+        "hasBadge": {
+          "property": "upReady"
+        }
+      }
+    },
+    "hm_nav_map": {
+      "type": "use",
+      "doc": "nav-button",
+      "key": "maptab",
+      "props": {
+        "label": "Map",
+        "icon": {
+          "guid": "225505ef-7756-491b-b6ac-ab3b2e3dc292"
+        },
+        "active": {
+          "property": "mapActive"
+        }
+      }
+    }
+  }
+}

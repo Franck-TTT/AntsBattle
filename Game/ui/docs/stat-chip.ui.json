@@ -18,7 +18,7 @@
           16
         ],
         "align": "center",
-        "bg": "#1a1220dd",
+        "bg": "#1a1d24dd",
         "radius": 28,
         "gap": 14,
         "h": 96,
@@ -42,7 +42,7 @@
         "w": 46,
         "h": 46,
         "radius": 23,
-        "bg": "#ffc51fff",
+        "bg": "#ffc93cff",
         "shrink": 0
       },
       "point": "target"
@@ -150,7 +150,7 @@
         "gold": {
           "set": {
             "sc_icon": {
-              "bg": "#ffc51fff"
+              "bg": "#ffc93cff"
             }
           }
         },

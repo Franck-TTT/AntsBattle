@@ -36,7 +36,7 @@
         ],
         "dir": "column",
         "align": "center",
-        "bg": "#1a1220e6",
+        "bg": "#1a1d24e6",
         "radius": 40,
         "gap": 2,
         "margin": [
@@ -55,7 +55,7 @@
         "fontSize": 110,
         "fitMin": 60,
         "weight": 900,
-        "color": "#ffc51fff",
+        "color": "#ffc93cff",
         "outline": 6,
         "outlineColor": "#000000cc"
       }

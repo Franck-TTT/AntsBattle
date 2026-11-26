@@ -1,5 +1,13 @@
 {
   "tonemap": "none",
-  "bloom": { "enabled": true, "threshold": 0.55, "knee": 0.3, "intensity": 0.9, "radius": 0.6 },
-  "ssao": { "enabled": false }
+  "bloom": {
+    "enabled": true,
+    "threshold": 0.8,
+    "knee": 0.25,
+    "intensity": 0.75,
+    "radius": 0.5
+  },
+  "ssao": {
+    "enabled": false
+  }
 }

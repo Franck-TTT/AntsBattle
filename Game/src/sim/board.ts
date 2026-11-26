@@ -1,16 +1,20 @@
 /**
  * The board: built once, reset on every run (its grid redrawn at the level's size), fitted to the screen. Sim code.
  */
-import { added, defineSystem, fitWorldView, math, query, read, teleport, withTag, write, LocalTransform, Shape, Text2D, ViewInfo, WorldView, type Commands, type EntityId, type SystemContext } from '@gameengine/runtime';
-import { Base, BaseLabel, Block, Board, BoardTile, Level, TraySlot, NestLabel, NestMound, NestOpened, NestSpot, Offer, WaveStarted, Run, Placement, Item, Enemy, Projectile, RestartRequested } from '../schema.gen.ts';
-import { CELLS, DEFAULT_BASE, DEFAULT_COLS, DEFAULT_NESTS, DEFAULT_ROWS, MAX_NESTS, REROLL_SLOT, TRAY_SLOTS, TRAY_SLOT_H, boardRect, cellX, cellY, flowField, tracePath, trayW, trayX, trayY, viewRect } from '../grid.ts';
-import { FIRST_WAVE_AT, START_GOLD, START_LIVES } from '../balance.ts';
-import { COIN, COLORS, ORDER, REROLL_ICON, shapeValue } from '../looks.ts';
+import { added, defineSystem, fitWorldView, math, uiScale, query, read, teleport, withTag, write, LocalTransform, Shape, Text2D, ViewInfo, WorldView, type Commands, type EntityId, type SystemContext } from '@gameengine/runtime';
+import { Base, BaseLabel, Block, Board, Boost, ItemKind, Panel, BoardTile, Level, TraySlot, NestLabel, NestMound, NestOpened, NestSpot, Offer, WaveStarted, Run, Placement, Item, Enemy, Projectile, Puddle, RestartRequested } from '../schema.gen.ts';
+import { CELLS, DEFAULT_BASE, DEFAULT_COLS, DEFAULT_NESTS, DEFAULT_ROWS, MAX_NESTS, REROLL_SLOT, PANEL_RESERVE_REF, TRAY_SLOTS, TRAY_SLOT_H, boardRect, cellX, cellY, flowField, panelLayout, tracePath, trayW, trayX, viewRect, type PanelLayout } from '../grid.ts';
+import { FIRST_WAVE_AT, OFFER_SIZE } from '../balance.ts';
+import { progress } from '../meta.ts';
+import { applyBoost, runGold, runLives } from './progress.ts';
+import { CITY, COIN, COLORS, ORDER, REROLL_ICON, SAFE_ZONE, buildingLayers, hash01, lotBuildings, shapeValue } from '../looks.ts';
 import { drawOffer } from './offer.ts';
 import { loadLevel } from './level.ts';
 
-/** Screen margins the board stays clear of, in UI reference px (the HUD sits in the world, between board and tray: grid.ts HUD_BAND). */
-export const FIT = { reserve: { top: 24, bottom: 24, left: 16, right: 16 } } as const;
+/** Screen margins the board stays clear of, in UI reference px: the bottom one is the panel (tray and HUD, grid.ts PANEL_RESERVE_REF). */
+export const FIT = { reserve: { top: 24, bottom: PANEL_RESERVE_REF, left: 16, right: 16 }, uiReference: [1080, 1920] } as const;
+/** Scratch panel placement: fully written by panelLayout before every read. */
+const panel: PanelLayout = { x: 0, trayY: 0, hudY: 0, scale: 1 };
 
 // Scratch buffers: fully written before every read, no state carried between runs.
 const blocked = new Uint8Array(CELLS);
@@ -61,26 +65,75 @@ function spawnGrid(cmd: Commands, cols: number, rows: number): void {
   const r = boardRect(cols, rows);
   const hw = cols / 2;
   const hh = rows / 2;
-  const FAR = 14;
-  // Far grid, outside the board only: lines crossing the board are cut into the parts above and below it.
-  const far = (x: number, y: number, w: number, h: number) => line(x, y, w, h, COLORS.gridFar, ORDER.ground);
-  for (let k = -FAR * 2; k <= FAR * 2; k++) {
-    const d = k / 2;
-    if (d < -hw || d > hw) far(r.x + d, r.y, 0.025, FAR * 2);
-    else {
-      far(r.x + d, r.y + (hh + FAR) / 2, 0.025, FAR - hh);
-      far(r.x + d, r.y - (hh + FAR) / 2, 0.025, FAR - hh);
-    }
-    if (d < -hh || d > hh) far(r.x, r.y + d, FAR * 2, 0.025);
-    else {
-      far(r.x - (hw + FAR) / 2, r.y + d, FAR - hw, 0.025);
-      far(r.x + (hw + FAR) / 2, r.y + d, FAR - hw, 0.025);
+  spawnCity(cmd, r.x, r.y, hw, hh);
+  cmd.spawn({ LocalTransform: at(r.x, r.y), Shape: { kind: 'Rect', size: [cols, rows], radius: 0, color: COLORS.board, order: ORDER.ground, sortingLayer: 'Default' }, BoardTile: {} });
+  // Each cell is an empty lot, the gaps between them the streets.
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      cmd.spawn({ LocalTransform: at(r.x - hw + col + 0.5, r.y + hh - row - 0.5), Shape: { kind: 'Rect', size: [0.9, 0.9], radius: 0.05, color: COLORS.lot, order: ORDER.tile, sortingLayer: 'Default' }, BoardTile: {} });
     }
   }
-  cmd.spawn({ LocalTransform: at(r.x, r.y), Shape: { kind: 'Rect', size: [cols, rows], radius: 0, color: COLORS.board, order: ORDER.ground, sortingLayer: 'Default' }, BoardTile: {} });
-  for (let k = 1; k < cols; k++) line(r.x - hw + k, r.y, 0.04, rows);
-  for (let k = 1; k < rows; k++) line(r.x, r.y - hh + k, cols, 0.04);
-  cmd.spawn({ LocalTransform: at(r.x, r.y), Shape: { kind: 'Rect', size: [cols + 0.14, rows + 0.14], radius: 0.04, color: '#00000000', strokeColor: COLORS.frame, strokeWidth: 0.07, order: ORDER.highlight, sortingLayer: 'Default' }, BoardTile: {} });
+  // The lit zone's rim: a thin cyan line that blooms, with yellow corner brackets.
+  cmd.spawn({ LocalTransform: at(r.x, r.y), Shape: { kind: 'Rect', size: [cols + 0.1, rows + 0.1], radius: 0.03, color: '#00000000', strokeColor: COLORS.frame, strokeWidth: 0.045, order: ORDER.highlight, sortingLayer: 'Default' }, BoardTile: {} });
+  const L = 0.55;
+  const T = 0.08;
+  for (const sx of [-1, 1]) {
+    for (const sy of [-1, 1]) {
+      const x = r.x + sx * (hw + 0.05);
+      const y = r.y + sy * (hh + 0.05);
+      line(x - sx * (L / 2 - T / 2), y, L, T, COLORS.corner, ORDER.highlight);
+      line(x, y - sy * (L / 2 - T / 2), T, L, COLORS.corner, ORDER.highlight);
+    }
+  }
+}
+
+/**
+ * The dead city around the board: one-cell city blocks split into buildings, grey and unlit (the board is
+ * the only lit zone), lower and darker the farther they stand from it, with a few parks and a river
+ * above the board crossed by a bridge on the board's axis. Buildings cast shadows down-right.
+ */
+function spawnCity(cmd: Commands, cx: number, cy: number, hw: number, hh: number): void {
+  const X = Math.ceil(hw) + 4;
+  const Y = Math.ceil(hh) + 5;
+  const put = (x: number, y: number, w: number, h: number, color: string, order: number, kind: 'Rect' | 'Circle' = 'Rect') =>
+    cmd.spawn({ LocalTransform: at(x, y), Shape: { kind, size: [w, h], radius: kind === 'Circle' ? w / 2 : 0.02, color, order, sortingLayer: 'Default' }, BoardTile: {} });
+  // River: from a little above the board to two cells higher, bank bands lighter than the deep middle.
+  const r0 = cy + hh + 0.9;
+  const r1 = r0 + 1.9;
+  const bands = CITY.water.length;
+  for (let k = 0; k < bands; k++) {
+    const inset = (k * (r1 - r0)) / (bands * 2 + 0.5);
+    put(cx, (r0 + r1) / 2, X * 2 + 2, r1 - r0 - inset * 2, CITY.water[k]!, [ORDER.ground, ORDER.tile, ORDER.path][k]!);
+  }
+  put(cx, (r0 + r1) / 2, 0.42, r1 - r0 + 0.3, CITY.bridge, ORDER.highlight);
+  for (let by = -Y; by < Y; by++) {
+    for (let bx = -X; bx < X; bx++) {
+      const x0 = cx + bx;
+      const y0 = cy + by;
+      // Skip blocks touching the board (with a street's margin) or the river.
+      if (x0 + 1 > cx - hw - 0.2 && x0 < cx + hw + 0.2 && y0 + 1 > cy - hh - 0.2 && y0 < cy + hh + 0.2) continue;
+      if (y0 + 1 > r0 - 0.05 && y0 < r1 + 0.05) continue;
+      const dist = Math.max(Math.max(cx - hw - (x0 + 1), x0 - (cx + hw), 0), Math.max(cy - hh - (y0 + 1), y0 - (cy + hh), 0));
+      const far = Math.min(1, dist / 3);
+      if (hash01(bx, by, 7) < 0.08) {
+        // A park: a lawn and three or four tree crowns.
+        put(x0 + 0.5, y0 + 0.5, 0.8, 0.8, CITY.park.lawn, ORDER.ground);
+        const trees = 3 + (hash01(bx, by, 8) < 0.5 ? 1 : 0);
+        for (let t = 0; t < trees; t++) {
+          const d = 0.16 + hash01(bx + t, by, 9) * 0.12;
+          put(x0 + 0.2 + hash01(bx, by + t, 10) * 0.6, y0 + 0.2 + hash01(bx + t, by + t, 11) * 0.6, d, d, CITY.park.tree, ORDER.tile, 'Circle');
+        }
+        continue;
+      }
+      const s = 1 - 0.5 * far;
+      const tone = far > 0.5 ? CITY.far : CITY.near;
+      for (const b of lotBuildings(bx, by, [0.1, 0.1, 0.1, 0.1], 0.08, 0.1, [0.04 * s, 0.14 * s])) {
+        for (const l of buildingLayers(b, tone, far < 0.7)) {
+          put(x0 + 0.5 + l.x, y0 + 0.5 + l.y, l.look.size[0], l.look.size[1], l.look.color, ORDER.ground + l.layer);
+        }
+      }
+    }
+  }
 }
 
 export const BuildBoard = defineSystem({
@@ -106,14 +159,16 @@ export const BuildBoard = defineSystem({
       VisualOffset: {},
       Base: {},
     });
+    // Its safe zone, on the ground around it.
+    cmd.spawn({ LocalTransform: at(0, 0), Shape: { kind: 'Rect', size: [SAFE_ZONE.size, SAFE_ZONE.size], radius: 0.06, color: SAFE_ZONE.fill, strokeColor: SAFE_ZONE.rim, strokeWidth: SAFE_ZONE.rimWidth, order: ORDER.trail, sortingLayer: 'Default' }, Parent: { entity: base } });
     // Lives left, on the base itself (BaseLives writes the number).
     cmd.spawn({ LocalTransform: at(0, -0.03), Text2D: { text: '', size: 0.42, color: COLORS.baseRim, align: 'Center', outlineColor: '#000000', outlineWidth: 0.12, order: ORDER.base + 2, sortingLayer: 'Default' }, BaseLabel: { shown: -1 }, Parent: { entity: base } });
     // Tray: three offer slots (their icons follow the offer, see TraySync) and the Reroll button.
-    // PlaceMarkers moves it under the level's board.
+    // FitView pins it to the bottom of the screen.
     for (let s = 0; s < TRAY_SLOTS; s++) {
       const reroll = s === REROLL_SLOT;
       const slot = cmd.spawn({
-        LocalTransform: at(trayX(s, DEFAULT_COLS), trayY(DEFAULT_ROWS)),
+        LocalTransform: at(0, 0),
         Shape: { kind: 'Rect', size: [trayW(s), TRAY_SLOT_H], radius: 0.06, color: reroll ? COLORS.reroll : COLORS.traySlot, strokeColor: COLORS.trayRim, strokeWidth: 0.06, order: ORDER.tray, sortingLayer: 'Default' },
         VisualOffset: {},
         TraySlot: { slot: s },
@@ -136,8 +191,8 @@ export const BuildBoard = defineSystem({
 export const StartRun = defineSystem({
   name: 'StartRun',
   after: ['BuildBoard'],
-  queries: { items: query(read(Item)), blocks: query(read(Block)), enemies: query(read(Enemy)), shots: query(read(Projectile)), tiles: query(read(LocalTransform), withTag(BoardTile)) },
-  resources: [write(Board), write(Run), write(Placement), write(Offer), read(Level)],
+  queries: { items: query(read(Item)), blocks: query(read(Block)), enemies: query(read(Enemy)), shots: query(read(Projectile)), puddles: query(read(Puddle)), tiles: query(read(LocalTransform), withTag(BoardTile)) },
+  resources: [write(Board), write(Run), write(Placement), write(Offer), write(Boost), read(Level)],
   events: [RestartRequested],
   runIf: { any: [{ resource: Board, field: 'version', op: '==', value: 0 }, { event: RestartRequested }, { changed: Level }] },
   run(ctx, q) {
@@ -145,13 +200,18 @@ export const StartRun = defineSystem({
     for (const c of q.blocks.chunks()) for (let i = 0; i < c.length; i++) ctx.commands.despawn(c.entity(i));
     for (const c of q.enemies.chunks()) for (let i = 0; i < c.length; i++) ctx.commands.despawn(c.entity(i));
     for (const c of q.shots.chunks()) for (let i = 0; i < c.length; i++) ctx.commands.despawn(c.entity(i));
+    for (const c of q.puddles.chunks()) for (let i = 0; i < c.length; i++) ctx.commands.despawn(c.entity(i));
     // The game opens on the level menu over the scene's level; a restart or a new level plays.
     const boot = ctx.resource(Board).version[0] === 0 && ctx.events.count(RestartRequested) === 0;
     const runId = ctx.resource(Run).runId[0]! + 1;
+    // The meta upgrades this run plays with (src/meta.ts, src/sim/progress.ts).
+    const meta = progress.get();
+    applyBoost(ctx, meta);
     ctx.set(Run, {
-      phase: boot ? 'menu' : 'playing', runId, time: 0, speed: 1, wave: 0, lives: START_LIVES, gold: START_GOLD, wallsBuilt: 0,
+      phase: boot ? 'menu' : 'playing', runId, time: 0, speed: 1, wave: 0, lives: runLives(meta), gold: runGold(meta), wallsBuilt: 0,
       nextWaveAt: FIRST_WAVE_AT, group: 0, groupSpawned: 0, spawnAt: 1e9, spawning: false, alive: 0, kills: 0, bossSteps: 0,
       placements: 0, refusals: 0, shots: 0, booms: 0, baseHits: 0, bosses: 0, nestTurn: 0, nestsOpen: 0, goldFrac: 0,
+      paid: false, stars: 0, newStars: 0, coinsWon: 0,
     });
     const b = ctx.resource(Board);
     for (let c = 0; c < CELLS; c++) {
@@ -166,15 +226,25 @@ export const StartRun = defineSystem({
     ctx.set(Placement, { active: false, kind: 'none', cell: -1, fromCell: -1, slot: -1, valid: false, previewLen: 0, returnSteps: 0 });
     ctx.setField(Offer, 'sets', 0);
     ctx.setField(Offer, 'rerolls', 0);
+    ctx.setField(Offer, 'freeRerolls', 0);
     drawOffer(ctx);
+    // Free first tower (upgrade): the first set holds a tower in its first weapon slot.
+    if (ctx.resource(Boost).freeTower[0]) {
+      const o = ctx.resource(Offer);
+      for (let s = 0; s < OFFER_SIZE; s++) {
+        if (o.kinds[s] === ItemKind.wall) continue;
+        o.kinds[s] = ItemKind.tower;
+        break;
+      }
+    }
   },
 });
 
-/** Moves the nest mounds, the base and the tray onto the level's board; nest slots the level does not use hide. */
+/** Moves the nest mounds and the base onto the level's board; nest slots the level does not use hide. */
 export const PlaceMarkers = defineSystem({
   name: 'PlaceMarkers',
   after: ['StartRun'],
-  queries: { mounds: query(read(NestMound), write(LocalTransform)), base: query(write(LocalTransform), withTag(Base)), tray: query(read(TraySlot), write(LocalTransform)) },
+  queries: { mounds: query(read(NestMound), write(LocalTransform)), base: query(write(LocalTransform), withTag(Base)) },
   resources: [read(Board), read(Level)],
   events: [RestartRequested],
   runIf: { any: [{ query: query(added(NestMound)) }, { event: RestartRequested }, { changed: Level }] },
@@ -202,28 +272,41 @@ export const PlaceMarkers = defineSystem({
         teleport(c.entity(i));
       }
     }
-    for (const c of q.tray.chunks()) {
-      const ts = c.col(TraySlot);
-      const pos = c.col(LocalTransform).position;
-      for (let i = 0; i < c.length; i++) {
-        pos[i * 3] = trayX(ts.slot[i]!, b.cols[0]!);
-        pos[i * 3 + 1] = trayY(b.rows[0]!);
-        teleport(c.entity(i));
-      }
-    }
   },
 });
 
+/**
+ * Fits the level's board into the screen above the bottom panel, then pins the panel (tray and
+ * HUD) to the bottom of the safe area at the same on-screen size whatever the board's size.
+ */
 export const FitView = defineSystem({
   name: 'FitView',
   after: ['StartRun'],
-  resources: [read(ViewInfo), write(WorldView), read(Board), read(Level)],
+  queries: { tray: query(read(TraySlot), write(LocalTransform)) },
+  resources: [read(ViewInfo), write(WorldView), write(Panel), read(Board), read(Level)],
   events: [RestartRequested],
-  runIf: { any: [{ changed: ViewInfo }, { resource: Board, field: 'version', op: '==', value: 0 }, { changed: Level }, { event: RestartRequested }, { query: query(added(NestMound)) }] },
-  run(ctx) {
+  runIf: { any: [{ changed: ViewInfo }, { resource: Board, field: 'version', op: '==', value: 0 }, { changed: Level }, { event: RestartRequested }, { query: query(added(NestMound)) }, { query: query(added(TraySlot)) }] },
+  run(ctx, q) {
     const b = ctx.resource(Board);
     const r = viewRect(b.cols[0]! || DEFAULT_COLS, b.rows[0]! || DEFAULT_ROWS);
     fitWorldView(ctx, r.x, r.y, r.w, r.h, FIT);
+    const v = ctx.resource(ViewInfo);
+    const wv = ctx.resource(WorldView);
+    const w = v.width[0]!;
+    const h = v.height[0]!;
+    panelLayout(wv.center[0]!, wv.center[1]!, wv.orthoSize[0]!, h, v.safeArea[0]!, v.safeArea[2]!, v.safeArea[3]!, uiScale(w, h, FIT), panel);
+    ctx.set(Panel, panel);
+    for (const c of q.tray.chunks()) {
+      const ts = c.col(TraySlot);
+      const t = c.col(LocalTransform);
+      for (let i = 0; i < c.length; i++) {
+        t.position[i * 3] = trayX(ts.slot[i]!, panel);
+        t.position[i * 3 + 1] = panel.trayY;
+        t.scale[i * 3] = panel.scale;
+        t.scale[i * 3 + 1] = panel.scale;
+        teleport(c.entity(i));
+      }
+    }
   },
 });
 

@@ -1,0 +1,391 @@
+{
+  "$schemaVersion": 1,
+  "guid": "1df91729-f494-40e8-9894-481663517652",
+  "name": "level-popup",
+  "title": "Level popup",
+  "kind": "view",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Level popup",
+      "style": {
+        "w": "100%",
+        "h": "100%",
+        "pad": 40,
+        "bg": "#00000000",
+        "justify": "center",
+        "align": "center"
+      },
+      "children": [
+        "lp_rim"
+      ]
+    },
+    "lp_rim": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "lp_glow",
+        "lp_panel"
+      ],
+      "style": {
+        "pad": 5,
+        "radius": 48,
+        "bg": "#5a616eff",
+        "w": 900,
+        "maxW": "100%"
+      }
+    },
+    "lp_panel": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "lp_head",
+        "lp_body",
+        "lp_stars",
+        "lp_play",
+        "lp_lock"
+      ],
+      "style": {
+        "pad": [
+          44,
+          44,
+          50,
+          44
+        ],
+        "dir": "column",
+        "align": "center",
+        "gap": 26,
+        "radius": 44,
+        "bg": "#1a1d24ff",
+        "w": "100%"
+      }
+    },
+    "lp_close": {
+      "type": "use",
+      "doc": "icon-button",
+      "key": "close"
+    },
+    "lp_kicker": {
+      "type": "label",
+      "name": "Label",
+      "text": "{kicker}",
+      "style": {
+        "fontSize": 36,
+        "fitMin": 22,
+        "weight": 900,
+        "letterSpacing": 4,
+        "color": "#c9ced6ff",
+        "textAlign": "left",
+        "font": {
+          "guid": "95b2641e-e699-4217-9291-f759580ab645"
+        }
+      }
+    },
+    "lp_name": {
+      "type": "label",
+      "name": "Label",
+      "text": "{name}",
+      "style": {
+        "fontSize": 84,
+        "fitMin": 44,
+        "weight": 900,
+        "color": "#ffc93cff",
+        "textAlign": "left",
+        "shadowX": 0,
+        "shadowY": 0,
+        "shadowColor": "#ffc93c33",
+        "shadowSoft": 12,
+        "font": {
+          "guid": "45be2b88-6a50-4995-8bcb-b8615868b12a"
+        }
+      }
+    },
+    "lp_stars": {
+      "type": "use",
+      "doc": "level-stars",
+      "key": "stars",
+      "props": {
+        "steps": 3,
+        "progress": {
+          "property": "stars"
+        }
+      },
+      "style": {
+        "scale": 2.1,
+        "margin": [
+          34,
+          0,
+          34,
+          0
+        ]
+      }
+    },
+    "lev_codearea": {
+      "type": "codeArea",
+      "name": "Code area",
+      "key": "preview",
+      "style": {
+        "w": "auto"
+      }
+    },
+    "lp_info": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "lp_info_r"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "column",
+        "gap": 14,
+        "w": "100%",
+        "grow": 1,
+        "minW": 0
+      }
+    },
+    "lp_info_r": {
+      "type": "repeat",
+      "doc": "info-chip",
+      "property": "info"
+    },
+    "lp_play": {
+      "type": "use",
+      "doc": "play-button",
+      "key": "play",
+      "props": {
+        "label": "PLAY",
+        "detail": " "
+      }
+    },
+    "lp_lock": {
+      "type": "label",
+      "name": "Label",
+      "text": "{lockText}",
+      "style": {
+        "fontSize": 44,
+        "fitMin": 22,
+        "weight": 800,
+        "color": "#a9b0bbff",
+        "hide": true,
+        "font": {
+          "guid": "95b2641e-e699-4217-9291-f759580ab645"
+        }
+      }
+    },
+    "lp_glow": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "813297e0-59a1-45f6-93d8-744f32c682b8"
+        },
+        "tint": "#5a616eff",
+        "tintMode": "multiply",
+        "imageAlpha": 0.18,
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%",
+        "sliceScale": 1
+      }
+    },
+    "lp_head": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "lp_titles",
+        "lp_close"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "row",
+        "align": "start",
+        "w": "100%",
+        "gap": 20
+      }
+    },
+    "lp_titles": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "lp_kicker",
+        "lp_name"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "column",
+        "grow": 1,
+        "minW": 0,
+        "gap": 4
+      }
+    },
+    "lp_body": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "lp_prev",
+        "lp_info"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "row",
+        "align": "start",
+        "w": "100%",
+        "gap": 24
+      }
+    },
+    "lp_prev": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "lp_pvrim",
+        "lp_caption"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "column",
+        "align": "center",
+        "gap": 10
+      }
+    },
+    "lp_caption": {
+      "type": "label",
+      "name": "Label",
+      "text": "Layout preview",
+      "style": {
+        "fontSize": 30,
+        "weight": 700,
+        "color": "#a3a7b7ff",
+        "font": {
+          "guid": "95b2641e-e699-4217-9291-f759580ab645"
+        }
+      }
+    },
+    "lp_pvrim": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "lp_pvglow",
+        "lev_codearea"
+      ],
+      "style": {
+        "pad": 4,
+        "radius": 18,
+        "bg": "#5a616eff"
+      }
+    },
+    "lp_pvglow": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "e5d70d83-5df1-441c-8c72-393d9fdd653f"
+        },
+        "tint": "#5a616eff",
+        "tintMode": "multiply",
+        "imageAlpha": 0.18,
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%",
+        "sliceScale": 1
+      }
+    }
+  },
+  "view": {
+    "behaviour": "dialog",
+    "dims": true,
+    "tapOutside": "dismiss",
+    "enter": {
+      "set": {
+        "lp_rim": {
+          "opacity": 0,
+          "scale": 0.7
+        }
+      }
+    }
+  },
+  "properties": {
+    "kicker": {
+      "type": "text",
+      "default": "LEVEL 6"
+    },
+    "name": {
+      "type": "text",
+      "default": "Crossfire"
+    },
+    "lockText": {
+      "type": "text",
+      "default": "Win level 5 to unlock"
+    },
+    "stars": {
+      "type": "number",
+      "default": 0,
+      "format": "value"
+    },
+    "locked": {
+      "type": "yesno",
+      "default": false,
+      "poses": {
+        "yes": {
+          "set": {
+            "lp_play": {
+              "hide": true
+            },
+            "lp_lock": {
+              "hide": false
+            },
+            "lp_stars": {
+              "hide": true
+            }
+          }
+        }
+      }
+    },
+    "boss": {
+      "type": "yesno",
+      "default": false,
+      "poses": {
+        "yes": {
+          "set": {
+            "lp_rim": {
+              "bg": "#e0338fff"
+            },
+            "lp_kicker": {
+              "color": "#e0338fff"
+            },
+            "lp_glow": {
+              "tint": "#e0338fff"
+            }
+          }
+        }
+      }
+    },
+    "info": {
+      "type": "list",
+      "of": "info-chip",
+      "default": []
+    }
+  }
+}

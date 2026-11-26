@@ -1,0 +1,398 @@
+{
+  "$schemaVersion": 1,
+  "guid": "c10722cc-bbea-4ee3-8665-c6705b473f68",
+  "name": "upgrades",
+  "title": "Upgrades",
+  "kind": "view",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Upgrades",
+      "style": {
+        "w": "100%",
+        "h": "100%",
+        "pad": [
+          36,
+          40,
+          36,
+          40
+        ],
+        "bg": "#15171bff",
+        "dir": "column",
+        "gap": 26
+      },
+      "children": [
+        "up_grid",
+        "up_top",
+        "up_head",
+        "up_gridbox",
+        "up_buttons",
+        "up_nav"
+      ]
+    },
+    "up_buttons": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "up_roll",
+        "up_luxury"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "row",
+        "gap": 24,
+        "w": "100%"
+      }
+    },
+    "up_roll": {
+      "type": "use",
+      "doc": "roll-button",
+      "key": "roll",
+      "props": {
+        "label": "ROLL",
+        "kicker": "ANY RARITY",
+        "sub": {
+          "property": "rollSub"
+        },
+        "accent": {
+          "property": "rollAccent"
+        }
+      },
+      "style": {
+        "grow": 1
+      }
+    },
+    "up_luxury": {
+      "type": "use",
+      "doc": "roll-button",
+      "key": "luxury",
+      "props": {
+        "kicker": "RARE OR BETTER",
+        "sub": {
+          "property": "luxurySub"
+        },
+        "accent": {
+          "property": "luxAccent"
+        },
+        "label": "LUXURY",
+        "steps": {
+          "property": "luxGoal"
+        },
+        "progress": {
+          "property": "luxStars"
+        },
+        "badge": {
+          "property": "luxCount"
+        },
+        "hasBadge": {
+          "property": "luxReady"
+        }
+      },
+      "style": {
+        "grow": 1
+      }
+    },
+    "up_top": {
+      "type": "use",
+      "doc": "top-bar",
+      "key": "topbar",
+      "props": {
+        "coins": {
+          "property": "coins"
+        },
+        "stars": {
+          "property": "stars"
+        }
+      }
+    },
+    "up_head": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "up_title",
+        "up_pow_rim"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "row",
+        "align": "center",
+        "w": "100%"
+      }
+    },
+    "up_title": {
+      "type": "label",
+      "name": "Label",
+      "text": "UPGRADES",
+      "style": {
+        "fontSize": 84,
+        "fitMin": 40,
+        "weight": 900,
+        "color": "#ffc93cff",
+        "grow": 1,
+        "textAlign": "left",
+        "shadowX": 0,
+        "shadowY": 0,
+        "shadowColor": "#ffc93c33",
+        "shadowSoft": 16,
+        "font": {
+          "guid": "45be2b88-6a50-4995-8bcb-b8615868b12a"
+        },
+        "letterSpacing": 2
+      }
+    },
+    "up_pow_rim": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "up_pow_glow",
+        "up_pow"
+      ],
+      "style": {
+        "pad": 4,
+        "radius": 40,
+        "bg": "#5a616eff"
+      }
+    },
+    "up_pow": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "up_pow_k",
+        "up_pow_v"
+      ],
+      "style": {
+        "pad": [
+          8,
+          28,
+          8,
+          28
+        ],
+        "dir": "row",
+        "align": "center",
+        "gap": 16,
+        "radius": 36,
+        "bg": "#1a1d24ff"
+      }
+    },
+    "up_pow_k": {
+      "type": "label",
+      "name": "Label",
+      "text": "POWER",
+      "style": {
+        "fontSize": 34,
+        "weight": 800,
+        "color": "#a9b0bbff",
+        "font": {
+          "guid": "95b2641e-e699-4217-9291-f759580ab645"
+        },
+        "letterSpacing": 1
+      }
+    },
+    "up_pow_v": {
+      "type": "label",
+      "name": "Label",
+      "text": "{power}",
+      "style": {
+        "fontSize": 46,
+        "weight": 900,
+        "color": "#5ee8ffff",
+        "shadowX": 0,
+        "shadowY": 0,
+        "shadowColor": "#5ee8ff33",
+        "shadowSoft": 12,
+        "font": {
+          "guid": "45be2b88-6a50-4995-8bcb-b8615868b12a"
+        }
+      }
+    },
+    "up_gridbox": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "upg_codearea"
+      ],
+      "style": {
+        "pad": 0,
+        "grow": 1,
+        "h": 0,
+        "minH": 0,
+        "w": "100%"
+      },
+      "scroll": {
+        "axis": "vertical",
+        "bounce": true
+      }
+    },
+    "upg_codearea": {
+      "type": "codeArea",
+      "name": "Code area",
+      "key": "grid",
+      "style": {
+        "w": "100%"
+      }
+    },
+    "up_nav": {
+      "type": "use",
+      "doc": "bottom-nav",
+      "key": "bottomnav",
+      "props": {
+        "upActive": true,
+        "mapActive": false,
+        "upReady": false,
+        "upBadge": " "
+      }
+    },
+    "up_pow_glow": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "d3be10ae-64ec-4f3c-9cc6-2462873aacf6"
+        },
+        "tint": "#5a616eff",
+        "tintMode": "multiply",
+        "imageAlpha": 0.18,
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%",
+        "sliceScale": 1
+      }
+    },
+    "up_grid": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "up_vig"
+      ],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "dcfbad66-9112-4f5f-b56e-49cfb1a1b2b9"
+        },
+        "tile": true,
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%",
+        "tint": "#3b4049ff",
+        "tintMode": "multiply",
+        "imageAlpha": 0.5
+      }
+    },
+    "up_vig": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "3c485bbf-0f58-4aca-bb14-d05b0d400c72"
+        },
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%"
+      }
+    }
+  },
+  "view": {
+    "behaviour": "screen",
+    "safe": true
+  },
+  "properties": {
+    "power": {
+      "type": "number",
+      "default": 0,
+      "format": "value"
+    },
+    "rollSub": {
+      "type": "text",
+      "default": "150 coins"
+    },
+    "luxurySub": {
+      "type": "text",
+      "default": "0/10 stars"
+    },
+    "coins": {
+      "type": "text",
+      "default": "1,240"
+    },
+    "stars": {
+      "type": "text",
+      "default": "12"
+    },
+    "luxStars": {
+      "type": "number",
+      "default": 2,
+      "format": "value"
+    },
+    "luxGoal": {
+      "type": "number",
+      "default": 10,
+      "format": "value"
+    },
+    "luxCount": {
+      "type": "text",
+      "default": "1"
+    },
+    "luxReady": {
+      "type": "yesno",
+      "default": false
+    },
+    "rollAccent": {
+      "type": "enum",
+      "values": [
+        "gold",
+        "purple",
+        "gold-off",
+        "purple-off"
+      ],
+      "default": "gold"
+    },
+    "luxAccent": {
+      "type": "enum",
+      "values": [
+        "gold",
+        "purple",
+        "gold-off",
+        "purple-off"
+      ],
+      "default": "gold"
+    }
+  },
+  "samples": {
+    "mid": {
+      "power": 11,
+      "rollSub": "150 coins",
+      "luxurySub": "2/10 stars"
+    }
+  }
+}

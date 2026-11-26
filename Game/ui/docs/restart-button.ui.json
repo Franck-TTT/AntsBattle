@@ -21,7 +21,7 @@
         ],
         "align": "center",
         "justify": "center",
-        "bg": "#ffc51fff",
+        "bg": "#ffc93cff",
         "radius": 75
       },
       "children": [
@@ -35,7 +35,7 @@
         "fontSize": 64,
         "fitMin": 32,
         "weight": 900,
-        "color": "#1a1220ff",
+        "color": "#1a1d24ff",
         "textAlign": "center"
       },
       "text": "Button",

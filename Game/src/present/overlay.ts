@@ -13,7 +13,7 @@ const pathScratch = new Uint8Array(CELLS);
 const claimed = new Uint8Array(CELLS * CELLS);
 import { GHOST_LIFT, ITEMS, MOVE_COOLDOWN, SHAPES, type BlockShapeName, type ItemKindName } from '../balance.ts';
 import { ITEM_NAMES, SHAPE_NAMES } from '../kinds.ts';
-import { COLORS, FLOW_COLORS, ITEM_LOOKS, ORDER, blockBody, blockTop, type ShapeLook } from '../looks.ts';
+import { BLOCK_TONES, COLORS, FLOW_COLORS, ITEM_LOOKS, ORDER, blockBuildings, blockPad, buildingLayers, type ShapeLook } from '../looks.ts';
 
 export const shapes = visualPool({ name: 'shapes', prefab: 'assets/prefabs/shape.prefab.json', size: 640, draws: Shape });
 export const rings = visualPool({ name: 'rings', prefab: 'assets/prefabs/ring.prefab.json', size: 40, draws: Sprite });
@@ -27,7 +27,12 @@ const linear = (hex: string, alpha = 1): [number, number, number, number] => {
 };
 
 // Colours resolved once (plain constants, presentation only).
+const FLAME = ITEM_NAMES.indexOf('flamethrower');
+/** Puffs drawn along a firing flamethrower's cone, base to tip. */
+const FLAME_PUFFS = 5;
 const C = {
+  flame: linear('#ff7a1f', 0.75),
+  flameCore: linear('#ffe14a', 0.9),
   flow: FLOW_COLORS.map((c) => linear(c, 0.6)),
   flowDim: FLOW_COLORS.map((c) => linear(c, 0.2)),
   flowPreview: FLOW_COLORS.map((c) => linear(c, 1)),
@@ -93,11 +98,19 @@ function lookDraw(l: ShapeLook, order: number, alpha: number, rot = 0, tint?: re
   };
 }
 
-/** What the finger carries: a block of its shape, or a weapon. */
+/** What the finger carries: a block's pad (its buildings come from putBuildings), or a weapon. */
 function ghostLooks(kind: Exclude<ItemKindName, 'none'>, shape: BlockShapeName): [ShapeLook, ShapeLook | null] {
   if (kind !== 'wall') return [ITEM_LOOKS[kind].body, ITEM_LOOKS[kind].detail];
   const [w, h] = SHAPES[shape];
-  return [blockBody(w, h), blockTop(w, h)];
+  return [blockPad(w, h), null];
+}
+
+/** A carried block's buildings over its pad; `seed` is the cell it would land on, so the drop keeps the look. */
+function putBuildings(f: VisualPoolFrame, x: number, y: number, shape: BlockShapeName, seed: number, alpha: number, tint: readonly number[] | undefined, scale: number): void {
+  const [w, h] = SHAPES[shape];
+  for (const b of blockBuildings(seed, w, h)) {
+    for (const l of buildingLayers(b, BLOCK_TONES.player)) put(f, x + l.x * scale, y + l.y * scale, lookDraw(l.look, ORDER.ghost + 1 + l.layer, alpha, 0, tint), scale);
+  }
 }
 
 /**
@@ -212,7 +225,8 @@ export const Overlay = defineSystem({
         put(f, gx + 0.08, gy - 0.16, { kind: 'Rect', w: w * 0.9, h: h * 0.75, radius: 0.3, color: C.shadow, order: ORDER.ghost - 1 });
         const tint = cell >= 0 && !valid ? C.invalidRim : undefined;
         put(f, gx, gy, lookDraw(body, ORDER.ghost, 0.95, 0, tint), bob);
-        if (detail) put(f, gx, gy, lookDraw(detail, ORDER.ghost + 1, 0.95, kind === 'wall' ? 0 : Math.PI / 2, tint), bob);
+        if (detail) put(f, gx, gy, lookDraw(detail, ORDER.ghost + 1, 0.95, Math.PI / 2, tint), bob);
+        if (kind === 'wall') putBuildings(f, gx, gy, shape, Math.max(0, cell), 0.95, tint, bob);
       }
     } else if (p.returnSteps[0]! > 0) {
       // Refused: fly back to the tray (or the cell it came from) with a shake.
@@ -226,7 +240,25 @@ export const Overlay = defineSystem({
         const [body, detail] = ghostLooks(kind, SHAPE_NAMES[p.retShape[0]!]!);
         const sc = (1.1 - 0.3 * e) * (kind === 'wall' ? 1 - 0.4 * e : 1);
         put(f, x, y, lookDraw(body, ORDER.ghost, 1 - 0.4 * e, 0, C.invalidRim), sc);
-        if (detail) put(f, x, y, lookDraw(detail, ORDER.ghost + 1, 1 - 0.4 * e, kind === 'wall' ? 0 : Math.PI / 2, C.invalidRim), sc);
+        if (detail) put(f, x, y, lookDraw(detail, ORDER.ghost + 1, 1 - 0.4 * e, Math.PI / 2, C.invalidRim), sc);
+        if (kind === 'wall') putBuildings(f, x, y, SHAPE_NAMES[p.retShape[0]!]!, 0, 1 - 0.4 * e, C.invalidRim, sc);
+      }
+    }
+    // Flamethrowers firing (reload running): a flickering cone of puffs along the barrel.
+    const flameLen = ITEMS.flamethrower.range;
+    for (const c of q.items.chunks()) {
+      const it = c.col(Item);
+      const pos = c.col(LocalTransform).position;
+      for (let i = 0; i < c.length; i++) {
+        if (it.kind[i] !== FLAME || it.held[i] || it.reload[i]! <= 0) continue;
+        const a = it.aim[i]!;
+        const ux = Math.cos(a);
+        const uy = Math.sin(a);
+        for (let k = 1; k <= FLAME_PUFFS; k++) {
+          const t = k / FLAME_PUFFS;
+          const r = (0.08 + t * flameLen * 0.28) * (0.85 + 0.25 * Math.sin(s.t * 40 + k * 1.7));
+          put(f, pos[i * 3]! + ux * flameLen * t * 0.85, pos[i * 3 + 1]! + uy * flameLen * t * 0.85, { kind: 'Circle', w: r * 2, h: r * 2, radius: r, color: t < 0.45 ? C.flameCore : C.flame, order: ORDER.shot });
+        }
       }
     }
     f.end();

@@ -1,0 +1,65 @@
+{
+  "$schemaVersion": 1,
+  "guid": "e5daf101-8131-402a-93d5-a6673b1b23f6",
+  "name": "lux-steps",
+  "title": "Lux steps",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Track",
+      "style": {
+        "dir": "row",
+        "align": "center",
+        "gap": 0,
+        "pad": 0,
+        "w": "100%",
+        "radius": 8,
+        "clip": true
+      },
+      "children": [
+        "segments"
+      ],
+      "lit": "progress"
+    },
+    "segments": {
+      "type": "repeat",
+      "name": "Segments",
+      "doc": "lux-steps-segment",
+      "property": "steps"
+    }
+  },
+  "properties": {
+    "steps": {
+      "type": "number",
+      "default": 5,
+      "drivers": [
+        {
+          "type": "range",
+          "min": 1,
+          "max": 12
+        },
+        {
+          "type": "steps",
+          "by": 1
+        }
+      ]
+    },
+    "progress": {
+      "type": "number",
+      "default": 3,
+      "drivers": [
+        {
+          "type": "range",
+          "min": 0,
+          "maxFrom": "steps"
+        },
+        {
+          "type": "steps",
+          "by": 1
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "$schemaVersion": 1,
+  "guid": "de29a23d-65ce-4390-b64c-76c1306034e4",
+  "name": "level-stars-segment",
+  "title": "Level stars segment",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Segment",
+      "style": {
+        "w": 44,
+        "h": 44,
+        "bg": "#00000000",
+        "radius": 0,
+        "rotate": 0,
+        "pad": 0
+      },
+      "children": [
+        "ls_empty",
+        "ls_full"
+      ]
+    },
+    "ls_empty": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "28d6d491-76b3-4ce4-ba29-c54261e8da53"
+        },
+        "w": 44,
+        "h": 44,
+        "tint": "#4f5664ff",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "tintMode": "multiply"
+      }
+    },
+    "ls_full": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "550620fc-7d0e-4e5c-a7dd-ac8a55b53375"
+        },
+        "w": 44,
+        "h": 44,
+        "tint": "#ffc93cff",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "hide": true,
+        "tintMode": "multiply"
+      }
+    }
+  },
+  "owner": "level-stars",
+  "behaviour": "toggle",
+  "properties": {
+    "on": {
+      "type": "yesno",
+      "default": false,
+      "poses": {
+        "yes": {
+          "set": {
+            "root": {
+              "bg": "#00000000"
+            },
+            "ls_full": {
+              "hide": false
+            },
+            "ls_empty": {
+              "hide": true
+            }
+          }
+        }
+      }
+    }
+  }
+}

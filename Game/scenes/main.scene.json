@@ -7,7 +7,7 @@
     {
       "name": "Camera",
       "id": "camera",
-      "Camera": { "clearColor": "#05060fff", "postProfile": { "guid": "6e210f72-6c34-4729-9650-eb640d9b8c4b" } },
+      "Camera": { "clearColor": "#15171bff", "postProfile": { "guid": "6e210f72-6c34-4729-9650-eb640d9b8c4b" } },
       "CameraShake": { "decay": 1.8, "maxOffset": [0.18, 0.18, 0], "maxAngle": 0.01, "frequency": 22 },
       "LocalTransform": {},
       "VisualOffset": {}

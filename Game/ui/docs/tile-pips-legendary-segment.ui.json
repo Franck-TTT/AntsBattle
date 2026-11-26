@@ -1,0 +1,38 @@
+{
+  "$schemaVersion": 1,
+  "guid": "65f91d1c-7a96-4775-aeea-9f880a585247",
+  "name": "tile-pips-legendary-segment",
+  "title": "Tile pips legendary segment",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Segment",
+      "style": {
+        "w": 26,
+        "h": 10,
+        "bg": "#2c3038ff",
+        "radius": 3
+      },
+      "children": []
+    }
+  },
+  "owner": "tile-pips-legendary",
+  "behaviour": "toggle",
+  "properties": {
+    "on": {
+      "type": "yesno",
+      "default": false,
+      "poses": {
+        "yes": {
+          "set": {
+            "root": {
+              "bg": "#ffc93cff"
+            }
+          }
+        }
+      }
+    }
+  }
+}
