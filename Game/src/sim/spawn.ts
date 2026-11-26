@@ -4,7 +4,7 @@
 import { type EntityId, type SystemContext } from '@gameengine/runtime';
 import { cellX, cellY, footprintX, footprintY } from '../grid.ts';
 import { SHAPES, type BlockShapeName, type ItemKindName } from '../balance.ts';
-import { ITEM_LOOKS, LOCKED_RING, LOCKED_RIVET, ORDER, blockBody, blockTop, lockedBlockBody, rivetOffsets, shapeValue, type ShapeLook } from '../looks.ts';
+import { ITEM_LOOKS, LOCKED_RING, ORDER, blockBody, blockTop, shapeValue, type ShapeLook } from '../looks.ts';
 
 export type WeaponKind = Exclude<ItemKindName, 'none' | 'wall'>;
 
@@ -21,13 +21,12 @@ export function spawnBlock(ctx: SystemContext, shape: BlockShapeName, cell: numb
   const [w, h] = SHAPES[shape];
   const e = ctx.commands.spawn({
     LocalTransform: { position: [footprintX(cell, w), footprintY(cell, h), 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] },
-    Shape: shapeValue(locked ? lockedBlockBody(w, h) : blockBody(w, h), ORDER.block),
+    Shape: shapeValue(blockBody(w, h), ORDER.block),
     VisualOffset: {},
     Block: { shape, cell, placedAt: time, locked },
   });
-  // Rivets and rings draw above the opaque block body (ants never walk on blocks, so sharing their order is safe).
-  if (locked) for (const [x, y] of rivetOffsets(w, h)) child(ctx, e, x, y, LOCKED_RIVET, ORDER.enemy);
-  else child(ctx, e, 0, 0.04, blockTop(w, h), ORDER.block);
+  // Pre-placed blocks look the same as the player's.
+  child(ctx, e, 0, 0.04, blockTop(w, h), ORDER.block);
   return e;
 }
 

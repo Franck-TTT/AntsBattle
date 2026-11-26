@@ -1,7 +1,8 @@
 /**
  * Level Layout: paint a level — its board size, its nests, its base, and its pre-placed blocks
- * and weapons. Click places the picked block (its top-left cell under the cursor) or weapon, adds or
- * removes a nest, or moves the base; right-click or the eraser removes. Drops that would break a
+ * and weapons, and its no-build cells. Click places the picked block (its top-left cell under the
+ * cursor) or weapon, adds or removes a nest, moves the base, or toggles a no-build cell (the 8 cells
+ * around each nest always are); right-click or the eraser removes. Drops that would break a
  * layout rule (src/layout.ts) are refused; the ants' paths show live. Writes go through the command
  * bus (asset.setText), so undo, the check and hot reload see them. Fields this tool does not edit
  * (name, order, …) are kept as they are.
@@ -16,6 +17,7 @@ const SUFFIX = '.level.json';
 const ERASER = 'erase';
 const NEST = 'nest';
 const BASE = 'base';
+const NO_BUILD = 'noBuild';
 
 /** The open level: the file's other fields as read, and the parts this tool edits. */
 interface Level {
@@ -26,6 +28,7 @@ interface Level {
   weapons: LayoutWeapon[];
   nests: LayoutNest[];
   base: LayoutCell;
+  noBuild: LayoutCell[];
 }
 
 // Survive a re-dock (remount): the open file and the picked tool.
@@ -39,14 +42,16 @@ const COLORS = {
   blockRim: '#8fa6d6',
   nest: '#3a1030',
   base: '#1e7a4a',
+  noBuild: '#ff4d5e',
   ok: '#3fd17a',
   bad: '#ff4d5e',
-  weapon: { tower: '#ffc51f', cannon: '#ff7a3f' } as Record<string, string>,
+  weapon: { tower: '#ffc51f', cannon: '#ff7a3f', frost: '#3fc8ff', mine: '#ff3b5c', boostPad: '#ffb020', mortar: '#4caf3f', flamethrower: '#ff5a1f', radar: '#5ee8ff', bank: '#ffc51f' } as Record<string, string>,
 };
 
 /** The file's text: its keys in their order, one list entry per line, so diffs stay readable. */
 function formatLevel(l: Level): string {
-  const doc: Record<string, unknown> = { ...l.raw, cols: l.cols, rows: l.rows, blocks: l.blocks, weapons: l.weapons, nests: l.nests, base: l.base };
+  const doc: Record<string, unknown> = { ...l.raw, cols: l.cols, rows: l.rows, blocks: l.blocks, weapons: l.weapons, nests: l.nests, base: l.base, noBuild: l.noBuild };
+  if (!l.noBuild.length) delete doc.noBuild;
   const inline = (v: unknown) => JSON.stringify(v).replace(/,"/g, ', "').replace(/":/g, '": ').replace(/^\{/, '{ ').replace(/\}$/, ' }');
   const value = (v: unknown) => (Array.isArray(v) ? (v.length ? `[\n${v.map((i) => `    ${inline(i)}`).join(',\n')}\n  ]` : '[]') : v && typeof v === 'object' ? inline(v) : JSON.stringify(v));
   return `{\n${Object.entries(doc).map(([k, v]) => `  ${JSON.stringify(k)}: ${value(v)}`).join(',\n')}\n}\n`;
@@ -58,7 +63,8 @@ function readLevel(raw: Record<string, unknown>): Level {
   const cols = (raw.cols as number | undefined) ?? DEFAULT_COLS;
   const rows = (raw.rows as number | undefined) ?? DEFAULT_ROWS;
   const { nests, base } = layoutMarkers({ cols, rows, blocks, weapons, nests: raw.nests as LayoutNest[] | undefined, base: raw.base as LayoutCell | undefined });
-  return { raw, cols, rows, blocks, weapons, nests, base };
+  const noBuild = ((raw.noBuild as LayoutCell[] | undefined) ?? []).map((z) => ({ col: z.col, row: z.row }));
+  return { raw, cols, rows, blocks, weapons, nests, base, noBuild };
 }
 
 const pathOf = (r: unknown): string[] => {
@@ -114,9 +120,11 @@ export default defineEditorWidget(({ React, ui }) => {
       if (!level || !result) return null;
       const col = cell % COLS;
       const row = (cell / COLS) | 0;
+      const z = level.noBuild.findIndex((o) => cellOf(o) === cell);
       if (erase || tool === ERASER) {
         const w = result.weaponAt[cell]!;
         if (w >= 0) return { ...level, weapons: level.weapons.filter((_, i) => i !== w) };
+        if (z >= 0) return { ...level, noBuild: level.noBuild.filter((_, i) => i !== z) };
         const n = nestAt(cell);
         if (n >= 0) return level.nests.length > 1 ? { ...level, nests: level.nests.filter((_, i) => i !== n) } : null;
         const b = result.blockAt[cell]!;
@@ -125,6 +133,7 @@ export default defineEditorWidget(({ React, ui }) => {
         const covered = new Set(blockCells(blk.shape, blk.col, blk.row, level.cols, level.rows) ?? []);
         return { ...level, blocks: level.blocks.filter((_, i) => i !== b), weapons: level.weapons.filter((wp) => !covered.has(cellOf(wp))) };
       }
+      if (tool === NO_BUILD) return z >= 0 ? { ...level, noBuild: level.noBuild.filter((_, i) => i !== z) } : { ...level, noBuild: [...level.noBuild, { col, row }] };
       if (tool === BASE) return cellOf(level.base) === cell ? null : { ...level, base: { col, row } };
       if (tool === NEST) {
         const n = nestAt(cell);
@@ -217,13 +226,14 @@ export default defineEditorWidget(({ React, ui }) => {
     // Hover ghost: the cells the click would fill, and whether it would be accepted.
     const ghost = React.useMemo(() => {
       if (hover < 0 || !level || tool === ERASER) return null;
-      const isBlock = !weapons.includes(tool) && tool !== NEST && tool !== BASE;
+      const isBlock = !weapons.includes(tool) && tool !== NEST && tool !== BASE && tool !== NO_BUILD;
       const cells = isBlock ? (blockCells(tool, hover % COLS, (hover / COLS) | 0, level.cols, level.rows) ?? [hover]) : [hover];
       const next = apply(hover, false);
       return { cells: new Set(cells), ok: !!next && !refusal(next) };
     }, [hover, tool, level, result]);
 
     const issueCells = new Set(result?.issues.flatMap((i) => i.cells) ?? []);
+    const painted = new Set(level ? level.noBuild.map(cellOf) : []);
     const markerCells = new Set(level ? [cellOf(level.base), ...level.nests.map(cellOf)] : []);
     const at = (col: number, row: number, w = 1, h = 1) => ({ gridColumn: `${col + 1} / span ${w}`, gridRow: `${row + 1} / span ${h}` });
     const flow = (n: number) => FLOW_COLORS[n % FLOW_COLORS.length]!;
@@ -247,7 +257,11 @@ export default defineEditorWidget(({ React, ui }) => {
           style={{
             ...at(col, row),
             border: `1px solid ${COLORS.grid}`,
-            background: g ? (ghost!.ok ? `${COLORS.ok}55` : `${COLORS.bad}55`) : 'transparent',
+            background: g
+              ? ghost!.ok ? `${COLORS.ok}55` : `${COLORS.bad}55`
+              : result?.noBuild[c]
+                ? `repeating-linear-gradient(45deg, ${COLORS.noBuild}${painted.has(c) ? '66' : '33'} 0 3px, transparent 3px 8px)`
+                : 'transparent',
             outline: issueCells.has(c) ? `2px solid ${COLORS.bad}` : 'none',
             outlineOffset: -2,
             cursor: 'pointer',
@@ -329,6 +343,7 @@ export default defineEditorWidget(({ React, ui }) => {
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
           {toolButton(NEST, 'nest')}
           {toolButton(BASE, 'base')}
+          {toolButton(NO_BUILD, 'no-build')}
           {shapes.map((s) => toolButton(s, s.slice(1)))}
           {weapons.map((w) => toolButton(w, w))}
           {toolButton(ERASER, 'eraser')}
@@ -367,7 +382,7 @@ export default defineEditorWidget(({ React, ui }) => {
         ) : null}
         {level ? (
           <div style={{ fontSize: 12, opacity: 0.8 }}>
-            {level.cols}×{level.rows} · {level.nests.length}/{MAX_NESTS} nests · {level.blocks.length} blocks · {level.weapons.length} weapons · click: place · right-click: remove (blocks and weapons are locked in game)
+            {level.cols}×{level.rows} · {level.nests.length}/{MAX_NESTS} nests · {level.blocks.length} blocks · {level.weapons.length} weapons · {level.noBuild.length} no-build cells (+ the 8 around each nest) · click: place · right-click: remove (blocks and weapons are locked in game)
           </div>
         ) : null}
         {result?.issues.length ? (

@@ -1,0 +1,6 @@
+guid = "5e0918ab-ca7c-4527-a2d6-477b7947742d"
+importer = "texture"
+
+[settings]
+border = { left = 50, right = 50, top = 0, bottom = 0 }
+body = { left = 22, right = 22, top = 22, bottom = 22 }

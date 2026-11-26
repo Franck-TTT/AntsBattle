@@ -1,0 +1,14 @@
+{
+  "$type": "LevelDef",
+  "id": "test-no-build-fixture",
+  "name": "Test fixture: no-build cells",
+  "order": 0,
+  "blocks": [
+    { "shape": "b1x1", "col": 0, "row": 5 }
+  ],
+  "weapons": [],
+  "noBuild": [
+    { "col": 3, "row": 5 },
+    { "col": 0, "row": 5 }
+  ]
+}

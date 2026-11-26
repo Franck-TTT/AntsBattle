@@ -42,7 +42,14 @@
         "none",
         "wall",
         "tower",
-        "cannon"
+        "cannon",
+        "frost",
+        "mine",
+        "boostPad",
+        "mortar",
+        "flamethrower",
+        "radar",
+        "bank"
       ],
       "package": "AntsBattle"
     },
@@ -56,7 +63,8 @@
         "gold",
         "enemy",
         "noBlock",
-        "fixed"
+        "fixed",
+        "noBuild"
       ],
       "package": "AntsBattle"
     },
@@ -69,9 +77,86 @@
         "menu"
       ],
       "package": "AntsBattle"
+    },
+    {
+      "name": "UpgradeKind",
+      "values": [
+        "towerDmg",
+        "cannonDmg",
+        "startGold",
+        "killGold",
+        "fireRate",
+        "towerRange",
+        "cannonAoe",
+        "freeCell",
+        "globalDmg",
+        "life",
+        "reroll",
+        "freeTower",
+        "slowmo"
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Rarity",
+      "values": [
+        "common",
+        "rare",
+        "epic",
+        "legendary"
+      ],
+      "package": "AntsBattle"
     }
   ],
   "types": [
+    {
+      "name": "AudioSettingsChanged",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "sound",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "music",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "The player switched sound or music on or off in the settings popup."
+    },
+    {
+      "name": "BankPaid",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "x",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "y",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1
+        },
+        {
+          "name": "gold",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "Signal: a bank paid its gold at the start of a wave."
+    },
     {
       "name": "Base",
       "kind": "tag",
@@ -156,11 +241,18 @@
           "doc": "1 where a block stands (blocks the ants), 0 free"
         },
         {
+          "name": "noBuild",
+          "kind": "array",
+          "scalar": "u8",
+          "lanes": 140,
+          "doc": "1 where the player can place nothing: the no-build cells of the level and the 8 cells around each nest"
+        },
+        {
           "name": "weapons",
           "kind": "array",
           "scalar": "u8",
           "lanes": 140,
-          "doc": "Weapon kind index standing on the block of each cell (0 none)"
+          "doc": "Weapon kind index on each cell (0 none): on its block, or on the ground for a mine or a boost pad"
         },
         {
           "name": "dist",
@@ -229,6 +321,13 @@
           "scalar": "u8",
           "lanes": 1,
           "doc": "Cell of the base"
+        },
+        {
+          "name": "waveCount",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Waves to hold to win this level (LevelDef.waves, else every wave of the sheet)"
         }
       ],
       "package": "AntsBattle"
@@ -238,6 +337,80 @@
       "kind": "tag",
       "sim": true,
       "fields": [],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Boost",
+      "kind": "resource",
+      "sim": true,
+      "fields": [
+        {
+          "name": "damage",
+          "kind": "array",
+          "scalar": "f32",
+          "lanes": 11,
+          "doc": "Damage multiplier per weapon kind (StartRun writes 1 and up)"
+        },
+        {
+          "name": "range",
+          "kind": "array",
+          "scalar": "f32",
+          "lanes": 11,
+          "doc": "Range added per weapon kind, cells"
+        },
+        {
+          "name": "splash",
+          "kind": "array",
+          "scalar": "f32",
+          "lanes": 11,
+          "doc": "Splash radius added per weapon kind, cells"
+        },
+        {
+          "name": "period",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "default": 1,
+          "doc": "Cooldown multiplier of every weapon"
+        },
+        {
+          "name": "killGold",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "default": 1,
+          "doc": "Gold per kill multiplier"
+        },
+        {
+          "name": "drag",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "default": 1,
+          "doc": "Multiplier of the game speed while dragging"
+        },
+        {
+          "name": "freeWalls",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Blocks that cost nothing, on top of the sheet's Free walls"
+        },
+        {
+          "name": "freeRerolls",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Rerolls that cost nothing each wave"
+        },
+        {
+          "name": "freeTower",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "The first offer holds a tower"
+        }
+      ],
       "package": "AntsBattle"
     },
     {
@@ -328,6 +501,13 @@
           "lanes": 1
         },
         {
+          "name": "nest",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Cell of the nest it came out of (a block dropped on it moves it onto the new path from there)"
+        },
+        {
           "name": "kx",
           "kind": "f32",
           "scalar": "f32",
@@ -340,6 +520,48 @@
           "scalar": "f32",
           "lanes": 1,
           "doc": "Knockback velocity y"
+        },
+        {
+          "name": "slow",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Share of its speed lost while slowed (frost)"
+        },
+        {
+          "name": "slowLeft",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds of slow left"
+        },
+        {
+          "name": "haste",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Share of speed gained while hasted (boost pad)"
+        },
+        {
+          "name": "hasteLeft",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds of haste left"
+        },
+        {
+          "name": "burn",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Damage per game second while burning (flamethrower)"
+        },
+        {
+          "name": "burnLeft",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds of burning left"
         }
       ],
       "package": "AntsBattle"
@@ -694,6 +916,20 @@
           "scalar": "u32",
           "lanes": 1,
           "doc": "Bumped on every new set or purchase, so the tray redraws"
+        },
+        {
+          "name": "freeRerolls",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Free rerolls left this wave (Boost.freeRerolls, refilled at each wave)"
+        },
+        {
+          "name": "singlePick",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Single-pick variant: 0 as the sheet says (SINGLE_PICK), 1 forced on, 2 forced off (cheat; kept across restarts)"
         }
       ],
       "package": "AntsBattle"
@@ -712,6 +948,43 @@
       ],
       "package": "AntsBattle",
       "doc": "Signal: the player paid for a new offer."
+    },
+    {
+      "name": "Panel",
+      "kind": "resource",
+      "sim": true,
+      "fields": [
+        {
+          "name": "x",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "World x of the panel centre"
+        },
+        {
+          "name": "trayY",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "World y of the tray centre line"
+        },
+        {
+          "name": "hudY",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "World y of the HUD bar centre line"
+        },
+        {
+          "name": "scale",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "default": 1,
+          "doc": "World units per tray unit (grid.ts TRAY_* sizes)"
+        }
+      ],
+      "package": "AntsBattle"
     },
     {
       "name": "Placement",
@@ -945,6 +1218,77 @@
           "scalar": "f32",
           "lanes": 1,
           "doc": "Flight direction, unit vector y"
+        },
+        {
+          "name": "slow",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Share of speed the enemies hit lose (frost)"
+        },
+        {
+          "name": "slowTime",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds the slow lasts"
+        },
+        {
+          "name": "puddle",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Damage per game second of the puddle left on impact (mortar), 0 none"
+        },
+        {
+          "name": "puddleSize",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Puddle radius, cells"
+        },
+        {
+          "name": "puddleTime",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds the puddle lasts"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "Puddle",
+      "kind": "component",
+      "sim": true,
+      "fields": [
+        {
+          "name": "radius",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Cells"
+        },
+        {
+          "name": "dps",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Damage per game second to each enemy inside"
+        },
+        {
+          "name": "left",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds before it dries"
+        },
+        {
+          "name": "life",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds it lasts in all (for the fade)"
         }
       ],
       "package": "AntsBattle"
@@ -956,6 +1300,22 @@
       "fields": [],
       "package": "AntsBattle",
       "doc": "The player pressed Restart on the end screen."
+    },
+    {
+      "name": "RollRequested",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "luxury",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "The Luxury roll (paid with star charge, Rare or better) instead of the coin Roll"
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "The player pressed Roll or Luxury on the Upgrades screen."
     },
     {
       "name": "Run",
@@ -1130,9 +1490,67 @@
           "scalar": "u32",
           "lanes": 1,
           "doc": "Nests open so far (presentation plays the opening)"
+        },
+        {
+          "name": "paid",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "The end-of-run reward was paid into the meta"
+        },
+        {
+          "name": "stars",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Stars this run earned (0 on a defeat)"
+        },
+        {
+          "name": "newStars",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Stars above the best already won on this level (they charge the Luxury roll)"
+        },
+        {
+          "name": "coinsWon",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Meta coins this run paid"
         }
       ],
       "package": "AntsBattle"
+    },
+    {
+      "name": "SettingsMenu",
+      "kind": "resource",
+      "sim": true,
+      "fields": [
+        {
+          "name": "open",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "The popup is open: the run is paused"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "SettingsToggled",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "open",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "The player opened (gear in the HUD) or closed the settings popup: the run pauses while it is open."
     },
     {
       "name": "TrayCoin",
@@ -1211,6 +1629,41 @@
       "package": "AntsBattle"
     },
     {
+      "name": "UpgradeRolled",
+      "kind": "event",
+      "sim": true,
+      "fields": [
+        {
+          "name": "upgrade",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "UpgradeKind"
+        },
+        {
+          "name": "rarity",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "Rarity"
+        },
+        {
+          "name": "level",
+          "kind": "u8",
+          "scalar": "u8",
+          "lanes": 1
+        },
+        {
+          "name": "luxury",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1
+        }
+      ],
+      "package": "AntsBattle",
+      "doc": "Signal: a roll gave an upgrade (the reveal popup shows it)."
+    },
+    {
       "name": "WaveStarted",
       "kind": "event",
       "sim": true,
@@ -1236,6 +1689,59 @@
       ],
       "package": "AntsBattle",
       "doc": "Signal: a wave started."
+    },
+    {
+      "name": "WeaponInfo",
+      "kind": "resource",
+      "sim": true,
+      "fields": [
+        {
+          "name": "open",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "The popup is open: the run is paused"
+        },
+        {
+          "name": "kind",
+          "kind": "enum",
+          "scalar": "u8",
+          "lanes": 1,
+          "enumName": "ItemKind"
+        },
+        {
+          "name": "slot",
+          "kind": "i8",
+          "scalar": "i8",
+          "lanes": 1,
+          "default": -1,
+          "doc": "Offer slot tapped, -1 for a weapon on the board"
+        },
+        {
+          "name": "cell",
+          "kind": "i16",
+          "scalar": "i16",
+          "lanes": 1,
+          "default": -1,
+          "doc": "Board cell tapped, -1 for an offer"
+        },
+        {
+          "name": "opens",
+          "kind": "u32",
+          "scalar": "u32",
+          "lanes": 1,
+          "doc": "Bumped on every open, so the UI opens a new popup"
+        }
+      ],
+      "package": "AntsBattle"
+    },
+    {
+      "name": "WeaponInfoClosed",
+      "kind": "event",
+      "sim": true,
+      "fields": [],
+      "package": "AntsBattle",
+      "doc": "The player closed the weapon info popup: the run resumes."
     }
   ],
   "commands": [],
@@ -1300,7 +1806,14 @@
                 "kind": {
                   "enum": [
                     "tower",
-                    "cannon"
+                    "cannon",
+                    "frost",
+                    "mine",
+                    "boostPad",
+                    "mortar",
+                    "flamethrower",
+                    "radar",
+                    "bank"
                   ]
                 },
                 "col": {
@@ -1374,6 +1887,36 @@
             ],
             "additionalProperties": false,
             "description": "The base to defend; absent: the default base (src/grid.ts)"
+          },
+          "noBuild": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "col": {
+                  "type": "integer",
+                  "description": "Column, 0 on the left"
+                },
+                "row": {
+                  "type": "integer",
+                  "description": "Row, 0 at the top"
+                }
+              },
+              "required": [
+                "col",
+                "row"
+              ],
+              "additionalProperties": false
+            },
+            "description": "No-build cells: the player can place nothing there (the 8 cells around each nest always are); ants walk through"
+          },
+          "waves": {
+            "type": "integer",
+            "description": "Waves to hold to win: the first N of the Waves tab of the sheet, 1 to all; absent: all"
+          },
+          "power": {
+            "type": "integer",
+            "description": "Advised POWER (meta upgrades) shown on the level map popup; absent: none shown"
           }
         },
         "required": [

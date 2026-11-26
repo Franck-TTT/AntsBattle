@@ -1,6 +1,6 @@
 ---
 name: perf-to-rust
-version: 1.18.0
+version: 1.19.0
 tier: optional
 description: Find a slow system with the profiler, transpile the sim to Rust or move a system to hand-written Rust while keeping its TypeScript version as the reference, then run it in parallel ranges and check its codegen; or warm code that is only slow on its first calls. Use when script time or a system's time is over budget.
 ---
@@ -79,7 +79,7 @@ Every project compiles each sim system that fits the transpilable subset to Rust
   - meta state (`metaInWorld` get/loaded/dispatch, `defineMeta` actions and invariants, which may call `loadData`; a `migrate` stays TypeScript, run as the save loads)
   - `loadData` (records with `$type` fields and unions too, its type token passed to helpers)
   - `listData` (a constant baked from `src/content.gen.ts`: `length`, indexing and `for…of`; a new index re-transpiles)
-  - tunables (converted once per step, not per read)
+  - tunables (converted once per asset version, and once per step while a hot-reload edit overrides them; not per read)
   - `NavGrid`/`findPath`/`smoothPath`
   - and the runtime calls with twins (tweens, raycasts, overlap contacts, animation parameters, pools, Skeleton2D play/hit/attachments, `spawnPrefab`, `entityIndex`, `playTimeline` and `stopTimeline`, events with no fields, `ctx.signal`, streaming, `fitWorldView`)
 - Installed packages are transpiled with `src/`: a system may call code from any package installed in `node_modules` (`file:`, a registry or git) whose exports point at its TypeScript, and the report names a package line by package (`@scope/pkg/src/x.ts:12`). Systems a package declares stay TypeScript, and a package reached only through tsconfig `paths` is not installed: calling it gives `which is not a module function`.

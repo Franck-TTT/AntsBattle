@@ -35,6 +35,13 @@ symbol map) needs that file before Gradle configures the build. List its name (n
 pass of its own first (`{variant}` is `Debug`, `Probe` or `Release`); a task the Gradle plugin did not
 register for the build (an upload with no token) is skipped.
 
+`"proguard": "proguard-rules.pro"` names a ProGuard rules file in the plugin directory. A game that
+sets `"android": { "minify": true }` runs R8 on release and probe builds, which removes or renames
+Java and Kotlin code that only reflection or native code reaches; the build appends each enabled
+plugin's file to the app's keep rules. Keep what your Kotlin looks up by name and what the vendor
+SDK reflects on when its own AAR ships no rule for it. R8 breaks these at run time, not in the
+build: test the plugin in a release build with minify on and off.
+
 On iOS, `"buildPhases": [{ "name": "Upload dSYMs", "script": "…", "inputFiles": ["${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}"] }]`
 runs scripts after the build, on every build (a crash reporter's symbol upload). Placeholders in
 `script` must have a value or a default, and each becomes one single-quoted shell word: write
@@ -61,6 +68,35 @@ release that added them: an older engine ignores them, and `import AcmeSDK` fail
 SDK finds no resources. On Android the same SDK's `.aar` goes in `files`
 (`"src/acme/acme.aar": "libs/acme.aar"`) with a `gradle` line
 `dependencies { implementation(files("src/acme/acme.aar")) }`.
+
+An iOS app extension (a Notification Service Extension, which runs when a push arrives while the
+game is closed) is its own target, built with the app and embedded in its `PlugIns/`:
+
+```json
+"extensions": [{
+  "name": "NotificationServiceExtension",
+  "bundleIdSuffix": "notificationextension",
+  "sources": ["ios-extension", "ios/SharedFlag.swift"],
+  "frameworks": ["UserNotifications"],
+  "info": { "NSExtension": {
+    "NSExtensionPointIdentifier": "com.apple.usernotifications.service",
+    "NSExtensionPrincipalClass": "$(PRODUCT_MODULE_NAME).NotificationService" } }
+}]
+```
+
+`name` is the target and the product (`PlugIns/NotificationServiceExtension.appex`); the bundle id is
+the app's final one plus `.` and `bundleIdSuffix`, so it follows `--bundle-id`. `sources` are files and
+folders in the plugin directory: keep the extension's own Swift beside `ios/`, never inside it (that
+compiles into the app). A file listed from `ios/` compiles into both, which is how the two share code.
+Leave the extension's Info.plist out of `sources`, even inside a listed folder: the build writes it.
+`info` takes placeholders like the app's and must name the extension point; the build adds the
+bundle keys and the app's version and build number. `entitlements` gives the extension its own
+file. The extension links only what it lists, never the engine. To sign on your Mac with
+`--provisioning-profile`, add the extension's own profile with `--extension-profile <file>` (a wildcard
+app profile that covers the extension's bundle id needs none); a build server signs each extension
+with the profile its signing values list.
+A field `plugin.json` does not know fails the build, so a package using `extensions` raises its
+`gameengine.engine` minimum to the engine release that added it.
 
 `"files"` (Android and iOS) can also copy **the game's own file** into the app: a source that is one
 setting, `"{{services.firebase.configFile}}"`, copies the file that setting names, relative to the

@@ -1,6 +1,6 @@
 ---
 name: models-3d
-version: 1.27.0
+version: 1.28.0
 tier: optional
 description: 3D models, rigs and clips — importing FBX and glTF/GLB, .gmeta import settings, prefabs, skinned meshes, outfits, blend shapes, Unity model@clip.fbx animations, meshes built at run time. Use when adding or porting a 3D model, character, rig or animation, or when one looks wrong or does not animate.
 ---
@@ -24,6 +24,7 @@ importer = "mesh"
 [settings]
 lods = 2                 # simplified LODs after the full mesh (0–4)
 lods_mode = "thin"       # grass, foliage, pebbles: coarser LODs drop whole parts and widen the rest
+lods_error = 0.1         # how far a LOD may move, share of the largest side (default 0.05, max 0.25)
 max_texture_size = 2048  # cook-time cap for the model's textures
 textures = "none"        # ship no texture copies: the game draws it with its own materials
 scale = 1.0              # FBX: multiplies after the unit conversion (Unity's Scale Factor)
@@ -110,7 +111,11 @@ without a scope reaches every sub-material). A texture value there is the file's
 (`layer1Map=0b0e4c8a-…`); the editor and the command bus write a typed path as its GUID.
 
 LODs count lost shading as well as moved positions, so a smooth face keeps its full mesh in a
-close-up; `lods = 0` is not needed to avoid creases.
+close-up; `lods = 0` is not needed to avoid creases. Hard edges (flat-shaded, low-poly art) simplify;
+texture, second-UV and colour seams stay. A chunky low-poly shape that gets no LOD 1 (`gameengine model info`
+shows one count under "triangles per LOD") needs a larger `lods_error`, such as 0.1: the renderer
+still picks each LOD only where its error is about a pixel or less (before `lod_bias`), so it
+costs nothing up close.
 
 A meadow block, a bush or a pile of pebbles is many small separate parts, and simplifying its
 edges melts it into blobs. `lods_mode = "thin"` builds its LODs by keeping about half the parts

@@ -1,0 +1,120 @@
+{
+  "$schemaVersion": 1,
+  "guid": "4285a892-9b0c-4100-8e47-ceaf506575f7",
+  "name": "gear-button",
+  "title": "Gear button",
+  "kind": "widget",
+  "root": "hm_gear_rim",
+  "nodes": {
+    "hm_gear_rim": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "tb_glow",
+        "hm_gear",
+        "hm_gear_rim_ring"
+      ],
+      "style": {
+        "pad": 0,
+        "w": 120,
+        "h": 120,
+        "radius": 32,
+        "bg": "#00000000"
+      }
+    },
+    "tb_glow": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "d60e6cdb-e8ee-46ea-b6e5-b21555c89df0"
+        },
+        "tint": "#3f6bffff",
+        "tintMode": "multiply",
+        "imageAlpha": 0.8,
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%",
+        "sliceScale": 1
+      }
+    },
+    "hm_gear": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "hm_gear_i"
+      ],
+      "style": {
+        "pad": 0,
+        "w": "100%",
+        "h": "100%",
+        "radius": 32,
+        "bg": "#0b0e24ff",
+        "align": "center",
+        "justify": "center"
+      }
+    },
+    "hm_gear_i": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "dcbc7f95-fc59-40fb-ae7f-469c7ef3359f"
+        },
+        "w": 64,
+        "h": 64,
+        "tint": "#e6ecffff",
+        "tintMode": "multiply"
+      }
+    },
+    "hm_gear_rim_ring": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "8e423128-9df1-4f7d-bd5a-e4fea0d5fd19"
+        },
+        "sliceScale": 1,
+        "tint": "#3f6bffff",
+        "tintMode": "multiply",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%"
+      }
+    }
+  },
+  "behaviour": "button",
+  "states": {
+    "pressed": {
+      "set": {
+        "hm_gear_rim": {
+          "scale": 0.94
+        }
+      }
+    }
+  }
+}

@@ -1,11 +1,14 @@
 import { array, asset, bool, component, dataAsset, entity, enumOf, event, f32, i16, i32, i8, p, resource, tag, u32, u8 } from '@gameengine/schema';
 
 // Item kinds: index 0 is "nothing". New weapons are added at the end of this list and in src/balance.ts.
-export const ITEM_KINDS = ['none', 'wall', 'tower', 'cannon'] as const;
+export const ITEM_KINDS = ['none', 'wall', 'tower', 'cannon', 'frost', 'mine', 'boostPad', 'mortar', 'flamethrower', 'radar', 'bank'] as const;
 export const ENEMY_KINDS = ['ant', 'fast', 'beetle', 'boss'] as const;
 export const FX_KINDS = ['dust', 'pop', 'boom', 'hit', 'baseHit', 'casing'] as const;
 // Block footprints, width × height in cells. New shapes go at the end (and in src/balance.ts SHAPES).
 export const BLOCK_SHAPES = ['b1x1', 'b2x2', 'b2x1', 'b1x2', 'b3x1', 'b1x3'] as const;
+/** Meta upgrades the Roll can give (their effect lives in src/meta.ts; rarity and value per level in the sheet's Upgrades tab). */
+export const UPGRADE_KINDS = ['towerDmg', 'cannonDmg', 'startGold', 'killGold', 'fireRate', 'towerRange', 'cannonAoe', 'freeCell', 'globalDmg', 'life', 'reroll', 'freeTower', 'slowmo'] as const;
+export const RARITIES = ['common', 'rare', 'epic', 'legendary'] as const;
 /** Item kinds a weapon can be (every kind but 'none' and 'wall'). */
 const WEAPON_KINDS = ITEM_KINDS.filter((k) => k !== 'none' && k !== 'wall');
 /** Most nests a level can have (one path colour each, src/looks.ts FLOW_COLORS). */
@@ -51,6 +54,14 @@ export const LevelDef = dataAsset(
       ),
     ),
     base: p.optional(p.obj({ col: p.int('Column, 0 on the left'), row: p.int('Row, 0 at the top') }, 'The base to defend; absent: the default base (src/grid.ts)')),
+    noBuild: p.optional(
+      p.arr(
+        p.obj({ col: p.int('Column, 0 on the left'), row: p.int('Row, 0 at the top') }),
+        'No-build cells: the player can place nothing there (the 8 cells around each nest always are); ants walk through',
+      ),
+    ),
+    waves: p.optional(p.int('Waves to hold to win: the first N of the Waves tab of the sheet, 1 to all; absent: all')),
+    power: p.optional(p.int('Advised POWER (meta upgrades) shown on the level map popup; absent: none shown')),
   },
   { doc: 'A level layout: its nests, its base, and what stands on the board when a run starts.' },
 );
@@ -96,6 +107,11 @@ export const Run = resource(
     bosses: u32(),
     nestTurn: u32({ doc: 'Round-robin counter: which open nest the next ant leaves from' }),
     nestsOpen: u32({ doc: 'Nests open so far (presentation plays the opening)' }),
+    // End-of-run rewards (PayRun), shown on the end screen.
+    paid: bool({ doc: 'The end-of-run reward was paid into the meta' }),
+    stars: u8({ doc: 'Stars this run earned (0 on a defeat)' }),
+    newStars: u8({ doc: 'Stars above the best already won on this level (they charge the Luxury roll)' }),
+    coinsWon: u32({ doc: 'Meta coins this run paid' }),
   },
   { sim: true },
 );
@@ -105,7 +121,8 @@ export const Board = resource(
   'Board',
   {
     cells: array(u8(), MAX_CELLS, { doc: '1 where a block stands (blocks the ants), 0 free' }),
-    weapons: array(u8(), MAX_CELLS, { doc: 'Weapon kind index standing on the block of each cell (0 none)' }),
+    noBuild: array(u8(), MAX_CELLS, { doc: '1 where the player can place nothing: the no-build cells of the level and the 8 cells around each nest' }),
+    weapons: array(u8(), MAX_CELLS, { doc: 'Weapon kind index on each cell (0 none): on its block, or on the ground for a mine or a boost pad' }),
     dist: array(i16(), MAX_CELLS, { doc: 'Steps to the base per cell, -1 unreachable or blocked' }),
     path: array(u8(), MAX_CELLS, { doc: 'Cells of the path from the nest to the base' }),
     pathLen: u8(),
@@ -116,6 +133,42 @@ export const Board = resource(
     nestCell: array(u8(), MAX_NESTS, { doc: 'Cell of each nest' }),
     nestWave: array(u8(), MAX_NESTS, { doc: 'Wave each nest opens on' }),
     baseCell: u8({ doc: 'Cell of the base' }),
+    waveCount: u8({ doc: 'Waves to hold to win this level (LevelDef.waves, else every wave of the sheet)' }),
+  },
+  { sim: true },
+);
+
+/**
+ * What the player's meta upgrades change in a run, written by StartRun from the meta (src/meta.ts)
+ * so the hot systems read plain numbers. Arrays are by ItemKind index.
+ */
+export const Boost = resource(
+  'Boost',
+  {
+    damage: array(f32(), ITEM_KINDS.length, { doc: 'Damage multiplier per weapon kind (StartRun writes 1 and up)' }),
+    range: array(f32(), ITEM_KINDS.length, { doc: 'Range added per weapon kind, cells' }),
+    splash: array(f32(), ITEM_KINDS.length, { doc: 'Splash radius added per weapon kind, cells' }),
+    period: f32({ default: 1, doc: 'Cooldown multiplier of every weapon' }),
+    killGold: f32({ default: 1, doc: 'Gold per kill multiplier' }),
+    drag: f32({ default: 1, doc: 'Multiplier of the game speed while dragging' }),
+    freeWalls: u8({ doc: "Blocks that cost nothing, on top of the sheet's Free walls" }),
+    freeRerolls: u8({ doc: 'Rerolls that cost nothing each wave' }),
+    freeTower: bool({ doc: 'The first offer holds a tower' }),
+  },
+  { sim: true },
+);
+
+/**
+ * The bottom panel (tray, then the HUD above it), pinned to the bottom of the screen at the same
+ * size on every level: world placement written by FitView from the screen (grid.ts panelLayout).
+ */
+export const Panel = resource(
+  'Panel',
+  {
+    x: f32({ doc: 'World x of the panel centre' }),
+    trayY: f32({ doc: 'World y of the tray centre line' }),
+    hudY: f32({ doc: 'World y of the HUD bar centre line' }),
+    scale: f32({ default: 1, doc: 'World units per tray unit (grid.ts TRAY_* sizes)' }),
   },
   { sim: true },
 );
@@ -134,7 +187,7 @@ export const Placement = resource(
     y: f32(),
     cell: i16({ default: -1, doc: 'Hovered cell (a block: its top-left cell), -1 off the board' }),
     valid: bool(),
-    reason: enumOf('PlaceReason', ['ok', 'offBoard', 'occupied', 'blocks', 'gold', 'enemy', 'noBlock', 'fixed']),
+    reason: enumOf('PlaceReason', ['ok', 'offBoard', 'occupied', 'blocks', 'gold', 'enemy', 'noBlock', 'fixed', 'noBuild']),
     previewDist: array(i16(), MAX_CELLS, { doc: 'Flow field if the hovered drop happened (each nest preview path is traced from it)' }),
     previewLen: u8({ doc: '1 when previewDist holds a valid preview' }),
     // Snap back after a refused drop.
@@ -149,6 +202,22 @@ export const Placement = resource(
   { sim: true },
 );
 
+/** The weapon info popup: a tap on a weapon (offer or board) opens it and pauses the run until it closes. */
+export const WeaponInfo = resource(
+  'WeaponInfo',
+  {
+    open: bool({ doc: 'The popup is open: the run is paused' }),
+    kind: enumOf('ItemKind', ITEM_KINDS),
+    slot: i8({ default: -1, doc: 'Offer slot tapped, -1 for a weapon on the board' }),
+    cell: i16({ default: -1, doc: 'Board cell tapped, -1 for an offer' }),
+    opens: u32({ doc: 'Bumped on every open, so the UI opens a new popup' }),
+  },
+  { sim: true },
+);
+
+/** The settings popup: the gear in the HUD opens it and pauses the run until it closes. */
+export const SettingsMenu = resource('SettingsMenu', { open: bool({ doc: 'The popup is open: the run is paused' }) }, { sim: true });
+
 /** A block on the board: fixed once placed, blocks the ants, carries weapons. */
 export const Block = component(
   'Block',
@@ -162,7 +231,7 @@ export const Block = component(
   { sim: true },
 );
 
-/** A weapon standing on a block cell. */
+/** A weapon standing on a block cell (a mine or a boost pad: on a free ground cell). */
 export const Item = component(
   'Item',
   {
@@ -194,8 +263,15 @@ export const Enemy = component(
     flashSteps: u8(),
     lane: f32({ doc: 'Sideways offset in its column, cells (spreads the swarm)' }),
     bornAt: f32(),
+    nest: u8({ doc: 'Cell of the nest it came out of (a block dropped on it moves it onto the new path from there)' }),
     kx: f32({ doc: 'Knockback velocity x, cells per game second (decays; the walk brings it back on its path)' }),
     ky: f32({ doc: 'Knockback velocity y' }),
+    slow: f32({ doc: 'Share of its speed lost while slowed (frost)' }),
+    slowLeft: f32({ doc: 'Game seconds of slow left' }),
+    haste: f32({ doc: 'Share of speed gained while hasted (boost pad)' }),
+    hasteLeft: f32({ doc: 'Game seconds of haste left' }),
+    burn: f32({ doc: 'Damage per game second while burning (flamethrower)' }),
+    burnLeft: f32({ doc: 'Game seconds of burning left' }),
   },
   { sim: true },
 );
@@ -214,6 +290,23 @@ export const Projectile = component(
     shock: f32({ doc: 'Shockwave radius on impact, cells' }),
     ux: f32({ doc: 'Flight direction, unit vector x (kept for the push at impact)' }),
     uy: f32({ doc: 'Flight direction, unit vector y' }),
+    slow: f32({ doc: 'Share of speed the enemies hit lose (frost)' }),
+    slowTime: f32({ doc: 'Game seconds the slow lasts' }),
+    puddle: f32({ doc: 'Damage per game second of the puddle left on impact (mortar), 0 none' }),
+    puddleSize: f32({ doc: 'Puddle radius, cells' }),
+    puddleTime: f32({ doc: 'Game seconds the puddle lasts' }),
+  },
+  { sim: true },
+);
+
+/** A puddle left by a mortar shell: hurts every enemy inside it each step until it dries. */
+export const Puddle = component(
+  'Puddle',
+  {
+    radius: f32({ doc: 'Cells' }),
+    dps: f32({ doc: 'Damage per game second to each enemy inside' }),
+    left: f32({ doc: 'Game seconds before it dries' }),
+    life: f32({ doc: 'Game seconds it lasts in all (for the fade)' }),
   },
   { sim: true },
 );
@@ -228,6 +321,8 @@ export const Offer = resource(
     sets: u32({ doc: 'Sets drawn this run' }),
     rerolls: u32({ doc: 'Rerolls bought this run (the price rises with each)' }),
     version: u32({ doc: 'Bumped on every new set or purchase, so the tray redraws' }),
+    freeRerolls: u8({ doc: 'Free rerolls left this wave (Boost.freeRerolls, refilled at each wave)' }),
+    singlePick: u8({ doc: 'Single-pick variant: 0 as the sheet says (SINGLE_PICK), 1 forced on, 2 forced off (cheat; kept across restarts)' }),
   },
   { sim: true },
 );
@@ -239,6 +334,7 @@ export const TrayLabel = component('TrayLabel', { slot: u8() }, { sim: true });
 export const TrayCoin = component('TrayCoin', { slot: u8() }, { sim: true });
 /** The icon shapes of an offer slot, replaced when the offer changes. */
 export const TrayIcon = component('TrayIcon', { slot: u8() }, { sim: true });
+export const BankPaid = event('BankPaid', { x: f32(), y: f32(), gold: u32() }, { sim: true, doc: 'Signal: a bank paid its gold at the start of a wave.' });
 export const OfferRerolled = event('OfferRerolled', { price: u32() }, { sim: true, doc: 'Signal: the player paid for a new offer.' });
 export const FxHost = component('FxHost', { kind: enumOf('FxKind', FX_KINDS) }, { sim: true });
 export const BoardTile = tag('BoardTile', { sim: true });
@@ -258,8 +354,13 @@ export const NestOpened = event('NestOpened', { nest: u8(), wave: u32() }, { sim
 
 export const RestartRequested = event('RestartRequested', {}, { sim: true, doc: 'The player pressed Restart on the end screen.' });
 export const LevelPicked = event('LevelPicked', { index: u8({ doc: 'Position in menuLevels() (src/levels.ts), from 0' }) }, { sim: true, doc: 'The player picked a level on the level menu.' });
+export const RollRequested = event('RollRequested', { luxury: bool({ doc: 'The Luxury roll (paid with star charge, Rare or better) instead of the coin Roll' }) }, { sim: true, doc: 'The player pressed Roll or Luxury on the Upgrades screen.' });
+export const UpgradeRolled = event('UpgradeRolled', { upgrade: enumOf('UpgradeKind', UPGRADE_KINDS), rarity: enumOf('Rarity', RARITIES), level: u8(), luxury: bool() }, { sim: true, doc: 'Signal: a roll gave an upgrade (the reveal popup shows it).' });
+export const WeaponInfoClosed = event('WeaponInfoClosed', {}, { sim: true, doc: 'The player closed the weapon info popup: the run resumes.' });
+export const SettingsToggled = event('SettingsToggled', { open: bool() }, { sim: true, doc: 'The player opened (gear in the HUD) or closed the settings popup: the run pauses while it is open.' });
+export const AudioSettingsChanged = event('AudioSettingsChanged', { sound: bool(), music: bool() }, { sim: true, doc: 'The player switched sound or music on or off in the settings popup.' });
 export const MenuRequested = event('MenuRequested', {}, { sim: true, doc: 'The player asked for the level menu.' });
 export const EnemyKilled = event('EnemyKilled', { x: f32(), y: f32(), gold: u32(), kind: enumOf('EnemyKind', ENEMY_KINDS) }, { sim: true, doc: 'Signal: an enemy died; gold flies to the counter.' });
 export const WaveStarted = event('WaveStarted', { wave: u32(), boss: bool(), newNest: bool() }, { sim: true, doc: 'Signal: a wave started.' });
 export const ItemPlaced = event('ItemPlaced', { kind: enumOf('ItemKind', ITEM_KINDS), shape: enumOf('BlockShape', BLOCK_SHAPES), cell: u8(), moved: bool(), cost: u32() }, { sim: true, doc: 'Signal: an item was dropped on the board.' });
-export const PlacementRefused = event('PlacementRefused', { reason: enumOf('PlaceReason', ['ok', 'offBoard', 'occupied', 'blocks', 'gold', 'enemy', 'noBlock', 'fixed']) }, { sim: true, doc: 'Signal: a drop was refused.' });
+export const PlacementRefused = event('PlacementRefused', { reason: enumOf('PlaceReason', ['ok', 'offBoard', 'occupied', 'blocks', 'gold', 'enemy', 'noBlock', 'fixed', 'noBuild']) }, { sim: true, doc: 'Signal: a drop was refused.' });

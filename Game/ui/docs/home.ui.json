@@ -1,0 +1,589 @@
+{
+  "$schemaVersion": 1,
+  "guid": "baf200aa-fd4f-4f5a-b375-325d14b3e3d3",
+  "name": "home",
+  "title": "Home / Level map",
+  "kind": "view",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Home",
+      "style": {
+        "w": "100%",
+        "h": "100%",
+        "pad": [
+          36,
+          40,
+          36,
+          40
+        ],
+        "bg": "#05060fff",
+        "dir": "column",
+        "gap": 30
+      },
+      "children": [
+        "ho_grid",
+        "hm_top",
+        "hm_lux_rim",
+        "hm_chapter",
+        "hm_mapbox",
+        "hm_play",
+        "hm_nav_rim"
+      ]
+    },
+    "hm_top": {
+      "type": "use",
+      "doc": "top-bar",
+      "key": "topbar",
+      "name": "Element",
+      "props": {
+        "coins": {
+          "property": "coins"
+        },
+        "stars": {
+          "property": "stars"
+        }
+      }
+    },
+    "hm_lux_rim": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "hm_lux_glow",
+        "hm_lux",
+        "hm_lux_rim_ring"
+      ],
+      "style": {
+        "pad": 0,
+        "w": "100%",
+        "radius": 36,
+        "bg": "#00000000",
+        "h": 190
+      }
+    },
+    "hm_lux": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "hm_lux_text",
+        "hm_lux_badge"
+      ],
+      "style": {
+        "pad": [
+          24,
+          30,
+          24,
+          30
+        ],
+        "dir": "row",
+        "align": "center",
+        "gap": 28,
+        "radius": 36,
+        "bg": "#140a2aff",
+        "w": "100%",
+        "h": "100%"
+      }
+    },
+    "hm_lux_text": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "hm_lux_row",
+        "hm_lux_steps"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "column",
+        "gap": 16,
+        "grow": 1,
+        "minW": 0
+      }
+    },
+    "hm_lux_row": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "hm_lux_title",
+        "hm_lux_prog",
+        "hm_lux_star"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "row",
+        "align": "center",
+        "w": "100%"
+      }
+    },
+    "hm_lux_title": {
+      "type": "label",
+      "name": "Label",
+      "text": "LUXURY ROLL",
+      "style": {
+        "fontSize": 46,
+        "fitMin": 24,
+        "weight": 900,
+        "color": "#ffffffff",
+        "grow": 1,
+        "textAlign": "left",
+        "shadowX": 0,
+        "shadowY": 0,
+        "shadowColor": "#d9b3ff33",
+        "shadowSoft": 10,
+        "font": {
+          "guid": "95b2641e-e699-4217-9291-f759580ab645"
+        },
+        "letterSpacing": 2
+      }
+    },
+    "hm_lux_prog": {
+      "type": "label",
+      "name": "Label",
+      "text": "{luxText}",
+      "style": {
+        "fontSize": 40,
+        "fitMin": 22,
+        "weight": 800,
+        "color": "#e6ecffff",
+        "font": {
+          "guid": "95b2641e-e699-4217-9291-f759580ab645"
+        }
+      }
+    },
+    "hm_lux_star": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "550620fc-7d0e-4e5c-a7dd-ac8a55b53375"
+        },
+        "w": 40,
+        "h": 40,
+        "tint": "#ffc51fff",
+        "margin": [
+          0,
+          0,
+          0,
+          8
+        ],
+        "tintMode": "multiply"
+      }
+    },
+    "hm_lux_badge": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "hm_lux_hex",
+        "hm_lux_hexrim",
+        "hm_lux_bstar",
+        "hm_lux_count"
+      ],
+      "style": {
+        "pad": 0,
+        "w": 130,
+        "h": 130,
+        "align": "center",
+        "justify": "center"
+      }
+    },
+    "hm_lux_hex": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "0b776a12-c65a-4362-b361-9939ca892c0a"
+        },
+        "w": 130,
+        "h": 130,
+        "tint": "#140a2aff",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "tintMode": "multiply"
+      }
+    },
+    "hm_lux_hexrim": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "841ab814-b99a-41c6-8e22-87f2e7bd7761"
+        },
+        "w": 138,
+        "h": 138,
+        "tint": "#b04cffff",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "tintMode": "multiply",
+        "attach": true
+      }
+    },
+    "hm_lux_bstar": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "550620fc-7d0e-4e5c-a7dd-ac8a55b53375"
+        },
+        "w": 64,
+        "h": 64,
+        "tint": "#ffc51fff",
+        "tintMode": "multiply"
+      }
+    },
+    "hm_lux_count": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "hm_lux_count_t"
+      ],
+      "style": {
+        "pad": 0,
+        "position": "anchored",
+        "anchor": [
+          1,
+          0
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": 56,
+        "h": 56,
+        "radius": 28,
+        "bg": "#3dff6eff",
+        "align": "center",
+        "justify": "center"
+      },
+      "show": "luxReady"
+    },
+    "hm_lux_count_t": {
+      "type": "label",
+      "name": "Label",
+      "text": "{luxCount}",
+      "style": {
+        "fontSize": 36,
+        "weight": 900,
+        "color": "#05060fff",
+        "font": {
+          "guid": "45be2b88-6a50-4995-8bcb-b8615868b12a"
+        }
+      }
+    },
+    "hm_chapter": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "hm_line_l",
+        "hm_chapter_t",
+        "hm_line_r"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "row",
+        "align": "center",
+        "gap": 24,
+        "w": "100%"
+      }
+    },
+    "hm_line_l": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "grow": 1,
+        "h": 4,
+        "bg": "#00000000",
+        "image": {
+          "guid": "0a1f73cb-8bb1-4520-956d-b09c2c3a5b5b"
+        },
+        "tint": "#ffc51fff",
+        "tintMode": "multiply"
+      }
+    },
+    "hm_chapter_t": {
+      "type": "label",
+      "name": "Label",
+      "text": "{chapter}",
+      "style": {
+        "fontSize": 52,
+        "fitMin": 26,
+        "weight": 900,
+        "letterSpacing": 6,
+        "color": "#ffc51fff",
+        "shadowX": 0,
+        "shadowY": 0,
+        "shadowColor": "#ffc51fcc",
+        "shadowSoft": 14,
+        "font": {
+          "guid": "45be2b88-6a50-4995-8bcb-b8615868b12a"
+        }
+      }
+    },
+    "hm_line_r": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "grow": 1,
+        "h": 4,
+        "bg": "#ffc51f99"
+      }
+    },
+    "hom_codearea": {
+      "type": "codeArea",
+      "name": "Code area",
+      "key": "map",
+      "style": {
+        "w": "auto",
+        "grow": 0,
+        "h": "auto"
+      }
+    },
+    "hm_play": {
+      "type": "use",
+      "doc": "play-button",
+      "key": "play",
+      "props": {
+        "label": "PLAY",
+        "detail": {
+          "property": "playDetail"
+        }
+      }
+    },
+    "hm_nav_rim": {
+      "type": "use",
+      "doc": "bottom-nav",
+      "key": "bottomnav",
+      "name": "Element",
+      "props": {
+        "upBadge": {
+          "property": "upBadge"
+        },
+        "upReady": {
+          "property": "upReady"
+        }
+      }
+    },
+    "hm_mapbox": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "hom_codearea"
+      ],
+      "style": {
+        "pad": 0,
+        "grow": 1,
+        "h": 0,
+        "minH": 0,
+        "w": "100%",
+        "align": "center",
+        "justify": "center"
+      }
+    },
+    "hm_lux_steps": {
+      "type": "use",
+      "doc": "lux-steps",
+      "key": "luxsteps",
+      "props": {
+        "steps": {
+          "property": "luxGoal"
+        },
+        "progress": {
+          "property": "luxStars"
+        }
+      },
+      "style": {
+        "w": "100%"
+      }
+    },
+    "hm_lux_glow": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "5b49a512-baa6-4ce3-93c2-19a3acf7b4fe"
+        },
+        "tint": "#b04cffff",
+        "tintMode": "multiply",
+        "imageAlpha": 0.6,
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%",
+        "sliceScale": 1
+      }
+    },
+    "ho_grid": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "ho_vig"
+      ],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "dcfbad66-9112-4f5f-b56e-49cfb1a1b2b9"
+        },
+        "tile": true,
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%"
+      }
+    },
+    "ho_vig": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "3c485bbf-0f58-4aca-bb14-d05b0d400c72"
+        },
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%"
+      }
+    },
+    "hm_lux_rim_ring": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "eca7e4eb-4dda-4700-8eda-9ba4ec7b3c6e"
+        },
+        "sliceScale": 1,
+        "tint": "#b04cffff",
+        "tintMode": "multiply",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%"
+      }
+    }
+  },
+  "view": {
+    "behaviour": "screen",
+    "safe": true
+  },
+  "properties": {
+    "coins": {
+      "type": "text",
+      "default": "1,240"
+    },
+    "stars": {
+      "type": "text",
+      "default": "12"
+    },
+    "luxText": {
+      "type": "text",
+      "default": "2 / 10"
+    },
+    "chapter": {
+      "type": "text",
+      "default": "CHAPTER 1"
+    },
+    "playDetail": {
+      "type": "text",
+      "default": "Level 6 · Crossfire"
+    },
+    "upBadge": {
+      "type": "text",
+      "default": "1"
+    },
+    "luxReady": {
+      "type": "yesno",
+      "default": false
+    },
+    "luxCount": {
+      "type": "text",
+      "default": "1"
+    },
+    "upReady": {
+      "type": "yesno",
+      "default": false
+    },
+    "luxStars": {
+      "type": "number",
+      "default": 2,
+      "format": "value"
+    },
+    "luxGoal": {
+      "type": "number",
+      "default": 10,
+      "format": "value"
+    }
+  },
+  "samples": {
+    "half": {
+      "coins": "1,240",
+      "stars": "12",
+      "luxText": "5 / 10",
+      "luxStars": 5,
+      "luxReady": true,
+      "luxCount": "1"
+    }
+  }
+}

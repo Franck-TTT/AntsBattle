@@ -13,3 +13,13 @@ export const LoadLevel = defineCheat({
     ctx.set(Level, { data: level, loads: ctx.get(Level).loads + 1 });
   },
 });
+
+export const RestartRun = defineCheat({
+  id: 'run.restart',
+  group: 'Level',
+  title: 'Restart the run on the current level',
+  resources: [write(Level)],
+  run(ctx) {
+    ctx.set(Level, { loads: ctx.get(Level).loads + 1 });
+  },
+});

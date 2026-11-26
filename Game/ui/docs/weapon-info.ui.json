@@ -1,0 +1,254 @@
+{
+  "$schemaVersion": 1,
+  "guid": "abce2860-e6e6-41a0-8b4f-a5824790c6b1",
+  "name": "weapon-info",
+  "title": "Weapon info",
+  "kind": "view",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Weapon info",
+      "style": {
+        "w": "100%",
+        "h": "100%",
+        "pad": 40,
+        "bg": "#00000000",
+        "justify": "center",
+        "align": "center"
+      },
+      "children": [
+        "wi_rim"
+      ]
+    },
+    "wi_rim": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "wi_glow",
+        "wi_panel",
+        "wi_ring"
+      ],
+      "style": {
+        "pad": 0,
+        "radius": 48,
+        "bg": "#00000000",
+        "w": 820,
+        "maxW": "100%"
+      }
+    },
+    "wi_glow": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "813297e0-59a1-45f6-93d8-744f32c682b8"
+        },
+        "tint": "#3f6bffff",
+        "tintMode": "multiply",
+        "imageAlpha": 0.6,
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%",
+        "sliceScale": 1
+      }
+    },
+    "wi_panel": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "wi_head",
+        "wi_desc",
+        "wi_info"
+      ],
+      "style": {
+        "pad": [
+          44,
+          44,
+          50,
+          44
+        ],
+        "dir": "column",
+        "align": "center",
+        "gap": 26,
+        "radius": 48,
+        "bg": "#0b0e24ff",
+        "w": "100%",
+        "h": "100%"
+      }
+    },
+    "wi_ring": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "d044cf5a-224f-4cfb-9218-f4bb86b06396"
+        },
+        "tint": "#3f6bffff",
+        "tintMode": "multiply",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%",
+        "sliceScale": 1
+      }
+    },
+    "wi_head": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "wi_titles",
+        "wi_close"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "row",
+        "align": "start",
+        "w": "100%",
+        "gap": 20
+      }
+    },
+    "wi_titles": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "wi_kicker",
+        "wi_name"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "column",
+        "grow": 1,
+        "minW": 0,
+        "gap": 4
+      }
+    },
+    "wi_close": {
+      "type": "use",
+      "doc": "icon-button",
+      "key": "close"
+    },
+    "wi_kicker": {
+      "type": "label",
+      "name": "Label",
+      "text": "{kicker}",
+      "style": {
+        "fontSize": 36,
+        "fitMin": 22,
+        "weight": 900,
+        "letterSpacing": 4,
+        "color": "#b8c4e8ff",
+        "textAlign": "left",
+        "font": {
+          "guid": "95b2641e-e699-4217-9291-f759580ab645"
+        }
+      }
+    },
+    "wi_name": {
+      "type": "label",
+      "name": "Label",
+      "text": "{name}",
+      "style": {
+        "fontSize": 84,
+        "fitMin": 44,
+        "weight": 900,
+        "color": "#ffc51fff",
+        "textAlign": "left",
+        "shadowX": 0,
+        "shadowY": 0,
+        "shadowColor": "#ffc51fcc",
+        "shadowSoft": 12,
+        "font": {
+          "guid": "45be2b88-6a50-4995-8bcb-b8615868b12a"
+        }
+      }
+    },
+    "wi_desc": {
+      "type": "label",
+      "name": "Label",
+      "text": "{desc}",
+      "style": {
+        "fontSize": 40,
+        "fitMin": 24,
+        "weight": 700,
+        "color": "#ffffffff",
+        "textAlign": "left",
+        "w": "100%",
+        "font": {
+          "guid": "95b2641e-e699-4217-9291-f759580ab645"
+        }
+      }
+    },
+    "wi_info": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "wi_info_r"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "column",
+        "gap": 14,
+        "w": "100%"
+      }
+    },
+    "wi_info_r": {
+      "type": "repeat",
+      "doc": "info-chip",
+      "property": "info"
+    }
+  },
+  "view": {
+    "behaviour": "dialog",
+    "dims": true,
+    "tapOutside": "dismiss",
+    "enter": {
+      "set": {
+        "wi_rim": {
+          "opacity": 0,
+          "scale": 0.7
+        }
+      }
+    }
+  },
+  "properties": {
+    "kicker": {
+      "type": "text",
+      "default": "WEAPON · 40 GOLD"
+    },
+    "name": {
+      "type": "text",
+      "default": "Tower"
+    },
+    "desc": {
+      "type": "text",
+      "default": "Fast single-target shots"
+    },
+    "info": {
+      "type": "list",
+      "of": "info-chip",
+      "default": []
+    }
+  }
+}

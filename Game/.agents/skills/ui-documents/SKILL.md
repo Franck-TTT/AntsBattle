@@ -1,6 +1,6 @@
 ---
 name: ui-documents
-version: 1.15.0
+version: 1.18.0
 tier: required
 description: UI documents (ui/**/*.ui.json) for every HUD, menu, popup, button and widget, built and changed with `gameengine ui doc` (MCP ui_doc_*), never hand-written JSON — layers, layout, states, poses, drivers, lists, transitions, placing one from a thin view. Use whenever a ui/**/*.ui.json is made or changed.
 ---
@@ -256,9 +256,20 @@ set its look with `--reaction`. The holder fires a trigger by giving it a new va
   what events carry) or a list's `--default '[{"key":"a","label":"A"}]'` for previews.
 - **Groups:** `ui doc set tabs root group=one` (exactly one on: tabs), `oneOrNone`, `many`; the holder hears
   `<key>: changed` with `selection`. **Lit up to:** `lit=<number>` turns its toggle children on up to it.
-- **Scrolling:** `ui doc set board b_list scroll="vertical items bounce"` (`horizontal`, snap `items` or
-  `pages`, `bounce`). A Repeat **alone** in a scroll element whose row widget has a fixed size (`h=` on its root)
+- **Scrolling:** `ui doc set board b_list scroll="vertical items bounce"` (`horizontal`, snap `items`,
+  `pages` or `children`, `bounce`). A Repeat **alone** in a scroll element whose row widget has a fixed size (`h=` on its root)
   is **virtual**: only the rows in view exist (10k rows are about 160 nodes). Keep long lists virtual.
+- **Scroll feel:** `ui doc set board b_list "scroll.feel=soft strength=1.5 spring=600,0.2 deceleration=fast"`: a
+  preset (`default`, `soft`, `snappy`, `bouncy`) and overrides: `strength` (how far a fling bounces past an end,
+  0 none), `max` (percent of the list a stretch tapers toward), `spring` / `snapSpring` (`ms[,bounce]`: swing
+  period, bounce 0 no overshoot) and `deceleration` (`slow`, `normal`, `fast` or a rate per second, 0.1–50; `normal` is 3). `scroll.feel=` clears it.
+- **Snap and scroll events:** `scroll="horizontal children"` snaps on each child whatever its size (a virtual Repeat
+  snaps with `items`: `children` sees only the rows built);
+  `scroll.snapAlign=center` rests items centred, `scroll.snapStop=yes` moves one at most per swipe (a pager).
+  A release lands on the snap point nearest where its fling would stop, at least the next one. `scroll.report=snap,scrollEnd` raises
+  those events as intents (`<key>: <layer id>: snap` with `scroll.index`, the item it lands on; also `scrollBegin`,
+  `fling`, `overscroll`); `scroll.haptic=selection` ticks once per new snap point. `scroll.scrollbar=auto` shows a position
+  indicator while it moves (`always` keeps it).
 - **Scroll to:** `ui doc set board b_list scroll.to=focus scroll.align=center "scroll.transition=easeOut 250"`
   binds where the list goes to a text, choice or enum property: `start`, `center`, `end`, or an item key of
   the Repeat inside (a virtual row not built yet too). A new value moves it, gliding on the transition; the

@@ -3,16 +3,18 @@
  * drop, refused-pick shakes, the base's red flash, camera shakes and sounds. Presentation only.
  */
 import { audio, burstAt, defineSystem, onSignal, parseColor, query, read, shakeCamera, withTag, write, Camera, RenderTime, Shape, VisualOffset, type EntityId } from '@gameengine/runtime';
-import { Base, Big, Block, Board, Enemy, FxHost, FxKind, Item, Placement, PlacementRefused, Run, TraySlot, WaveStarted } from '../schema.gen.ts';
-import { ENEMY_NAMES } from '../kinds.ts';
+import { Base, Big, Block, Board, Enemy, FxHost, FxKind, Item, Placement, PlacementRefused, Puddle, Run, TraySlot, WaveStarted } from '../schema.gen.ts';
+import { ENEMY_NAMES, ITEM_NAMES } from '../kinds.ts';
 import { cellX, cellY } from '../grid.ts';
-import { COLORS, ENEMY_LOOKS, FLASH } from '../looks.ts';
+import { COLORS, ENEMY_LOOKS, FLASH, PUDDLE } from '../looks.ts';
 import { ITEMS } from '../balance.ts';
 
 /** Recoil per ItemKind: how far the weapon kicks back (cells) and how fast it settles (1/s). */
-const RECOIL_KICK = [0, 0, 0.03, 0.09];
-const RECOIL_SETTLE = [1, 1, 30, 9];
-const PERIOD = [0, 0, ITEMS.tower.period, ITEMS.cannon.period];
+const RECOIL: Record<(typeof ITEM_NAMES)[number], [number, number]> = { none: [0, 1], wall: [0, 1], tower: [0.03, 30], cannon: [0.09, 9], frost: [0.05, 16], mine: [0, 1], boostPad: [0, 1], mortar: [0.07, 10], flamethrower: [0.012, 30], radar: [0, 1], bank: [0, 1] };
+const RECOIL_KICK = ITEM_NAMES.map((k) => RECOIL[k][0]);
+const RECOIL_SETTLE = ITEM_NAMES.map((k) => RECOIL[k][1]);
+const PERIOD = ITEM_NAMES.map((k) => (k === 'none' || k === 'wall' ? 0 : ITEMS[k].period));
+const MINE = ITEM_NAMES.indexOf('mine');
 /** Camera tremor when enemies take damage: trauma per hit burst, at most every TREMOR_GAP seconds. */
 const TREMOR = 0.07;
 const TREMOR_GAP = 0.12;
@@ -46,6 +48,7 @@ export const Juice = defineSystem({
     blocks: query(read(Block), write(VisualOffset)),
     base: query(withTag(Base), write(Shape), write(VisualOffset)),
     slots: query(read(TraySlot), write(VisualOffset)),
+    puddles: query(read(Puddle), write(Shape)),
     camera: query(read(Camera)),
     fx: query(read(FxHost)),
   },
@@ -190,8 +193,16 @@ export const Juice = defineSystem({
         const aim = it.aim[i]!;
         vo.position[i * 3] = (deny > 0 ? Math.sin(deny * 1.6) * 0.09 : 0) - Math.cos(aim) * kick;
         vo.position[i * 3 + 1] = -Math.sin(aim) * kick;
-        sh.color[i * 4 + 3] = it.held[i] ? 0.35 : 1;
+        // A mine that blew up shows dimmed until it re-arms.
+        sh.color[i * 4 + 3] = it.held[i] ? 0.35 : kind === MINE && it.reload[i]! > 0 ? 0.45 : 1;
       }
+    }
+
+    // Mortar puddles: fade in on landing, fade out as they dry.
+    for (const c of q.puddles.chunks()) {
+      const pd = c.col(Puddle);
+      const col = c.col(Shape).color;
+      for (let i = 0; i < c.length; i++) col[i * 4 + 3] = PUDDLE.alpha * Math.max(0, Math.min(1, pd.left[i]! / 0.5, (pd.life[i]! - pd.left[i]!) / 0.15));
     }
 
     // Blocks: a heavier squash on drop, a shake when the player tries to move one (they are fixed).

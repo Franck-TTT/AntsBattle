@@ -1,6 +1,6 @@
 ---
 name: playable-ads
-version: 1.9.0
+version: 1.10.1
 tier: optional
 description: Playable ads — cut a game slice in playable-ads/<ad>/, verify it, rewrite it for the web, story-video ads (*.story.json, createStoryVideo), then `gameengine playable build|validate` per network (AppLovin, Unity, Meta, Google, TikTok…). Use for any playable, HTML5, MRAID or interactive video ad, end card, loading phase or size problem.
 ---
@@ -25,6 +25,8 @@ images, audio, skeletons (~600 kB evaluator) and physics (below) all count again
 built size against that cap, not only against each network's.
 
 ## Workflow
+
+Before writing code, read `references/build-api.md`: engine field names, scene JSON, the schema DSL, `ctx` and event calls, and the web runtime signatures.
 
 1. **Create:** `gameengine playable new <ad> [--from-scene assets/scenes/x.scene.json] --json`.
    You get `playable-ads/<ad>/` (slice project, `playable.json`, `web/`) and, the first time,

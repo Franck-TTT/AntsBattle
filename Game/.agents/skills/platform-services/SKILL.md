@@ -1,6 +1,6 @@
 ---
 name: platform-services
-version: 1.25.0
+version: 1.27.0
 tier: optional
 description: Third-party SDKs and backends as project services (analytics, consent, ad networks, login; in-app purchases come from a package) — services/*.schema.ts, mocks, plugin manifests, Kotlin and Swift sources, replay-safe rules. Use when adding, changing or testing any SDK, store, ad network or server call from native code.
 ---
@@ -147,7 +147,7 @@ against it. Pin exact versions. `{{services.<path>}}` reads `project.gameengine.
 written as `{ "ios": …, "android": … }` resolves per platform (and each app ships only its own
 platform's entry); a line or key whose placeholder has no value and no `|default` is left out. A plugin may have only one platform section.
 
-More manifest fields (Info.plist texts per language, `gradlePlugins`, `gradlePrepareTasks`, iOS `buildPhases`, `linkerFlags`, `xcframeworks`, `files`): `references/manifest.md`.
+More manifest fields (Info.plist texts per language, `gradlePlugins`, `gradlePrepareTasks`, `proguard`, iOS `buildPhases`, `linkerFlags`, `xcframeworks`, `files`): `references/manifest.md`.
 
 **3. Native sources.** Implement the generated interface (Kotlin `StoreService`, Swift protocol
 `StoreService`; generated per build, with typed params/results) and register in `install`:
@@ -168,8 +168,8 @@ class StoreAcmePlugin : GameEnginePlugin, StoreService {
 `context.buildConfig` (Swift `context.buildConfig`) is the build's config, so a plugin can turn an
 SDK's verbose or test mode on in dev and probe builds and keep it off in release without a setting.
 `context.cheats` says whether the build carries cheats: dev and probe always, a release only with
-`--cheats` or `cheats.release` (an in-house build). Gate a test feature a cheat calls, such as a
-test crash, on `context.cheats`, not on `buildConfig`: an in-house release keeps it, a store build does not.
+`--cheats` or `cheats.release`. Gate a test feature a cheat calls, such as a test crash, on
+`context.cheats`, not on `buildConfig`: a release with cheats keeps it, one without them does not.
 Answer every call once (`reply.ok` / `reply.fail("E_CANCELLED", "…")`), from any thread; raise
 events with `services.emitStoreOrderUpdated(…)`. Plugins never touch the ECS.
 

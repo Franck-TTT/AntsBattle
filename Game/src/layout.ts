@@ -2,8 +2,8 @@
  * Level layout rules, shared by the sim (src/sim/level.ts), the `game/level-layout` check and the
  * Level Layout editor widget. Pure functions over plain data: no runtime imports.
  */
-import { CELLS, COLS, DEFAULT_COLS, DEFAULT_ROWS, MAX_NESTS, MIN_COLS, MIN_ROWS, ROWS, defaultBase, defaultNests, flowField, footprintCell, tracePath, type Markers, type NestDef } from './grid.ts';
-import { SHAPES } from './balance.ts';
+import { CELLS, COLS, DEFAULT_COLS, DEFAULT_ROWS, MAX_NESTS, MIN_COLS, MIN_ROWS, ROWS, defaultBase, defaultNests, flowField, footprintCell, noBuildCells, tracePath, type Markers, type NestDef } from './grid.ts';
+import { ON_GROUND, SHAPES, type ItemKindName } from './balance.ts';
 
 export interface LayoutBlock {
   readonly shape: string;
@@ -34,13 +34,15 @@ export interface Layout {
   readonly nests?: readonly LayoutNest[] | undefined;
   /** Absent: the default base for the board's size. */
   readonly base?: LayoutCell | undefined;
+  /** Cells the player can place nothing on, besides the 8 around each nest (always). */
+  readonly noBuild?: readonly LayoutCell[] | undefined;
 }
 
 /** One problem in a layout: the cells it is about, and the entry at fault (null: the layout as a whole). */
 export interface LayoutIssue {
   readonly message: string;
   readonly cells: readonly number[];
-  readonly entry: { readonly list: 'blocks' | 'weapons' | 'nests' | 'base' | 'size'; readonly index: number } | null;
+  readonly entry: { readonly list: 'blocks' | 'weapons' | 'nests' | 'base' | 'size' | 'noBuild'; readonly index: number } | null;
 }
 
 export interface LayoutResult {
@@ -53,6 +55,8 @@ export interface LayoutResult {
   readonly base: number;
   /** The same as Markers, for the grid helpers. */
   readonly markers: Markers;
+  /** 1 on every cell the player can place nothing on: the valid no-build cells and the 8 around each nest. */
+  readonly noBuild: Uint8Array;
   /** 1 on every cell a valid block covers. */
   readonly cells: Uint8Array;
   /** Index of the valid block covering each cell, -1 for none. */
@@ -131,6 +135,20 @@ export function checkLayout(layout: Layout): LayoutResult {
     issues.push({ message: 'No nest opens on wave 1: the first wave would have nowhere to come from', cells: nests.map((n) => n.cell), entry: null });
   }
   const isMarkerCell = (c: number): boolean => c === base || nests.some((n) => n.cell === c);
+  const markers: Markers = { nestCount: [nests.length], nestCell: nests.map((n) => n.cell), nestWave: nests.map((n) => n.fromWave), baseCell: [base] };
+
+  // No-build cells: the painted ones that make sense, then the ring around each nest. They bind the
+  // player only: the level's own blocks and weapons may stand on them.
+  const painted: number[] = [];
+  (layout.noBuild ?? []).forEach((z, index) => {
+    const entry = { list: 'noBuild' as const, index };
+    const cell = z.row * COLS + z.col;
+    if (!inside(z.col, z.row, cols, rows)) issues.push({ message: `No-build cell ${where(z.col, z.row)} is off the board`, cells: [], entry });
+    else if (isMarkerCell(cell)) issues.push({ message: `No-build cell ${where(z.col, z.row)} is on a nest or the base`, cells: [cell], entry });
+    else if (painted.includes(cell)) issues.push({ message: `No-build cell ${where(z.col, z.row)} is listed twice`, cells: [cell], entry });
+    else painted.push(cell);
+  });
+  const noBuild = noBuildCells(markers, cols, rows, painted, new Uint8Array(CELLS));
 
   const cells = new Uint8Array(CELLS);
   const blockAt = new Int16Array(CELLS).fill(-1);
@@ -164,7 +182,13 @@ export function checkLayout(layout: Layout): LayoutResult {
       return;
     }
     const c = w.row * COLS + w.col;
-    if (!cells[c]) {
+    if (ON_GROUND.has(w.kind as ItemKindName)) {
+      // Mines and boost pads lie on a free ground cell, where the ants walk.
+      if (cells[c] || isMarkerCell(c)) {
+        issues.push({ message: `Weapon ${w.kind} at ${where(w.col, w.row)} must lie on a free ground cell (not a block, a nest or the base)`, cells: [c], entry });
+        return;
+      }
+    } else if (!cells[c]) {
       issues.push({ message: `Weapon ${w.kind} at ${where(w.col, w.row)} does not stand on a block`, cells: [c], entry });
       return;
     }
@@ -178,8 +202,7 @@ export function checkLayout(layout: Layout): LayoutResult {
   flowField(cells, dist, new Int16Array(CELLS), base, cols, rows);
   const cut = nests.filter((n) => dist[n.cell]! < 0).map((n) => n.cell);
   if (cut.length) issues.push({ message: `The blocks close every path from ${cut.length > 1 ? `${cut.length} nests` : 'a nest'} to the base`, cells: cut, entry: null });
-  const markers: Markers = { nestCount: [nests.length], nestCell: nests.map((n) => n.cell), nestWave: nests.map((n) => n.fromWave), baseCell: [base] };
-  return { issues, cols, rows, nests, base, markers, cells, blockAt, weaponAt, dist };
+  return { issues, cols, rows, nests, base, markers, noBuild, cells, blockAt, weaponAt, dist };
 }
 
 /** Every cell on the ants' path from each nest to the base, for a preview (1 on the path). */

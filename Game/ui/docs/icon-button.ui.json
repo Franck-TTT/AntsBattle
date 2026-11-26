@@ -1,0 +1,143 @@
+{
+  "$schemaVersion": 1,
+  "guid": "d311f118-b6d4-4dd8-806c-93bc894cc8f1",
+  "name": "icon-button",
+  "title": "Icon button",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Icon button",
+      "style": {
+        "dir": "row",
+        "h": 100,
+        "minW": 0,
+        "pad": 0,
+        "align": "center",
+        "justify": "center",
+        "bg": "#00000000",
+        "radius": 28,
+        "w": 100
+      },
+      "children": [
+        "ib_glow",
+        "ib_in",
+        "root_ring"
+      ]
+    },
+    "ib_in": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "ib_icon"
+      ],
+      "style": {
+        "pad": 0,
+        "w": "100%",
+        "h": "100%",
+        "radius": 28,
+        "bg": "#0b0e24ff",
+        "align": "center",
+        "justify": "center"
+      }
+    },
+    "ib_icon": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": "@icon",
+        "w": 50,
+        "h": 50,
+        "tint": "#ff2e88ff",
+        "tintMode": "multiply"
+      }
+    },
+    "ib_glow": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "5e0918ab-ca7c-4527-a2d6-477b7947742d"
+        },
+        "tint": "#ff2e88ff",
+        "tintMode": "multiply",
+        "imageAlpha": 0.7,
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%",
+        "sliceScale": 1
+      }
+    },
+    "root_ring": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "fe3e60fe-b048-4ac5-8d8c-0bca59f46642"
+        },
+        "sliceScale": 1,
+        "tint": "#ff2e88ff",
+        "tintMode": "multiply",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%"
+      }
+    }
+  },
+  "behaviour": "button",
+  "properties": {
+    "icon": {
+      "type": "image",
+      "default": {
+        "guid": "31b3b5d4-174f-49ff-8ddc-783ac4958896"
+      }
+    }
+  },
+  "transition": {
+    "type": "back",
+    "ms": 240,
+    "overshoot": 1.4
+  },
+  "states": {
+    "pressed": {
+      "set": {
+        "root": {
+          "scale": 0.94
+        }
+      }
+    },
+    "disabled": {
+      "set": {
+        "root": {
+          "saturation": 0,
+          "opacity": 0.6
+        }
+      }
+    }
+  }
+}

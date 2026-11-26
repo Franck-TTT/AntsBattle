@@ -1,6 +1,6 @@
 ---
 name: mobile-performance-review
-version: 1.30.0
+version: 1.33.0
 tier: required
 description: Mobile performance review of a file, feature or game — measure first (perf.stats, profile.markers, `gameengine device perf`, capacity sweeps), then check CPU, GPU, memory, load-time and download budgets per device class. Use before shipping a feature, when a budget test fails, for 'will this run on low-end phones', or a drop to 30 fps.
 ---
@@ -215,6 +215,17 @@ UI screen over gameplay, 10+ minutes of play for heap growth and thermals. Recor
   texture page share draws too (skill `vfx`), so mixed blend modes and big standalone
   effect textures are what add draws. Many short effects at once: one stopped system and
   `burstAt(system, positions)` instead of an entity each.
+- Alpha-masked foliage, grass cards and cut-outs (`alphaMode: "mask"`): a discard turns off the
+  tile GPU's own hidden-surface removal, so overlapping cards shade card by card. When a phone is
+  fragment-bound on them (`gameengine screenshot --view overdraw`, `3d.forward` GPU ms), try
+  `"features": { "maskedPrepass": true }` on that quality level and compare GPU ms on the device:
+  it draws their depth first, at the cost of their vertices twice and a few extra draw calls, so
+  keep it only if the frame gets faster.
+- Lit 3D shading: when a low phone level is GPU-bound on lighting (`3d.forward` GPU ms high with
+  few overlapping layers) and the scene is matte or stylised, try `liteLighting: true` on that
+  level (`gameengine quality set android.low liteLighting=on`; boot-only, so relaunch). What it
+  removes and its measured saving: skill `device-tiers`. While the main thread bounds the frame it
+  saves GPU time but shows no more frames.
 - Off-screen and invisible 2D content (outside every orthographic camera, alpha 0,
   `visible: false`) is not drawn but still costs extraction on the CPU (`render.stats().culled2d`
   / `transparent2d`; skill `atlasing`): pool thousands of parked entities, and hide pooled visuals
@@ -239,6 +250,12 @@ UI screen over gameplay, 10+ minutes of play for heap growth and thermals. Recor
   target and a full-size composite: avoid post in 2D games. Per device, `device-profiles.json`
   (the engine's `android-mali-g5x` runs at 0.75 scale and msaa 1; a project's own `device-profiles.json` is matched first) and
   its `targetFps`.
+- **Output size on Android** (`outputScale`, 0.5–1): on 1080p and 1440p phones the passes at
+  output size (post, SMAA/FXAA, the UI) are a large share of the GPU frame; `"android.medium":
+  { "outputScale": 0.8 }` shades fewer of those pixels and softens UI and text. It compounds with
+  `renderScale` for the 3D scene (0.8 × 0.75 draws it at 0.6 of the panel), so set both on an
+  `android.*` level only: iOS ignores `outputScale` but takes `renderScale`. Keeping the scene's
+  resolution: skill `device-tiers`.
 - **Idle screens** (menus, a paused board, a map waiting for a tap): every frame is drawn and
   presented, still or not (`idleFrames.enabled` is false: the engine does not skip identical
   frames, since a GPU left idle woke at a low clock the quality governor read as load). A still

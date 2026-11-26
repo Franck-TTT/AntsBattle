@@ -1,6 +1,6 @@
 ---
 name: device-tiers
-version: 1.29.0
+version: 1.32.0
 tier: required
 description: Cheaper content per device — phone-low first, quality levels low/medium/high per platform (quality.select, quality.levels, --level), opt-in visual features per level (quality features, quality show, W_FEATURE_OFF), overrides in materials, VFX, textures, meshes, post, audio. Use when a game runs badly on phones or an effect is missing on a device.
 ---
@@ -140,6 +140,19 @@ run stays off:
 - Adding an effect means adding its switch for the levels that can pay for it: check its cost in
   `quality features` against the 33 ms phone-low frame. SMAA, scene depth and the depth prepass
   keep their tier defaults (desktop on).
+- `depthPrepass` and `maskedPrepass` are boot-only geometry switches (a level change applies at
+  the next launch). `maskedPrepass` is off on every tier until a level switches it on: it draws
+  the depth of alpha-masked materials only (foliage, grass cards, cut-outs), for phone levels
+  that are fragment-bound on overlapping masked cards (skill `mobile-performance-review`).
+- `liteLighting: true` (a settings field on `quality.levels.<key>` or `render.tiers.<key>`, not
+  under `features`; boot-only) shades lit 3D materials with diffuse light only: the sun with its
+  shadow, local lights, ambient and emissive stay; specular highlights, environment reflections,
+  reflection probes and clearcoat go, and metals shade as a matte version of their base colour.
+  Off everywhere until a level sets it. Use it on low phone levels whose GPU is busy lighting,
+  where the look survives (matte or stylised scenes): `gameengine quality set android.low
+  liteLighting=on`, then `gameengine device perf --feature-sweep --only liteLighting` on the
+  phone. A 3D town scene on a Galaxy A04s (`android.low`) saved 4–6 ms of GPU a frame and showed
+  8.5–11 % more frames once the CPU was not the limit.
 - A post profile that leaves `bloom` or `ssao` out still asks for them (both default on in a
   profile): switch them on, or set `"enabled": false` in the profile so `W_FEATURE_OFF` stays quiet.
 - A project file at `"$schemaVersion": 1` still runs every special visual its tier has, and
@@ -216,7 +229,16 @@ run stays off:
   `"overrides": { "phone-low": { "effects": { "<id>": null } } }`, mark extras `optional` so the
   governor drops them first, or switch them all off per level with the `postEffects` feature.
 - **Render settings:** `msaa`, `keepMsaa`, `renderScale`, `post`, `lighting2d`, `sceneDepth`, `sceneDepthLayers`,
-  `meshLodBias`, `meshMinLod` and `skyScale` follow a key change at run time; `hdr` and `shadow*` apply when the renderer starts.
+  `meshLodBias`, `meshMinLod`, `skyScale` and `outputScale` follow a key change at run time; `hdr`, `shadow*` and `liteLighting` apply when the renderer starts.
+- **Output size on Android:** `outputScale` (0.5–1, default 1) presents at that fraction of the
+  window and Android scales it up to the panel, so the full-screen passes after the scene (post,
+  SMAA/FXAA, the UI) shade fewer pixels on 1080p and 1440p phones: `"android.medium": { "outputScale": 0.8 }`.
+  `renderScale` applies on top of it (0.8 × 0.75 draws the scene at 0.6 of the panel), UI and text
+  get softer, and layout, touch and safe areas are unchanged. Only Android applies it.
+  Adding `outputScale` to a level that already sets `renderScale` lowers the scene further: to keep
+  the scene's resolution, raise `renderScale` by the same factor (`renderScale` 0.6 becomes 0.75
+  with `outputScale` 0.8), so only the passes at output size get cheaper. Do both on an `android.*`
+  level: iOS ignores `outputScale` but would take the higher `renderScale`.
 - **Anti-aliasing:** 3D gets 4x MSAA by default on mobile and desktop, and FXAA (or SMAA where the
   `smaa` feature is on) when `msaa` is 1. Some GPUs' device profiles turn MSAA off (Mali-G5x,
   PowerVR); `"keepMsaa": true` on a level keeps the project's MSAA there, and the governor still

@@ -1,5 +1,11 @@
 /* Coins flying from a kill to the gold counter (positioned by the HUD view in reference px). */
 .hud-root { width: 100%; height: 100%; }
+.hud-gear {
+  /* Top right, like the level menu's gear; the board keeps clear of it (FIT.reserve.top in src/sim/board.ts). */
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 36px);
+  right: calc(env(safe-area-inset-right) + 40px);
+}
 .hud-flights { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 .hud-coin {
   position: absolute;
@@ -12,3 +18,26 @@
   border-width: 5px;
   border-color: #b8860b;
 }
+
+/* Home level map (src/views/level-menu.view.tsx): nodes and path dots placed in % of the map area. */
+.map-root { --map-h: 740px; position: relative; width: 1000px; height: var(--map-h); flex-shrink: 0; }
+@media (aspect < 0.5) { .map-root { --map-h: 1200px; } }
+@media (aspect > 0.7) { .map-root { --map-h: 700px; } }
+.map-node { position: absolute; width: 140px; height: 140px; margin-left: -70px; margin-top: -70px; }
+.map-dot { position: absolute; width: 8px; height: 8px; margin-left: -4px; margin-top: -4px; border-radius: 4px; background-color: #2f45d6cc; }
+.map-dot-lit { width: 13px; height: 13px; margin-left: -6px; margin-top: -6px; border-radius: 7px; background-color: #9fe8ff; }
+
+/* Level popup layout preview: one cell per board cell. */
+.pv-board { flex-direction: column; gap: 4px; padding: 12px; border-radius: 16px; background-color: #080a1c; }
+.pv-row { flex-direction: row; gap: 4px; }
+.pv-col { flex-direction: column; gap: 4px; }
+.pv-cell { width: 30px; height: 30px; border-radius: 4px; background-color: #1a2366; }
+.pv-block { background-color: #c3cdf0; }
+.pv-weapon { background-color: #29f2ff; }
+.pv-nest { background-color: #ff2ec8; }
+.pv-base { background-color: #29f2ff; border-radius: 15px; }
+
+/* Upgrades grid (src/views/upgrades.view.tsx): 4 equal columns. */
+.up-grid { flex-direction: column; gap: 20px; width: 100%; padding: 24px 22px; }
+.up-row { flex-direction: row; gap: 20px; width: 100%; }
+.up-cell { flex-grow: 1; flex-basis: 0; min-width: 0; }

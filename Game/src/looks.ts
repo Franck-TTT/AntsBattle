@@ -17,6 +17,8 @@ export const COLORS = {
   preview: '#ffd84a',
   valid: '#3dff6e',
   invalid: '#ff2e4d',
+  /** No-build cells and nests: a thin cross, the colour of the board's grid lines (gridMajor). */
+  noBuild: '#2f45d6',
   nest: '#12051a',
   nestRim: '#ff2ec8',
   nestHole: '#ff2ec8',
@@ -74,6 +76,38 @@ export const ITEM_LOOKS: Record<Exclude<ItemKindName, 'none'>, { body: ShapeLook
     body: { kind: 'Polygon', size: [0.72, 0.72], radius: 0.02, sides: 8, color: '#1c0d03', strokeColor: '#ff8a1f', strokeWidth: 0.07 },
     detail: { kind: 'Rect', size: [0.58, 0.22], radius: 0, color: '#1c0d03', strokeColor: '#ff8a1f', strokeWidth: 0.05 },
   },
+  frost: {
+    body: { kind: 'Polygon', size: [0.64, 0.64], radius: 0.02, sides: 4, color: '#031420', strokeColor: '#7fd8ff', strokeWidth: 0.07 },
+    detail: { kind: 'Rect', size: [0.46, 0.12], radius: 0.06, color: '#e6f8ff', strokeColor: '#7fd8ff', strokeWidth: 0.03 },
+  },
+  /** Flat on the ground, under the ants: a dark disc with a red neon rim and a light. */
+  mine: {
+    body: { kind: 'Circle', size: [0.46, 0.46], radius: 0.23, color: '#1f0408', strokeColor: '#ff2e4d', strokeWidth: 0.06 },
+    detail: { kind: 'Circle', size: [0.12, 0.12], radius: 0.06, color: '#ff2e4d' },
+  },
+  /** Flat on the ground, under the ants: an amber plate with a chevron. */
+  boostPad: {
+    body: { kind: 'Rect', size: [0.7, 0.7], radius: 0.1, color: '#1f1403', strokeColor: '#ffb020', strokeWidth: 0.06 },
+    detail: { kind: 'Polygon', size: [0.34, 0.34], radius: 0.02, sides: 3, color: '#ffb020' },
+  },
+  mortar: {
+    body: { kind: 'Polygon', size: [0.66, 0.66], radius: 0.02, sides: 5, color: '#071f03', strokeColor: '#3dff6e', strokeWidth: 0.07 },
+    detail: { kind: 'Rect', size: [0.4, 0.24], radius: 0.08, color: '#071f03', strokeColor: '#3dff6e', strokeWidth: 0.05 },
+  },
+  flamethrower: {
+    body: { kind: 'Polygon', size: [0.62, 0.62], radius: 0.02, sides: 6, color: '#200803', strokeColor: '#ff5a1f', strokeWidth: 0.07 },
+    detail: { kind: 'Rect', size: [0.46, 0.16], radius: 0.04, color: '#200803', strokeColor: '#ff5a1f', strokeWidth: 0.04 },
+  },
+  /** Support: no barrel; a dish ring, centred. */
+  radar: {
+    body: { kind: 'Circle', size: [0.6, 0.6], radius: 0.3, color: '#031a20', strokeColor: '#29f2ff', strokeWidth: 0.06 },
+    detail: { kind: 'Ring', size: [0.34, 0.34], radius: 0.17, thickness: 0.06, color: '#29f2ff' },
+  },
+  /** Support: a vault with a coin, centred. */
+  bank: {
+    body: { kind: 'Rect', size: [0.6, 0.6], radius: 0.08, color: '#1f1803', strokeColor: '#ffc51f', strokeWidth: 0.06 },
+    detail: { kind: 'Circle', size: [0.26, 0.26], radius: 0.13, color: '#ffc51f', strokeColor: '#b8860b', strokeWidth: 0.04 },
+  },
 };
 
 /** Enemies are plain outlined shapes, one colour each; the "head" is an inner shape on big kinds. */
@@ -108,6 +142,13 @@ export const FLOW_COLORS = ['#9ae6ff', '#3f8cff', '#ffe02e', '#ff9e3d', '#c58cff
 
 /** Enemy body colours by EnemyKind index (restored after a hit flash). Keep in step with ENEMY_LOOKS. */
 export const ENEMY_BODY_COLORS = ['#1f0412', '#1f1a03', '#031f0c', '#1a0424'] as const;
+/** Body fill of a slowed (frosted) enemy. */
+export const FROST_COLOR = '#2a7fb0';
+/** Body fill of a hasted enemy (boost pad). */
+export const HASTE_COLOR = '#8a5a00';
+/** A mortar's puddle, drawn on the ground under the ants, of radius `r` cells. */
+export const PUDDLE = { color: '#3dff6e66', alpha: 0.4 } as const;
+export const puddleLook = (r: number): ShapeLook => ({ kind: 'Circle', size: [r * 2, r * 2], radius: r, color: PUDDLE.color });
 
 /** Enemies shrink at swarm scale so a column of hundreds still reads as a column. */
 export function enemyScale(kind: EnemyKindName): number {
@@ -140,10 +181,13 @@ export function rivetOffsets(w: number, h: number): [number, number][] {
 }
 export const LOCKED_RING: ShapeLook = { kind: 'Ring', size: [0.86, 0.86], radius: 0.43, thickness: 0.05, color: LOCKED.rim };
 
-/** Projectiles: a white-hot streak with a coloured rim (tower), a glowing shell (cannon). */
+/** Projectiles: a white-hot streak (tower), a glowing shell (cannon), an ice shard (frost), a green shell (mortar); a mine's blast is never seen. */
 export const SHOT_LOOKS = {
   tower: { kind: 'Rect', size: [0.34, 0.09], radius: 0.045, color: '#f2ffff', strokeColor: '#29f2ff', strokeWidth: 0.035 },
   cannon: { kind: 'Circle', size: [0.3, 0.3], radius: 0.15, color: '#ffe0b0', strokeColor: '#ff7a1a', strokeWidth: 0.07 },
+  frost: { kind: 'Polygon', size: [0.22, 0.22], radius: 0.02, sides: 4, color: '#e6f8ff', strokeColor: '#7fd8ff', strokeWidth: 0.04 },
+  mine: { kind: 'Circle', size: [0.1, 0.1], radius: 0.05, color: '#ff2e4d' },
+  mortar: { kind: 'Circle', size: [0.24, 0.24], radius: 0.12, color: '#d8ffe0', strokeColor: '#3dff6e', strokeWidth: 0.06 },
 } as const satisfies Record<string, ShapeLook>;
 
 /** Base flash and enemy flash colours. */

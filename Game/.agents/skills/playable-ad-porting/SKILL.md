@@ -1,6 +1,6 @@
 ---
 name: playable-ad-porting
-version: 1.18.0
+version: 1.19.0
 tier: optional
 description: Porting a playable-ad slice onto @gameengine/playable so the web ad runs the game's own systems — the web entry, supported features, input, sprites, HUD and sound, `gameengine playable verify`. Use when an ad's web build should run the game's code, or when verify reports a divergence.
 ---
@@ -124,7 +124,7 @@ function start(img: Record<string, HTMLImageElement>) {
   // slow phone pass { renderScale: 0.75 } or { maxFps: 30 } as the 4th argument rather than drawing less.
   const stage = createStage();
   const audio = new Sounds(sounds);
-  const p = createPlayable({ boot, game, scene: Uint8Array.from(atob(slice.scene), (c) => c.charCodeAt(0)), seed: slice.seed, dt: slice.dt });
+  const p = createPlayable({ boot, game, scene: Uint8Array.from(atob(slice.scene), (c) => c.charCodeAt(0)), seed: slice.seed, dt: slice.dt, refs: slice.refs });
   const byAlias = Object.fromEntries(Object.entries(aliases).flatMap(([alias, key]) => (img[key] ? [[alias, img[key]!]] : [])));
   // Each finger gets its own pointer id; the view and pointers are in points, as gestures measure millimetres.
   let pending: InputEvent[] = [viewEvent(stage)];

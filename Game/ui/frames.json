@@ -1,0 +1,18 @@
+{
+  "$comment": "Outlines (rings) and glows of the meta UI. One entry per shape: corner radius, outline width (stroke, 0 = none), glow spread (0 = none) and the element's fixed height (\"auto\" for panels whose height follows their content). `gameengine tool ui-frames` draws assets/ui/meta/rim_<name>.png and glow_<name>.png and makes the listed elements match; the game/ui-frames check fails when a document drifts. Colours, opacity and states stay in the documents.",
+  "frames": {
+    "chip": { "radius": 44, "stroke": 5, "glow": 26, "height": 88, "uses": [{ "doc": "meta-chip", "element": "root", "face": "mc_in" }] },
+    "pill": { "radius": 37, "stroke": 4, "glow": 26, "height": 74, "uses": [{ "doc": "upgrades", "element": "up_pow_rim", "face": "up_pow" }] },
+    "gear": { "radius": 32, "stroke": 5, "glow": 28, "height": 120, "uses": [{ "doc": "gear-button", "element": "hm_gear_rim", "face": "hm_gear" }] },
+    "icon": { "radius": 28, "stroke": 5, "glow": 22, "height": 100, "uses": [{ "doc": "icon-button", "element": "root", "face": "ib_in" }] },
+    "play": { "radius": 44, "stroke": 0, "glow": 36, "height": 200, "uses": [{ "doc": "play-button", "element": "root", "face": "pb_face" }] },
+    "lux": { "radius": 36, "stroke": 5, "glow": 34, "height": 190, "uses": [{ "doc": "home", "element": "hm_lux_rim", "face": "hm_lux" }] },
+    "navbar": { "radius": 44, "stroke": 4, "glow": 0, "height": 176, "uses": [{ "doc": "bottom-nav", "element": "hm_nav_rim", "face": "hm_nav" }] },
+    "nav": { "radius": 40, "stroke": 5, "glow": 28, "height": 150, "uses": [{ "doc": "nav-button", "element": "root", "face": "nb_in" }] },
+    "roll": { "radius": 40, "stroke": 5, "glow": 34, "height": 290, "uses": [{ "doc": "roll-button", "element": "root", "face": "rb_in" }] },
+    "tile": { "radius": 30, "stroke": 5, "glow": 22, "height": 220, "uses": [{ "doc": "upgrade-tile", "element": "root", "face": "ut_in" }] },
+    "info": { "radius": 22, "stroke": 3, "glow": 0, "height": 78, "uses": [{ "doc": "info-chip", "element": "root", "face": "ic_in" }] },
+    "panel": { "radius": 48, "stroke": 5, "glow": 40, "height": "auto", "uses": [{ "doc": "level-popup", "element": "lp_rim", "face": "lp_panel" }] },
+    "reveal": { "radius": 48, "stroke": 8, "glow": 40, "height": "auto", "uses": [{ "doc": "upgrade-reveal", "element": "rv_rim", "face": "rv_panel" }] }
+  }
+}

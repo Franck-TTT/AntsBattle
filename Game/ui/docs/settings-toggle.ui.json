@@ -1,0 +1,184 @@
+{
+  "$schemaVersion": 1,
+  "guid": "f45c0e43-ff05-47ac-8126-c1eb6f0c12b9",
+  "name": "settings-toggle",
+  "title": "Settings toggle",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Settings toggle",
+      "style": {
+        "dir": "row",
+        "pad": 0,
+        "align": "center",
+        "bg": "#00000000",
+        "radius": 22,
+        "w": "100%",
+        "h": 110
+      },
+      "children": [
+        "st_in",
+        "st_ring"
+      ]
+    },
+    "st_in": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "st_label",
+        "st_track"
+      ],
+      "style": {
+        "pad": [
+          14,
+          28,
+          14,
+          28
+        ],
+        "dir": "row",
+        "align": "center",
+        "gap": 20,
+        "radius": 22,
+        "bg": "#0b0e24ff",
+        "w": "100%",
+        "h": "100%"
+      }
+    },
+    "st_label": {
+      "type": "label",
+      "name": "Label",
+      "text": "{label}",
+      "style": {
+        "fontSize": 44,
+        "fitMin": 24,
+        "weight": 900,
+        "color": "#ffffffff",
+        "grow": 1,
+        "textAlign": "left",
+        "font": {
+          "guid": "45be2b88-6a50-4995-8bcb-b8615868b12a"
+        }
+      }
+    },
+    "st_track": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "st_knob"
+      ],
+      "style": {
+        "pad": 0,
+        "w": 132,
+        "h": 68,
+        "radius": 34,
+        "bg": "#2a3158ff"
+      }
+    },
+    "st_knob": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "w": 52,
+        "h": 52,
+        "radius": 26,
+        "bg": "#b8c4e8ff",
+        "position": "anchored",
+        "anchor": [
+          0,
+          0.5
+        ],
+        "pivot": [
+          0,
+          0.5
+        ],
+        "offset": [
+          8,
+          0
+        ]
+      }
+    },
+    "st_ring": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "ae35fd1b-826e-4ef8-bf95-1b985db644a0"
+        },
+        "sliceScale": 1,
+        "tint": "#2f45d6ff",
+        "tintMode": "multiply",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%"
+      }
+    }
+  },
+  "behaviour": "toggle",
+  "properties": {
+    "label": {
+      "type": "text",
+      "default": "Sound"
+    },
+    "on": {
+      "type": "yesno",
+      "poses": {
+        "yes": {
+          "set": {
+            "st_track": {
+              "bg": "#3dff6eff"
+            },
+            "st_knob": {
+              "anchor": [
+                1,
+                0.5
+              ],
+              "pivot": [
+                1,
+                0.5
+              ],
+              "offset": [
+                -8,
+                0
+              ],
+              "bg": "#0b0e24ff"
+            }
+          }
+        }
+      }
+    }
+  },
+  "states": {
+    "pressed": {
+      "set": {
+        "root": {
+          "scale": 0.97
+        }
+      }
+    }
+  },
+  "samples": {
+    "on": {
+      "label": "Sound",
+      "on": true
+    },
+    "off": {
+      "label": "Music",
+      "on": false
+    }
+  }
+}

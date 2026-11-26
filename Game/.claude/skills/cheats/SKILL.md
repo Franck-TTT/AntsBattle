@@ -1,6 +1,6 @@
 ---
 name: cheats
-version: 1.14.0
+version: 1.14.2
 tier: optional
 description: Cheats and debug commands — defineCheat in src/**/*.cheats.ts, the in-game console, `gameengine cheat list|run`, MCP cheat_*, the Cheats panel, cheat() in tests, the engine.perf widget, screenshots (engine.capture store shots, devCapture.frame for QA reports), release stripping. Use for any debug or QA shortcut, or to set up a test or agent state.
 ---
@@ -109,7 +109,7 @@ from a presentation cheat except through `emit(SomeEvent)`.
 
 | Who | How |
 |---|---|
-| Player / QA on a device or the desktop player | two-finger double tap (or Shift+Escape, the `cheats.key` default; also in the editor's Play view) opens the console; tap a group, set params, **Run** |
+| Player / QA on a device or the desktop player | the project's `cheats.gesture` (default a two-finger double tap) or Shift+Escape (the `cheats.key` default; also in the editor's Play view) opens the console; tap a group, set params, **Run** |
 | Agent with a shell | `gameengine run --headless --paused`, then `gameengine cheat list`, `gameengine cheat run moves.add amount=3` (or `--arg amount=3`, `--args '{"amount":3}'`), then `gameengine step 1` |
 | Agent over MCP | `cheat_list`, `cheat_run { id, args }` (then `step`) |
 | Editor | the **Cheats** panel while Play runs |
@@ -200,13 +200,15 @@ UI must work without a picture.
 |---|---|
 | editor Play, `gameengine run`, tests | yes |
 | `build android|ios --config dev|probe`, `cook` | yes |
-| `--config release`, `cook --release` | no — unless `--cheats`, or `"cheats": { "release": true }` in project.gameengine.json (in-house builds, installed directly) |
+| `--config release`, `cook --release` | no — unless `--cheats`, or `"cheats": { "release": true }` in project.gameengine.json (builds installed directly) |
 
 `gameengine build … --report` says `cheats: included` when they are in. Release builds have no
 debug protocol, so there only the in-game console runs them.
 
 Cheats never reach a store: `--upload` refuses a build that carries them (Play, App Store Connect,
-Steam), so install in-house cheat builds directly. `release pack` always leaves them out and refuses a `--content-of` base that has them.
+Steam), so install cheat builds directly. `release pack` keeps them only in a release for a channel
+`releases.cheatChannels` lists (e.g. `["qa", "qa-*"]`, a trailing `*` matching a
+prefix), strips them everywhere else, and refuses a `--content-of` base that has them for such a channel.
 
 Console settings in `project.gameengine.json` (all optional):
 
@@ -214,8 +216,9 @@ Console settings in `project.gameengine.json` (all optional):
 "cheats": { "gesture": "twoFingerDoubleTap", "key": "Shift+Escape", "release": false }
 ```
 
-`gesture`: `twoFingerDoubleTap` (default), `cornerDoubleTap` (two taps in the top-left corner;
-works with a mouse), `none`. `key`: a `KeyboardEvent.code` name with optional `Shift+`, `Ctrl+`, `Alt+` or `Meta+` prefixes
+`gesture`: `twoFingerDoubleTap` (default), `threeFingerDoubleTap` (for games whose two-finger pinch or pan
+would open it; with iOS's Zoom accessibility setting on, the system takes three-finger double taps), `cornerDoubleTap` (two taps in the top-left corner; works with a mouse),
+`none`. `key`: a `KeyboardEvent.code` name with optional `Shift+`, `Ctrl+`, `Alt+` or `Meta+` prefixes
 (default `Shift+Escape`), empty for none.
 
 ## Checks

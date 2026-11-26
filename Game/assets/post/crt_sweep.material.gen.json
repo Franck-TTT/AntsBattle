@@ -1,0 +1,96 @@
+{
+  "format": 1,
+  "name": "CrtSweep",
+  "model": "unlit",
+  "blend": "opaque",
+  "alphaCutoff": 0.5,
+  "doubleSided": false,
+  "uniformSize": 32,
+  "params": [
+    {
+      "name": "period",
+      "type": "f32",
+      "offset": 0,
+      "default": [
+        10
+      ],
+      "doc": "Seconds between two sweeps",
+      "ui": {
+        "min": 1,
+        "max": 60
+      }
+    },
+    {
+      "name": "sweep",
+      "type": "f32",
+      "offset": 4,
+      "default": [
+        1.2
+      ],
+      "doc": "Seconds the band takes to cross the screen",
+      "ui": {
+        "min": 0.1,
+        "max": 10
+      }
+    },
+    {
+      "name": "width",
+      "type": "f32",
+      "offset": 8,
+      "default": [
+        0.05
+      ],
+      "doc": "Band height, in screen units",
+      "ui": {
+        "min": 0.01,
+        "max": 1
+      }
+    },
+    {
+      "name": "shift",
+      "type": "f32",
+      "offset": 12,
+      "default": [
+        2.5
+      ],
+      "doc": "Horizontal jitter inside the band, in pixels at 1080p",
+      "ui": {
+        "min": 0,
+        "max": 64
+      }
+    },
+    {
+      "name": "split",
+      "type": "f32",
+      "offset": 16,
+      "default": [
+        0.75
+      ],
+      "doc": "Red/blue split inside the band, in pixels at 1080p",
+      "ui": {
+        "min": 0,
+        "max": 32
+      }
+    },
+    {
+      "name": "glow",
+      "type": "f32",
+      "offset": 20,
+      "default": [
+        0.04
+      ],
+      "doc": "Extra brightness inside the band",
+      "ui": {
+        "min": 0,
+        "max": 1
+      }
+    }
+  ],
+  "textures": [],
+  "samplerBinding": 1,
+  "wgsl": "// Post effect CrtSweep (@gameengine/materials, compiled; do not edit).\nstruct MaterialParams {\n  p_period: f32,\n  p_sweep: f32,\n  p_width: f32,\n  p_shift: f32,\n  p_split: f32,\n  p_glow: f32,\n};\n@group(1) @binding(0) var<uniform> material: MaterialParams;\nfn material_post(in: PostInput) -> vec3f {\n  let v0: f32 = in.screen_uv.y;\n  let v1: f32 = (v0 * 220.0);\n  let v2: f32 = (in.time * 40.0);\n  let v3: f32 = (v1 + v2);\n  let v4: f32 = sin(v3);\n  let v5: f32 = (v4 * material.p_shift);\n  let v6: f32 = in.size.y;\n  let v7: f32 = (v6 / 1080.0);\n  let v8: f32 = (v5 * v7);\n  let v9: f32 = (in.time / material.p_period);\n  let v10: f32 = fract(v9);\n  let v11: f32 = (v10 * material.p_period);\n  let v12: f32 = (v11 / material.p_sweep);\n  let v13: f32 = (material.p_width * 2.0);\n  let v14: f32 = (v13 + 1.0);\n  let v15: f32 = (v12 * v14);\n  let v16: f32 = (v15 - material.p_width);\n  let v17: f32 = (v0 - v16);\n  let v18: f32 = abs(v17);\n  let v19: f32 = smoothstep(0.0, material.p_width, v18);\n  let v20: f32 = (v19 * -1.0);\n  let v21: f32 = (v20 + 1.0);\n  let v22: f32 = (v8 * v21);\n  let v23: vec2f = vec2f(v22, 0.0);\n  let v24: vec2f = (v23 * in.texel);\n  let v25: vec2f = (in.screen_uv + v24);\n  let v26: f32 = (material.p_split * v7);\n  let v27: f32 = (v26 * v21);\n  let v28: vec2f = vec2f(v27, 0.0);\n  let v29: vec2f = (v28 * in.texel);\n  let v30: vec2f = (v25 + v29);\n  let v31: vec3f = post_color(v30);\n  let v32: f32 = v31.x;\n  let v33: vec3f = post_color(v25);\n  let v34: f32 = v33.y;\n  let v35: vec2f = (v25 - v29);\n  let v36: vec3f = post_color(v35);\n  let v37: f32 = v36.z;\n  let v38: vec3f = vec3f(v32, v34, v37);\n  let v39: f32 = (v21 * material.p_glow);\n  let v40: f32 = (v0 * v6);\n  let v41: f32 = (v40 * 1.6);\n  let v42: f32 = sin(v41);\n  let v43: f32 = (v42 * 0.5);\n  let v44: f32 = (v43 + 0.5);\n  let v45: f32 = (v44 * 0.5);\n  let v46: f32 = (v45 + 0.5);\n  let v47: f32 = (v39 * v46);\n  let v48: f32 = (v47 + 1.0);\n  let v49: f32 = clamp(v48, 1.0, 2.0);\n  let v50: vec3f = (v38 * v49);\n  return v50;\n}\n",
+  "domain": "post",
+  "stage": "overlay",
+  "hash": "8fe7509cc4bbdcbc",
+  "sourceHash": "f48a464115610449"
+}

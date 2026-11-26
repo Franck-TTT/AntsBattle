@@ -1,0 +1,249 @@
+{
+  "$schemaVersion": 1,
+  "guid": "ca295f05-a5b4-4005-9af6-b851d35fa9a9",
+  "name": "settings",
+  "title": "Settings",
+  "kind": "view",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Settings",
+      "style": {
+        "w": "100%",
+        "h": "100%",
+        "pad": 40,
+        "bg": "#00000000",
+        "justify": "center",
+        "align": "center"
+      },
+      "children": [
+        "se_rim"
+      ]
+    },
+    "se_rim": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "se_glow",
+        "se_panel",
+        "se_ring"
+      ],
+      "style": {
+        "pad": 0,
+        "radius": 48,
+        "bg": "#00000000",
+        "w": 820,
+        "maxW": "100%"
+      }
+    },
+    "se_glow": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "813297e0-59a1-45f6-93d8-744f32c682b8"
+        },
+        "tint": "#3f6bffff",
+        "tintMode": "multiply",
+        "imageAlpha": 0.6,
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%",
+        "sliceScale": 1
+      }
+    },
+    "se_panel": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "se_head",
+        "se_opts",
+        "se_menu"
+      ],
+      "style": {
+        "pad": [
+          44,
+          44,
+          50,
+          44
+        ],
+        "dir": "column",
+        "align": "center",
+        "gap": 26,
+        "radius": 48,
+        "bg": "#0b0e24ff",
+        "w": "100%",
+        "h": "100%"
+      }
+    },
+    "se_ring": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "d044cf5a-224f-4cfb-9218-f4bb86b06396"
+        },
+        "tint": "#3f6bffff",
+        "tintMode": "multiply",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%",
+        "sliceScale": 1
+      }
+    },
+    "se_head": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "se_title",
+        "se_close"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "row",
+        "align": "center",
+        "w": "100%",
+        "gap": 20
+      }
+    },
+    "se_title": {
+      "type": "label",
+      "name": "Label",
+      "text": "SETTINGS",
+      "style": {
+        "fontSize": 84,
+        "fitMin": 44,
+        "weight": 900,
+        "color": "#ffc51fff",
+        "textAlign": "left",
+        "grow": 1,
+        "shadowX": 0,
+        "shadowY": 0,
+        "shadowColor": "#ffc51fcc",
+        "shadowSoft": 12,
+        "font": {
+          "guid": "45be2b88-6a50-4995-8bcb-b8615868b12a"
+        }
+      }
+    },
+    "se_close": {
+      "type": "use",
+      "doc": "icon-button",
+      "key": "close",
+      "props": {
+        "icon": {
+          "guid": "31b3b5d4-174f-49ff-8ddc-783ac4958896"
+        }
+      }
+    },
+    "se_opts": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "se_sound",
+        "se_music"
+      ],
+      "style": {
+        "pad": 0,
+        "dir": "column",
+        "gap": 14,
+        "w": "100%"
+      }
+    },
+    "se_sound": {
+      "type": "use",
+      "doc": "settings-toggle",
+      "key": "sound",
+      "props": {
+        "label": "SOUND",
+        "on": {
+          "property": "sound"
+        }
+      }
+    },
+    "se_music": {
+      "type": "use",
+      "doc": "settings-toggle",
+      "key": "music",
+      "props": {
+        "label": "MUSIC",
+        "on": {
+          "property": "music"
+        }
+      }
+    },
+    "se_menu": {
+      "type": "use",
+      "doc": "restart-button",
+      "key": "menu",
+      "props": {
+        "label": "BACK TO MENU"
+      },
+      "show": "inRun"
+    }
+  },
+  "view": {
+    "behaviour": "dialog",
+    "tapOutside": "dismiss",
+    "enter": {
+      "set": {
+        "se_rim": {
+          "opacity": 0,
+          "scale": 0.7
+        }
+      }
+    }
+  },
+  "properties": {
+    "sound": {
+      "type": "yesno",
+      "default": true
+    },
+    "music": {
+      "type": "yesno",
+      "default": true
+    },
+    "inRun": {
+      "type": "yesno",
+      "default": true
+    }
+  },
+  "samples": {
+    "allOn": {
+      "sound": true,
+      "music": true
+    },
+    "muted": {
+      "sound": false,
+      "music": false
+    },
+    "menu": {
+      "sound": true,
+      "music": true,
+      "inRun": false
+    }
+  }
+}

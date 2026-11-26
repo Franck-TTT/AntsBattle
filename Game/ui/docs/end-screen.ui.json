@@ -26,6 +26,7 @@
       "children": [
         "es_title",
         "es_sub",
+        "es_reward",
         "end_restartbutton",
         "end_menubutton"
       ],
@@ -84,6 +85,18 @@
       "key": "menu",
       "props": {
         "label": "LEVELS"
+      }
+    },
+    "es_reward": {
+      "type": "label",
+      "name": "Label",
+      "text": "{reward}",
+      "style": {
+        "fontSize": 52,
+        "fitMin": 26,
+        "weight": 900,
+        "color": "#ffc51fff",
+        "textAlign": "center"
       }
     }
   },
@@ -156,18 +169,24 @@
     "subtitle": {
       "type": "text",
       "default": "All 10 waves held"
+    },
+    "reward": {
+      "type": "text",
+      "default": "+60 coins · 2 stars"
     }
   },
   "samples": {
     "won": {
       "result": "won",
       "title": "VICTORY!",
-      "subtitle": "All 10 waves held - 3 lives left"
+      "subtitle": "All 10 waves held - 3 lives left",
+      "reward": "+70 coins · 3 stars (1 new)"
     },
     "lost": {
       "result": "lost",
       "title": "OVERRUN",
-      "subtitle": "They reached wave 6"
+      "subtitle": "They broke through on wave 6",
+      "reward": "+20 coins"
     }
   }
 }

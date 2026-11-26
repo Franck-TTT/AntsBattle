@@ -1,0 +1,38 @@
+{
+  "$schemaVersion": 1,
+  "guid": "19ef5aa6-e5ed-40de-92cc-840748c60b1a",
+  "name": "tile-pips-rare-segment",
+  "title": "Tile pips rare segment",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Segment",
+      "style": {
+        "w": 26,
+        "h": 10,
+        "bg": "#1f2c7aff",
+        "radius": 3
+      },
+      "children": []
+    }
+  },
+  "owner": "tile-pips-rare",
+  "behaviour": "toggle",
+  "properties": {
+    "on": {
+      "type": "yesno",
+      "default": false,
+      "poses": {
+        "yes": {
+          "set": {
+            "root": {
+              "bg": "#3f8bffff"
+            }
+          }
+        }
+      }
+    }
+  }
+}

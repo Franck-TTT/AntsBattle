@@ -60,6 +60,27 @@ export function isMarker(m: Markers, cell: number): boolean {
   for (let n = 0; n < m.nestCount[0]!; n++) if (m.nestCell[n] === cell) return true;
   return false;
 }
+/**
+ * Fills `out` (CELLS) with 1 on every cell of a `cols` × `rows` board the player can place nothing
+ * on: the `painted` cells (a level's no-build zone) and the 8 cells around each nest, open or not yet.
+ */
+export function noBuildCells(m: Markers, cols: number, rows: number, painted: readonly number[], out: Uint8Array): Uint8Array {
+  out.fill(0);
+  for (const c of painted) if (onBoard(c, cols, rows)) out[c] = 1;
+  for (let n = 0; n < m.nestCount[0]!; n++) {
+    const nc = m.nestCell[n]!;
+    const col = colOf(nc);
+    const row = rowOf(nc);
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const c2 = col + dc;
+        const r2 = row + dr;
+        if ((dr || dc) && c2 >= 0 && r2 >= 0 && c2 < cols && r2 < rows) out[r2 * COLS + c2] = 1;
+      }
+    }
+  }
+  return out;
+}
 /** True when every nest, open or not yet, can still reach the base through `dist`. */
 export function nestsReach(m: Markers, dist: ArrayLike<number>): boolean {
   for (let n = 0; n < m.nestCount[0]!; n++) if (dist[m.nestCell[n]!]! < 0) return false;
@@ -109,31 +130,72 @@ export const TRAY_SLOTS = 4;
 /** Width of the whole tray. */
 export const TRAY_W = TRAY_REROLL_W + 3 * (TRAY_SLOT_W + TRAY_GAP);
 export const trayW = (slot: number): number => (slot === REROLL_SLOT ? TRAY_REROLL_W : TRAY_SLOT_W);
-/** Centre of a tray slot, under the middle of a `cols`-wide board. */
-export function trayX(slot: number, cols: number): number {
-  const left = boardRect(cols, 1).x - TRAY_W / 2;
-  return slot === REROLL_SLOT ? left + 3 * (TRAY_SLOT_W + TRAY_GAP) + TRAY_REROLL_W / 2 : left + TRAY_SLOT_W / 2 + slot * (TRAY_SLOT_W + TRAY_GAP);
+/**
+ * The bottom panel: the tray, then the HUD bar above it, pinned to the bottom of the safe area at
+ * the same on-screen size on every level. Sizes in UI reference px (1080 × 1920 reference); the
+ * board is fitted into the screen above it (FitView), so a level's size changes only the cells.
+ */
+/** UI reference px per tray unit (TRAY_* sizes): the tray is about as wide as the HUD bar. */
+export const PANEL_REF_PER_UNIT = 132;
+const PANEL_MARGIN_REF = 24;
+const PANEL_GAP_REF = 20;
+/** Height of the HUD bar (ui/docs/hud-bar.ui.json, 38 pt on a 393 pt wide phone). */
+const HUD_REF = 104;
+/** Screen band the panel takes at the bottom, above the safe area: the board stays clear of it. */
+export const PANEL_RESERVE_REF = PANEL_MARGIN_REF + TRAY_SLOT_H * PANEL_REF_PER_UNIT + 2 * PANEL_GAP_REF + HUD_REF;
+
+/** Where the panel stands in the world: written into the Panel resource by FitView. */
+export interface PanelLayout {
+  x: number;
+  trayY: number;
+  hudY: number;
+  /** World units per tray unit. */
+  scale: number;
 }
-/** Band between the board and the tray where the HUD (wave and gold) sits, in world units. */
-export const HUD_BAND = 1.0;
-const HUD_GAP = 0.15;
-/** Centre line of the HUD band, just below a `rows`-tall board (the HUD view follows this point). */
-export const hudY = (rows: number): number => cellY(0) + 0.5 - rows - HUD_GAP - HUD_BAND / 2;
-/** Centre line of the tray, below the HUD band. */
-export const trayY = (rows: number): number => cellY(0) + 0.5 - rows - 2 * HUD_GAP - HUD_BAND - TRAY_SLOT_H / 2;
+
+/**
+ * The panel's world placement for a world view (centre, half height `orthoSize`) on a screen of
+ * `height` points with `safeLeft`/`safeRight`/`safeBottom` insets, the UI drawing `uiScale` points
+ * per reference px.
+ */
+export function panelLayout(cx: number, cy: number, orthoSize: number, height: number, safeLeft: number, safeRight: number, safeBottom: number, uiScale: number, out: PanelLayout): PanelLayout {
+  const worldPerPt = (2 * orthoSize) / Math.max(height, 1);
+  const worldPerRef = worldPerPt * uiScale;
+  const scale = worldPerRef * PANEL_REF_PER_UNIT;
+  const bottom = cy - orthoSize + safeBottom * worldPerPt + PANEL_MARGIN_REF * worldPerRef;
+  out.x = cx + ((safeLeft - safeRight) / 2) * worldPerPt;
+  out.trayY = bottom + (scale * TRAY_SLOT_H) / 2;
+  out.hudY = bottom + scale * TRAY_SLOT_H + (PANEL_GAP_REF + HUD_REF / 2) * worldPerRef;
+  out.scale = scale;
+  return out;
+}
+
+/** Centre x of a tray slot. */
+export function trayX(slot: number, p: PanelLayout): number {
+  const left = -TRAY_W / 2;
+  const local = slot === REROLL_SLOT ? left + 3 * (TRAY_SLOT_W + TRAY_GAP) + TRAY_REROLL_W / 2 : left + TRAY_SLOT_W / 2 + slot * (TRAY_SLOT_W + TRAY_GAP);
+  return p.x + local * p.scale;
+}
+/** Centre line of the tray. */
+export const trayY = (p: PanelLayout): number => p.trayY;
 
 /** The tray slot under a world point, or -1. */
-export function slotAt(x: number, y: number, cols: number, rows: number): number {
-  if (Math.abs(y - trayY(rows)) > (TRAY_SLOT_H + TRAY_GAP) / 2) return -1;
-  for (let s = 0; s < TRAY_SLOTS; s++) if (Math.abs(x - trayX(s, cols)) <= (trayW(s) + TRAY_GAP) / 2) return s;
+export function slotAt(x: number, y: number, p: PanelLayout): number {
+  if (Math.abs(y - p.trayY) > ((TRAY_SLOT_H + TRAY_GAP) / 2) * p.scale) return -1;
+  for (let s = 0; s < TRAY_SLOTS; s++) if (Math.abs(x - trayX(s, p)) <= ((trayW(s) + TRAY_GAP) / 2) * p.scale) return s;
   return -1;
 }
 
-/** The rect that must stay on screen: a `cols` × `rows` board plus the tray, with a small margin. */
+/**
+ * Smallest board the camera frames: smaller levels keep the cells of this size instead of
+ * blowing them up (largest cell on screen).
+ */
+export const FIT_MIN_COLS = 6;
+export const FIT_MIN_ROWS = 8;
+/** The rect that must stay on screen above the panel: a `cols` × `rows` board with a small margin. */
 export function viewRect(cols: number, rows: number): { x: number; y: number; w: number; h: number } {
-  const top = cellY(0) + 0.5 + 0.25;
-  const bottom = trayY(rows) - TRAY_SLOT_H / 2 - 0.15;
-  return { x: boardRect(cols, rows).x, y: (top + bottom) / 2, w: Math.max(cols + 0.5, TRAY_W + 0.25), h: top - bottom };
+  const b = boardRect(cols, rows);
+  return { x: b.x, y: b.y, w: Math.max(cols, FIT_MIN_COLS) + 0.5, h: Math.max(rows, FIT_MIN_ROWS) + 0.5 };
 }
 
 /**

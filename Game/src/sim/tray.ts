@@ -3,7 +3,7 @@
  * greyed-out slots when gold changes. Written only when something changed. Sim code.
  */
 import { added, defineSystem, query, read, write, LocalTransform, Shape, Text2D, type EntityId, type SystemContext } from '@gameengine/runtime';
-import { EnemyKilled, ItemPlaced, Offer, OfferRerolled, RestartRequested, Run, TrayCoin, TrayIcon, TrayLabel, TraySlot } from '../schema.gen.ts';
+import { Boost, EnemyKilled, ItemPlaced, Offer, OfferRerolled, RestartRequested, Run, TrayCoin, TrayIcon, TrayLabel, TraySlot } from '../schema.gen.ts';
 import { OFFER_SIZE, SHAPES, itemPrice, rerollPrice, type BlockShapeName, type ItemKindName } from '../balance.ts';
 import { REROLL_SLOT } from '../grid.ts';
 import { ITEM_NAMES, SHAPE_NAMES } from '../kinds.ts';
@@ -40,7 +40,7 @@ export const TraySync = defineSystem({
   name: 'TraySync',
   after: ['Combat'],
   queries: { slots: query(write(TraySlot)), labels: query(read(TrayLabel), write(LocalTransform)), coins: query(read(TrayCoin), write(LocalTransform)), icons: query(read(TrayIcon)) },
-  resources: [read(Run), read(Offer)],
+  resources: [read(Run), read(Offer), read(Boost)],
   // Prices change on a kill, a drop, a reroll or a restart; icons when the offer changes.
   runIf: { any: [{ event: EnemyKilled }, { event: ItemPlaced }, { event: OfferRerolled }, { event: RestartRequested }, { changed: Offer }, { query: query(added(TraySlot)) }] },
   run(ctx, q) {
@@ -57,13 +57,13 @@ export const TraySync = defineSystem({
         let sold = false;
         let text = '';
         if (slot === REROLL_SLOT) {
-          price = rerollPrice(offer.rerolls[0]!);
+          price = rerollPrice(offer.rerolls[0]!, offer.freeRerolls[0]!);
           text = `${price}`;
         } else if (slot < OFFER_SIZE) {
           sold = offer.sold[slot] === 1;
           const kind = ITEM_NAMES[offer.kinds[slot]!]! as Exclude<ItemKindName, 'none'>;
           const shape = SHAPE_NAMES[offer.shapes[slot]!]!;
-          price = itemPrice(kind, run.wallsBuilt[0]!, shape);
+          price = itemPrice(kind, run.wallsBuilt[0]!, shape, ctx.resource(Boost).freeWalls[0]!);
           text = sold ? '' : price === 0 ? 'FREE' : `${price}`;
           if (ts.shownVersion[i] !== version) {
             for (const ic of q.icons.chunks()) {

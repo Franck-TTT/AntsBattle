@@ -5,8 +5,8 @@
  * - novice: looks every 3 s, building its maze from the top-left (first weapons far from the path).
  */
 import { worldTest } from './play.ts';
-import { Block, Board, Enemy, Item, Offer, Run } from '../src/schema.gen.ts';
-import { CELLS, COLS, DEFAULT_BASE, DEFAULT_COLS, DEFAULT_MARKERS, DEFAULT_ROWS, REROLL_SLOT, isMarker, nestsReach, cellX, cellY, flowField, footprintCell, footprintX, footprintY, trayX, trayY } from '../src/grid.ts';
+import { Block, Board, Enemy, Item, Offer, Run, Panel } from '../src/schema.gen.ts';
+import { CELLS, COLS, DEFAULT_BASE, DEFAULT_COLS, DEFAULT_MARKERS, DEFAULT_ROWS, REROLL_SLOT, isMarker, nestsReach, noBuildCells, cellX, cellY, flowField, footprintCell, footprintX, footprintY, trayX, trayY } from '../src/grid.ts';
 import { GHOST_LIFT, ITEMS, SHAPES, START_LIVES, itemPrice, rerollPrice, type BlockShapeName } from '../src/balance.ts';
 import { ITEM_NAMES, SHAPE_NAMES } from '../src/kinds.ts';
 
@@ -16,6 +16,9 @@ const COL_ORDER = [3, 2, 4, 1, 5, 0, 6];
 // The novice builds the serpentine top-down, left to right (balance.test.ts's order).
 const NOVICE_BARRIERS: [number, number][] = [[2, 6], [4, 0], [6, 6], [8, 0]];
 const NOVICE_COLS = [0, 1, 2, 3, 4, 5, 6];
+
+/** The default board's no-build cells (the 8 around each nest): the bot builds elsewhere. */
+const NO_BUILD = noBuildCells(DEFAULT_MARKERS, DEFAULT_COLS, DEFAULT_ROWS, [], new Uint8Array(CELLS));
 
 function blockSpot(cells: ArrayLike<number>, shape: BlockShapeName, novice: boolean): number {
   const [w, h] = SHAPES[shape];
@@ -32,7 +35,7 @@ function blockSpot(cells: ArrayLike<number>, shape: BlockShapeName, novice: bool
         const c = footprintCell(anchor, w, k);
         const r = (c / COLS) | 0;
         const gapHere = BARRIERS.some(([br, bg]) => br === r && bg === c % COLS);
-        if (cells[c] || isMarker(DEFAULT_MARKERS, c) || gapHere) ok = false;
+        if (cells[c] || isMarker(DEFAULT_MARKERS, c) || NO_BUILD[c] || gapHere) ok = false;
       }
       if (!ok) continue;
       void gap;
@@ -142,13 +145,13 @@ function probeRun(profile: string, every: number, reroll: boolean, novice: boole
           usable = true;
           if (run.gold < itemPrice(kind, run.wallsBuilt, shape)) continue;
           const before = world.entities(Item).length + world.entities(Block).length;
-          await press([trayX(slot, DEFAULT_COLS), trayY(DEFAULT_ROWS)], target);
+          await press([trayX(slot, world.resource(Panel)), trayY(world.resource(Panel))], target);
           acted = world.entities(Item).length + world.entities(Block).length > before;
           if (acted) bought++;
         }
         if (acted) continue;
         if (reroll && !usable && run.gold >= rerollPrice(offer.rerolls) + 30) {
-          await press([trayX(REROLL_SLOT, DEFAULT_COLS), trayY(DEFAULT_ROWS)], null);
+          await press([trayX(REROLL_SLOT, world.resource(Panel)), trayY(world.resource(Panel))], null);
           rerolls++;
           continue;
         }

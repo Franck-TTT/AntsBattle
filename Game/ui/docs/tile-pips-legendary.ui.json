@@ -1,0 +1,62 @@
+{
+  "$schemaVersion": 1,
+  "guid": "fdfdefea-d06a-4dd3-9fcc-91995e632bca",
+  "name": "tile-pips-legendary",
+  "title": "Tile pips legendary",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Track",
+      "style": {
+        "dir": "row",
+        "align": "center",
+        "gap": 6,
+        "pad": 0
+      },
+      "children": [
+        "segments"
+      ],
+      "lit": "progress"
+    },
+    "segments": {
+      "type": "repeat",
+      "name": "Segments",
+      "doc": "tile-pips-legendary-segment",
+      "property": "steps"
+    }
+  },
+  "properties": {
+    "steps": {
+      "type": "number",
+      "default": 5,
+      "drivers": [
+        {
+          "type": "range",
+          "min": 1,
+          "max": 12
+        },
+        {
+          "type": "steps",
+          "by": 1
+        }
+      ]
+    },
+    "progress": {
+      "type": "number",
+      "default": 3,
+      "drivers": [
+        {
+          "type": "range",
+          "min": 0,
+          "maxFrom": "steps"
+        },
+        {
+          "type": "steps",
+          "by": 1
+        }
+      ]
+    }
+  }
+}

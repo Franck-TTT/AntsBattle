@@ -8,6 +8,10 @@ import { Board, Level, LevelDef } from '../schema.gen.ts';
 import { CELLS, COLS } from '../grid.ts';
 import { ITEM_NAMES } from '../kinds.ts';
 import { checkLayout, type Layout } from '../layout.ts';
+import { WAVE_COUNT } from '../balance.ts';
+
+/** Waves a level plays: its `waves`, within 1 and every wave of the sheet. */
+export const levelWaves = (def: { waves?: number }): number => Math.max(1, Math.min(WAVE_COUNT, def.waves ?? WAVE_COUNT));
 import { spawnBlock, spawnItem } from './spawn.ts';
 
 const EMPTY: Layout = { blocks: [], weapons: [] };
@@ -31,7 +35,11 @@ export function loadLevel(ctx: SystemContext): void {
     b.nestWave[i] = n.fromWave;
   });
   b.baseCell[0] = layout.base;
-  for (let c = 0; c < CELLS; c++) b.cells[c] = layout.cells[c]!;
+  b.waveCount[0] = levelWaves(def as { waves?: number });
+  for (let c = 0; c < CELLS; c++) {
+    b.cells[c] = layout.cells[c]!;
+    b.noBuild[c] = layout.noBuild[c]!;
+  }
   def.blocks.forEach((blk, i) => {
     const top = blk.row * COLS + blk.col;
     if (layout.blockAt[top] === i) spawnBlock(ctx, blk.shape as Parameters<typeof spawnBlock>[1], top, 0, true);

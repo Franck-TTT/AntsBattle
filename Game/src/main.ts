@@ -5,14 +5,20 @@
  * Sim (deterministic, fixed step): src/sim/*. Presentation (LateUpdate, UI): src/present/*, src/ui/*.
  */
 export { BuildBoard, StartRun, PlaceMarkers, FitView, NestSync, BaseLives } from './sim/board.ts';
-export { DragItems, GameSpeed } from './sim/placement.ts';
+export { DragItems, GameSpeed, CloseWeaponInfo } from './sim/placement.ts';
 export { Waves, SyncFlow, MoveEnemies, Combat } from './sim/battle.ts';
 export { TraySync } from './sim/tray.ts';
 export { PickLevel, OpenMenu } from './sim/menu.ts';
+export { ToggleSettings, AudioSettings } from './sim/settings.ts';
+export { PayRun, RollUpgrade } from './sim/progress.ts';
 export { Overlay, shapesPool, ringsPool } from './present/overlay.ts';
 export { Juice } from './present/juice.ts';
+export { PostFromSheet } from './present/post.ts';
 export { GameUI } from './ui/game.ui.tsx';
 export { HudView } from './views/hud.view.tsx';
 export { BannerView } from './views/banner.view.tsx';
 export { EndView } from './views/end.view.tsx';
 export { LevelMenuView } from './views/level-menu.view.tsx';
+export { UpgradesView, UpgradeRevealView } from './views/upgrades.view.tsx';
+export { WeaponInfoView } from './views/weapon-info.view.tsx';
+export { SettingsView } from './views/settings.view.tsx';

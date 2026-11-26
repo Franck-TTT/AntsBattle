@@ -1,0 +1,162 @@
+{
+  "$schemaVersion": 1,
+  "guid": "47bdad15-ebd2-450a-9f8b-da070ff102ae",
+  "name": "meta-chip",
+  "title": "Meta chip",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Meta chip",
+      "style": {
+        "dir": "row",
+        "pad": 0,
+        "align": "center",
+        "bg": "#00000000",
+        "radius": 44,
+        "h": 88
+      },
+      "children": [
+        "mc_glow",
+        "mc_in",
+        "root_ring"
+      ]
+    },
+    "mc_in": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "mc_icon",
+        "mc_value"
+      ],
+      "style": {
+        "pad": [
+          10,
+          30,
+          10,
+          14
+        ],
+        "dir": "row",
+        "align": "center",
+        "gap": 14,
+        "radius": 44,
+        "bg": "#0b0e24ff",
+        "h": "100%"
+      }
+    },
+    "mc_icon": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": "@icon",
+        "w": 62,
+        "h": 62,
+        "tint": "#ffffffff",
+        "tintMode": "multiply"
+      }
+    },
+    "mc_value": {
+      "type": "label",
+      "name": "Label",
+      "text": "{value}",
+      "style": {
+        "fontSize": 50,
+        "fitMin": 26,
+        "weight": 900,
+        "color": "#ffc51fff",
+        "shadowX": 0,
+        "shadowY": 0,
+        "shadowColor": "#ffc51fb3",
+        "shadowSoft": 10,
+        "font": {
+          "guid": "45be2b88-6a50-4995-8bcb-b8615868b12a"
+        }
+      }
+    },
+    "mc_glow": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "e808b6ed-c991-4873-8444-91272500991a"
+        },
+        "tint": "#ffc51fff",
+        "tintMode": "multiply",
+        "imageAlpha": 0.55,
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%",
+        "sliceScale": 1
+      }
+    },
+    "root_ring": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "dae5ee85-d63c-460a-aa4e-573381e5d8b8"
+        },
+        "sliceScale": 1,
+        "tint": "#ffc51fff",
+        "tintMode": "multiply",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%"
+      }
+    }
+  },
+  "properties": {
+    "value": {
+      "type": "text",
+      "default": "1,240"
+    },
+    "icon": {
+      "type": "image",
+      "default": {
+        "guid": "d95efa6e-2703-4582-b964-5305acf63ea5"
+      }
+    },
+    "kind": {
+      "type": "enum",
+      "values": [
+        "coins",
+        "stars"
+      ],
+      "default": "coins",
+      "poses": {
+        "stars": {
+          "set": {
+            "mc_icon": {
+              "tint": "#ffc51fff"
+            }
+          }
+        }
+      }
+    }
+  }
+}

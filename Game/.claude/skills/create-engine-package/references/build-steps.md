@@ -51,9 +51,9 @@ export const events = defineBuildStep({
   `<outDir>/artifacts`), listed in `build-report.json` `artifacts` for the build server to collect,
   failed builds included. Two steps can't write the same artifact. `ctx.message('warning', text)`
   adds a line to the build's summary. `ctx.build` has the platform, config, outDir, artifactsDir,
-  dryRun and cheats (the build carries the cheat console: dev, probe, and an in-house release with
-  `--cheats` or `cheats.release`; never a store build), so a step can write what only testers get,
-  such as an in-house service's token, and clear it otherwise; `ctx.log` prints.
+  dryRun and cheats (the build carries the cheat console: dev, probe, and a release with
+  `--cheats` or `cheats.release`; never a release without them), so a step can write what only testers get,
+  such as a test-only service's token, and clear it otherwise; `ctx.log` prints.
 - **Files that never ship:** list the files (not folders or patterns) a step reads that must stay
   off devices in `private: ['boosters.json']`. Keep those at the project root or in a folder of their own, never in
   `assets/`, `src/`, `scenes/`, `plugins/` or the settings files. The build fails if one would ship

@@ -1,6 +1,6 @@
 ---
 name: releases
-version: 1.0.0
+version: 1.2.0
 tier: required
 description: Over-the-air releases and hubs — gameengine release pack/apply, releases.manifest, releases.trusted, channels, release and content keys, the content manifest, services.releases (check, download, apply) and services.launcher for a hub that launches other games. Use when updating a shipped game without a store build, or building a hub app.
 ---
@@ -10,7 +10,7 @@ description: Over-the-air releases and hubs — gameengine release pack/apply, r
 ## The rules that matter most
 
 1. **A release carries script, settings and content, never machine code.** Rust systems (`native/`) ship in a store build and keep running from the binary; transpiled systems run their TypeScript when a release changed them. Only the game's own app applies a release of a game with `native/` (`E_NATIVE`). A store update retires installed releases.
-2. **Two keys per game, never the same one.** The **release key** (`releases.trusted[].publicKey`) signs code. The **content key** (`contentKey`, the content team's) signs releases that keep a code the device already trusts, so it cannot ship code (content bundles holding scripts or settings are refused). Keep both out of the repo.
+2. **A release key and a content key, never the same one.** The **release key** (`releases.trusted[].publicKey`) signs code. The **content key** (`contentKey`, the content team's) signs releases that keep a code the device already trusts, so it cannot ship code (content bundles holding scripts or settings are refused). Keep both out of the repo. Whether each game has its own release key or one studio key signs them all is the studio's decision (§ Keys).
 3. **The version only grows** (use the build number), and a device refuses a manifest older than the one it keeps.
 4. **A content release reaches only devices already on its code.** Release code changes with the release key, and make content releases `--content-of` the release that shipped that code (or the store build's `shipped/`).
 5. **Upload the manifest last**, after the files it names.
@@ -19,17 +19,27 @@ description: Over-the-air releases and hubs — gameengine release pack/apply, r
 
 | Goal | Command |
 |---|---|
-| Update over the air (script, settings, content) | `gameengine release pack --version N --key release-key.json`; the game's own `name` must be in `releases.trusted` (`gameengine release keygen` prints the entry), `release apply <dir> --dir <releases dir>` tests it on desktop |
+| Update over the air (script, settings, content) | `gameengine release pack --version N --key release-key.json`; the game's own `name` must be in `releases.trusted` (`gameengine release keygen` makes a key pair and prints the entry), `release apply <dir> --dir <releases dir>` tests it on desktop |
 | A content release on shipped code | `gameengine release pack --version N --key content-key.json --content-of <dir>` (a release directory, or a store build's `shipped/` beside its report: keep it) |
 | Publish a release | Upload the release's `files/` as it is (names change only with their bytes: skip what the CDN has), its `content-manifest-<platform>-<abi>.json` last; `--files-url https://…` when the manifest is served from elsewhere than its files |
 | Cook only the bundles the CDN lacks | `gameengine cook --plan --json` lists each bundle's published name; `gameengine release pack … --only <missing names> --previous <folder of the present bundles' records>` (`<name>.json` beside each `.gpak`) |
 
 On a phone the manifest and its files are served over https (iOS lets plain http reach only the device itself, `127.0.0.1`, which the iOS simulator shares with the Mac; Android's shell allows none), and the release is packed for that platform (`release pack --platform ios|android`).
 
+## Keys
+
+How keys are split is the studio's decision; the engine checks only that a release's signature matches a public key the app trusts for it (the game's own entry, or `"*"` in a hub). Either:
+
+- **A key per game:** run `gameengine release keygen` for each game. A leaked key exposes one game.
+- **One studio key for every game:** run `gameengine release keygen` once, keep the private key in the studio's secret store, and add `{ "id": "<game name>", "publicKey": … }` to each game's `releases.trusted` (and `"*"` in a hub). A new game needs no new key; a leaked key exposes every game that trusts it.
+
+Either way the content key stays a separate key, and a lost key means no more releases until a store update ships a new public key.
+
 ## A game's own updates
 
 - **They need no code:** set `releases.manifest.url` and list the game's id in `releases.trusted`. After start and on return to the foreground the engine checks the manifest for this app's release channel, downloads what it offers and applies it (live when only content changed, else at the next start), and logs `self-update: …`. A release staged for the next start is not fetched again; loose desktop runs and web players skip the engine's update.
 - **Channels:** `{channel}` in the URL is the app's channel, any name you choose (`inhouse`, `store`, `beta`, a branch): `releases.channel` in `project.gameengine.json`, or `gameengine build --channel <name>` for one build (`releases.status` reports it). Testers or a branch get a release before players do: publish each channel's manifest at its own URL, e.g. `https://cdn/…/{id}/{channel}/content-manifest-{platform}-{abi}.json`. `release pack --channel <name>` picks the channel its files and manifest are for (unset: `releases.channel`). A missing manifest (404, or 403 from a bucket that does not list) means nothing is published yet; an unknown `{…}` in the URL fails the config.
+- **Cheats:** a release keeps the cheat console only for a channel `releases.cheatChannels` lists, e.g. `["qa", "qa-*"]` (a trailing `*` matches a prefix); every other channel's releases strip them. List only channels whose apps never reach a store.
 - **Deprecated:** `{buildType}`, `--build-type` and a project with no `releases.channel` (the bundle id then decides: `inhouse` for `.inhouse`, else `store`) warn `W_DEPRECATED_BUILD_TYPE`, and `gameengine check` reports it: do what the warning says.
 - **The content manifest:** `release pack` writes `files/content-manifest-<platform>-<abi>.json`: one release, its files by published name, size and SHA-256, signed with the release or the content key. `releases.manifest` in `project.gameengine.json` has `url` (a template with `{id}`, `{channel}`, `{platform}` and `{abi}`) and `refresh` (`onStart`, `onForeground`, `minIntervalSec`, default 900; `retrySec`, default 60, after a failed fetch). Without it, fetch the manifest yourself (e.g. from your studio's asset service) and pass its text to `check({ manifest })`.
 - **From the game (`services.releases`, UI code only):**

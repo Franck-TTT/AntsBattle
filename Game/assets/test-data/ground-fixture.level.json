@@ -1,0 +1,11 @@
+{
+  "$type": "LevelDef",
+  "id": "test-ground-fixture",
+  "name": "Test fixture: ground weapons",
+  "order": 0,
+  "blocks": [],
+  "weapons": [
+    { "kind": "boostPad", "col": 3, "row": 5 },
+    { "kind": "mine", "col": 3, "row": 7 }
+  ]
+}

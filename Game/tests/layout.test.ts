@@ -137,3 +137,47 @@ worldTest('board size: within limits, and everything must fit in it', async () =
   }
 });
 
+
+worldTest('mines and boost pads lie on a free ground cell, never on a block, a nest or the base', async () => {
+  const r = checkLayout({
+    blocks: [{ shape: 'b1x1', col: 2, row: 5 }],
+    weapons: [
+      { kind: 'boostPad', col: 3, row: 5 }, // free ground
+      { kind: 'mine', col: 3, row: 7 }, // free ground
+      { kind: 'boostPad', col: 2, row: 5 }, // on the block
+      { kind: 'mine', col: 3, row: 0 }, // the first nest
+    ],
+  });
+  expect(messages(r)).toEqual([
+    'Weapon boostPad at (2, 5) must lie on a free ground cell (not a block, a nest or the base)',
+    'Weapon mine at (3, 0) must lie on a free ground cell (not a block, a nest or the base)',
+  ]);
+  expect(r.weaponAt[cell(3, 5)]).toBe(0);
+  expect(r.cells[cell(3, 5)]).toBe(0);
+});
+
+worldTest('no-build cells: the 8 around each nest always, painted ones checked, the level own content allowed on them', async () => {
+  const r = checkLayout({
+    blocks: [{ shape: 'b1x1', col: 2, row: 1 }], // next to the first nest: allowed for the level
+    weapons: [],
+    noBuild: [
+      { col: 3, row: 5 },
+      { col: 3, row: 5 }, // twice
+      { col: 3, row: 10 }, // the base
+      { col: 8, row: 5 }, // off the board
+    ],
+  });
+  expect(messages(r)).toEqual(['No-build cell (3, 5) is listed twice', 'No-build cell (3, 10) is on a nest or the base', 'No-build cell (8, 5) is off the board']);
+  expect(r.issues[0]!.entry).toEqual({ list: 'noBuild', index: 1 });
+  expect(r.cells[cell(2, 1)]).toBe(1);
+  expect(r.noBuild[cell(3, 5)]).toBe(1);
+  // Ring of the nest (3, 0), cut by the top edge; the nest itself and the base stay out of it.
+  for (const c of [cell(2, 0), cell(4, 0), cell(2, 1), cell(3, 1), cell(4, 1)]) expect(r.noBuild[c]).toBe(1);
+  expect(r.noBuild[cell(3, 0)]).toBe(0);
+  expect(r.noBuild[cell(3, 2)]).toBe(0);
+  expect(r.noBuild[BASE_CELL]).toBe(0);
+  // Every nest has its ring, the ones not open yet too: 5 + 5 + 5 cells on the default board.
+  expect(Array.from(r.noBuild).filter((v) => v === 1).length).toBe(15 + 1);
+  // Ants walk through: the path is the same as without no-build cells.
+  expect(layoutPaths(r)[cell(3, 1)]).toBe(1);
+});

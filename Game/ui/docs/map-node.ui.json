@@ -1,0 +1,446 @@
+{
+  "$schemaVersion": 1,
+  "guid": "6bdb6107-7a8f-4871-938f-949b3eff4ecd",
+  "name": "map-node",
+  "title": "Map node",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Map node",
+      "style": {
+        "dir": "row",
+        "h": 140,
+        "minW": 0,
+        "pad": 0,
+        "align": "center",
+        "justify": "center",
+        "bg": "#00000000",
+        "radius": 0,
+        "w": 140
+      },
+      "children": [
+        "mn_glow",
+        "mn_fill",
+        "mn_rim",
+        "mn_oglow",
+        "mn_ofill",
+        "mn_orim",
+        "mn_core",
+        "mn_lock",
+        "mn_num",
+        "mn_stars",
+        "mn_corerim"
+      ]
+    },
+    "mn_glow": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "c90948cc-c3d9-4097-9118-2848d6331c5c"
+        },
+        "w": 196,
+        "h": 196,
+        "tint": "#29f2ff99",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "tintMode": "multiply"
+      }
+    },
+    "mn_fill": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "0b776a12-c65a-4362-b361-9939ca892c0a"
+        },
+        "w": 136,
+        "h": 136,
+        "tint": "#080a1cff",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "tintMode": "multiply"
+      }
+    },
+    "mn_rim": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "841ab814-b99a-41c6-8e22-87f2e7bd7761"
+        },
+        "w": 148,
+        "h": 148,
+        "tint": "#29f2ffff",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "tintMode": "multiply"
+      }
+    },
+    "mn_oglow": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "fdd883a0-3dcf-496d-ac73-1838570c9e9d"
+        },
+        "w": 196,
+        "h": 196,
+        "tint": "#d23cff99",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "hide": true,
+        "tintMode": "multiply"
+      }
+    },
+    "mn_ofill": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "d2d90a5f-2818-4be8-9111-9648b0636520"
+        },
+        "w": 136,
+        "h": 136,
+        "tint": "#080a1cff",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "hide": true,
+        "tintMode": "multiply"
+      }
+    },
+    "mn_orim": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "1c43a899-8c69-4ced-87e2-e57f0f712294"
+        },
+        "w": 148,
+        "h": 148,
+        "tint": "#d23cffff",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "hide": true,
+        "tintMode": "multiply"
+      }
+    },
+    "mn_core": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "0b776a12-c65a-4362-b361-9939ca892c0a"
+        },
+        "w": 62,
+        "h": 62,
+        "tint": "#1a1206ff",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "hide": true,
+        "tintMode": "multiply"
+      }
+    },
+    "mn_lock": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "811fe72a-e3c8-4fdd-8ae6-c6d1a2403fa5"
+        },
+        "w": 56,
+        "h": 56,
+        "tint": "#6f82e0ff",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "hide": true,
+        "tintMode": "multiply"
+      }
+    },
+    "mn_num": {
+      "type": "label",
+      "name": "Label",
+      "text": "{num}",
+      "style": {
+        "fontSize": 56,
+        "weight": 900,
+        "color": "#e6ecffff",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "shadowX": 0,
+        "shadowY": 0,
+        "shadowColor": "#29f2ffcc",
+        "shadowSoft": 12,
+        "font": {
+          "guid": "45be2b88-6a50-4995-8bcb-b8615868b12a"
+        }
+      }
+    },
+    "mn_stars": {
+      "type": "use",
+      "doc": "level-stars",
+      "key": "stars",
+      "props": {
+        "steps": 3,
+        "progress": {
+          "property": "stars"
+        }
+      },
+      "style": {
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          1
+        ],
+        "pivot": [
+          0.5,
+          0
+        ],
+        "offset": [
+          0,
+          6
+        ],
+        "attach": true
+      }
+    },
+    "mn_corerim": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "841ab814-b99a-41c6-8e22-87f2e7bd7761"
+        },
+        "w": 74,
+        "h": 74,
+        "tint": "#ffc51fff",
+        "tintMode": "multiply",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "hide": true
+      }
+    }
+  },
+  "behaviour": "button",
+  "properties": {
+    "num": {
+      "type": "number",
+      "default": 1,
+      "format": "value"
+    },
+    "stars": {
+      "type": "number",
+      "default": 0,
+      "format": "value"
+    },
+    "state": {
+      "type": "enum",
+      "values": [
+        "done",
+        "current",
+        "locked",
+        "boss"
+      ],
+      "default": "done",
+      "poses": {
+        "current": {
+          "set": {
+            "mn_glow": {
+              "tint": "#ffc51f99"
+            },
+            "mn_rim": {
+              "tint": "#ffc51fff"
+            },
+            "mn_num": {
+              "color": "#ffc51fff",
+              "shadowColor": "#ffc51f99"
+            },
+            "root": {
+              "scale": 1.25
+            },
+            "mn_stars": {
+              "hide": true
+            }
+          }
+        },
+        "locked": {
+          "set": {
+            "mn_glow": {
+              "hide": true
+            },
+            "mn_rim": {
+              "tint": "#2f45d6ff"
+            },
+            "mn_num": {
+              "hide": true
+            },
+            "mn_lock": {
+              "hide": false
+            },
+            "mn_stars": {
+              "hide": true
+            }
+          }
+        },
+        "boss": {
+          "set": {
+            "mn_glow": {
+              "hide": true
+            },
+            "mn_fill": {
+              "hide": true
+            },
+            "mn_rim": {
+              "hide": true
+            },
+            "mn_num": {
+              "hide": true
+            },
+            "mn_stars": {
+              "hide": true
+            },
+            "mn_oglow": {
+              "hide": false
+            },
+            "mn_ofill": {
+              "hide": false
+            },
+            "mn_orim": {
+              "hide": false
+            },
+            "mn_core": {
+              "hide": false
+            },
+            "root": {
+              "scale": 1.35
+            },
+            "mn_corerim": {
+              "hide": false
+            }
+          }
+        }
+      }
+    }
+  },
+  "transition": {
+    "type": "back",
+    "ms": 240,
+    "overshoot": 1.4
+  },
+  "states": {
+    "pressed": {
+      "set": {
+        "root": {
+          "scale": 0.94
+        }
+      }
+    },
+    "disabled": {
+      "set": {
+        "root": {
+          "saturation": 0,
+          "opacity": 0.6
+        }
+      }
+    }
+  }
+}

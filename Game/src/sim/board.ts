@@ -1,16 +1,21 @@
 /**
  * The board: built once, reset on every run (its grid redrawn at the level's size), fitted to the screen. Sim code.
  */
-import { added, defineSystem, fitWorldView, math, query, read, teleport, withTag, write, LocalTransform, Shape, Text2D, ViewInfo, WorldView, type Commands, type EntityId, type SystemContext } from '@gameengine/runtime';
-import { Base, BaseLabel, Block, Board, BoardTile, Level, TraySlot, NestLabel, NestMound, NestOpened, NestSpot, Offer, WaveStarted, Run, Placement, Item, Enemy, Projectile, RestartRequested } from '../schema.gen.ts';
-import { CELLS, DEFAULT_BASE, DEFAULT_COLS, DEFAULT_NESTS, DEFAULT_ROWS, MAX_NESTS, REROLL_SLOT, TRAY_SLOTS, TRAY_SLOT_H, boardRect, cellX, cellY, flowField, tracePath, trayW, trayX, trayY, viewRect } from '../grid.ts';
-import { FIRST_WAVE_AT, START_GOLD, START_LIVES } from '../balance.ts';
+import { added, defineSystem, fitWorldView, math, uiScale, query, read, teleport, withTag, write, LocalTransform, Shape, Text2D, ViewInfo, WorldView, type Commands, type EntityId, type SystemContext } from '@gameengine/runtime';
+import { Base, BaseLabel, Block, Board, Boost, ItemKind, Panel, BoardTile, Level, TraySlot, NestLabel, NestMound, NestOpened, NestSpot, Offer, WaveStarted, Run, Placement, Item, Enemy, Projectile, Puddle, RestartRequested } from '../schema.gen.ts';
+import { CELLS, DEFAULT_BASE, DEFAULT_COLS, DEFAULT_NESTS, DEFAULT_ROWS, MAX_NESTS, REROLL_SLOT, PANEL_RESERVE_REF, TRAY_SLOTS, TRAY_SLOT_H, boardRect, cellX, cellY, flowField, isMarker, type Markers, panelLayout, tracePath, trayW, trayX, viewRect, type PanelLayout } from '../grid.ts';
+import { FIRST_WAVE_AT, OFFER_SIZE } from '../balance.ts';
+import { progress } from '../meta.ts';
+import { applyBoost, runGold, runLives } from './progress.ts';
 import { COIN, COLORS, ORDER, REROLL_ICON, shapeValue } from '../looks.ts';
 import { drawOffer } from './offer.ts';
 import { loadLevel } from './level.ts';
 
-/** Screen margins the board stays clear of, in UI reference px (the HUD sits in the world, between board and tray: grid.ts HUD_BAND). */
-export const FIT = { reserve: { top: 24, bottom: 24, left: 16, right: 16 } } as const;
+/** Screen margins the board stays clear of, in UI reference px: the bottom one is the panel (tray and HUD, grid.ts PANEL_RESERVE_REF). */
+/** Top: 36 margin + the 120 settings gear (.hud-gear in ui/game.style.css) + 16 gap. */
+export const FIT = { reserve: { top: 172, bottom: PANEL_RESERVE_REF, left: 16, right: 16 }, uiReference: [1080, 1920] } as const;
+/** Scratch panel placement: fully written by panelLayout before every read. */
+const panel: PanelLayout = { x: 0, trayY: 0, hudY: 0, scale: 1 };
 
 // Scratch buffers: fully written before every read, no state carried between runs.
 const blocked = new Uint8Array(CELLS);
@@ -51,11 +56,11 @@ export function recomputeBoard(ctx: SystemContext): void {
 const at = (x: number, y: number) => ({ position: [x, y, 0] as [number, number, number], rotation: [0, 0, 0, 1] as [number, number, number, number], scale: [1, 1, 1] as [number, number, number] });
 
 /**
- * The board's grid for a `cols` × `rows` board: one line per cell edge, a neon frame, and a faint
- * half-cell grid over the space outside the board only. Every piece is a BoardTile, so a new level's
- * size can redraw them.
+ * The board's grid for a `cols` × `rows` board: one line per cell edge, a neon frame, a faint
+ * half-cell grid over the space outside the board only, and a cross on each no-build cell and nest.
+ * Every piece is a BoardTile, so a new level can redraw them.
  */
-function spawnGrid(cmd: Commands, cols: number, rows: number): void {
+function spawnGrid(cmd: Commands, cols: number, rows: number, noBuild: ArrayLike<number>, nests: Markers): void {
   const line = (x: number, y: number, w: number, h: number, color: string = COLORS.gridMajor, order: number = ORDER.tile) =>
     cmd.spawn({ LocalTransform: at(x, y), Shape: { kind: 'Rect', size: [w, h], radius: 0, color, order, sortingLayer: 'Default' }, BoardTile: {} });
   const r = boardRect(cols, rows);
@@ -78,6 +83,14 @@ function spawnGrid(cmd: Commands, cols: number, rows: number): void {
     }
   }
   cmd.spawn({ LocalTransform: at(r.x, r.y), Shape: { kind: 'Rect', size: [cols, rows], radius: 0, color: COLORS.board, order: ORDER.ground, sortingLayer: 'Default' }, BoardTile: {} });
+  // No-build cells and nests: a thin cross from corner to corner, under the paths and the mounds.
+  const diag = (a: number): [number, number, number, number] => [0, 0, math.sin(a / 2), math.cos(a / 2)];
+  for (let c = 0; c < CELLS; c++) {
+    if (!noBuild[c] && !(isMarker(nests, c) && c !== nests.baseCell[0])) continue;
+    for (const a of [math.PI / 4, -math.PI / 4]) {
+      cmd.spawn({ LocalTransform: { position: [cellX(c), cellY(c), 0], rotation: diag(a), scale: [1, 1, 1] }, Shape: { kind: 'Rect', size: [1.4142135623730951, 0.015], radius: 0.0075, color: COLORS.noBuild, order: ORDER.tile, sortingLayer: 'Default' }, BoardTile: {} });
+    }
+  }
   for (let k = 1; k < cols; k++) line(r.x - hw + k, r.y, 0.04, rows);
   for (let k = 1; k < rows; k++) line(r.x, r.y - hh + k, cols, 0.04);
   cmd.spawn({ LocalTransform: at(r.x, r.y), Shape: { kind: 'Rect', size: [cols + 0.14, rows + 0.14], radius: 0.04, color: '#00000000', strokeColor: COLORS.frame, strokeWidth: 0.07, order: ORDER.highlight, sortingLayer: 'Default' }, BoardTile: {} });
@@ -109,11 +122,11 @@ export const BuildBoard = defineSystem({
     // Lives left, on the base itself (BaseLives writes the number).
     cmd.spawn({ LocalTransform: at(0, -0.03), Text2D: { text: '', size: 0.42, color: COLORS.baseRim, align: 'Center', outlineColor: '#000000', outlineWidth: 0.12, order: ORDER.base + 2, sortingLayer: 'Default' }, BaseLabel: { shown: -1 }, Parent: { entity: base } });
     // Tray: three offer slots (their icons follow the offer, see TraySync) and the Reroll button.
-    // PlaceMarkers moves it under the level's board.
+    // FitView pins it to the bottom of the screen.
     for (let s = 0; s < TRAY_SLOTS; s++) {
       const reroll = s === REROLL_SLOT;
       const slot = cmd.spawn({
-        LocalTransform: at(trayX(s, DEFAULT_COLS), trayY(DEFAULT_ROWS)),
+        LocalTransform: at(0, 0),
         Shape: { kind: 'Rect', size: [trayW(s), TRAY_SLOT_H], radius: 0.06, color: reroll ? COLORS.reroll : COLORS.traySlot, strokeColor: COLORS.trayRim, strokeWidth: 0.06, order: ORDER.tray, sortingLayer: 'Default' },
         VisualOffset: {},
         TraySlot: { slot: s },
@@ -136,8 +149,8 @@ export const BuildBoard = defineSystem({
 export const StartRun = defineSystem({
   name: 'StartRun',
   after: ['BuildBoard'],
-  queries: { items: query(read(Item)), blocks: query(read(Block)), enemies: query(read(Enemy)), shots: query(read(Projectile)), tiles: query(read(LocalTransform), withTag(BoardTile)) },
-  resources: [write(Board), write(Run), write(Placement), write(Offer), read(Level)],
+  queries: { items: query(read(Item)), blocks: query(read(Block)), enemies: query(read(Enemy)), shots: query(read(Projectile)), puddles: query(read(Puddle)), tiles: query(read(LocalTransform), withTag(BoardTile)) },
+  resources: [write(Board), write(Run), write(Placement), write(Offer), write(Boost), read(Level)],
   events: [RestartRequested],
   runIf: { any: [{ resource: Board, field: 'version', op: '==', value: 0 }, { event: RestartRequested }, { changed: Level }] },
   run(ctx, q) {
@@ -145,13 +158,18 @@ export const StartRun = defineSystem({
     for (const c of q.blocks.chunks()) for (let i = 0; i < c.length; i++) ctx.commands.despawn(c.entity(i));
     for (const c of q.enemies.chunks()) for (let i = 0; i < c.length; i++) ctx.commands.despawn(c.entity(i));
     for (const c of q.shots.chunks()) for (let i = 0; i < c.length; i++) ctx.commands.despawn(c.entity(i));
+    for (const c of q.puddles.chunks()) for (let i = 0; i < c.length; i++) ctx.commands.despawn(c.entity(i));
     // The game opens on the level menu over the scene's level; a restart or a new level plays.
     const boot = ctx.resource(Board).version[0] === 0 && ctx.events.count(RestartRequested) === 0;
     const runId = ctx.resource(Run).runId[0]! + 1;
+    // The meta upgrades this run plays with (src/meta.ts, src/sim/progress.ts).
+    const meta = progress.get();
+    applyBoost(ctx, meta);
     ctx.set(Run, {
-      phase: boot ? 'menu' : 'playing', runId, time: 0, speed: 1, wave: 0, lives: START_LIVES, gold: START_GOLD, wallsBuilt: 0,
+      phase: boot ? 'menu' : 'playing', runId, time: 0, speed: 1, wave: 0, lives: runLives(meta), gold: runGold(meta), wallsBuilt: 0,
       nextWaveAt: FIRST_WAVE_AT, group: 0, groupSpawned: 0, spawnAt: 1e9, spawning: false, alive: 0, kills: 0, bossSteps: 0,
       placements: 0, refusals: 0, shots: 0, booms: 0, baseHits: 0, bosses: 0, nestTurn: 0, nestsOpen: 0, goldFrac: 0,
+      paid: false, stars: 0, newStars: 0, coinsWon: 0,
     });
     const b = ctx.resource(Board);
     for (let c = 0; c < CELLS; c++) {
@@ -162,19 +180,29 @@ export const StartRun = defineSystem({
     recomputeBoard(ctx);
     // The grid at the level's size (a new level may be another size).
     for (const c of q.tiles.chunks()) for (let i = 0; i < c.length; i++) ctx.commands.despawn(c.entity(i));
-    spawnGrid(ctx.commands, b.cols[0]!, b.rows[0]!);
+    spawnGrid(ctx.commands, b.cols[0]!, b.rows[0]!, b.noBuild, b);
     ctx.set(Placement, { active: false, kind: 'none', cell: -1, fromCell: -1, slot: -1, valid: false, previewLen: 0, returnSteps: 0 });
     ctx.setField(Offer, 'sets', 0);
     ctx.setField(Offer, 'rerolls', 0);
+    ctx.setField(Offer, 'freeRerolls', 0);
     drawOffer(ctx);
+    // Free first tower (upgrade): the first set holds a tower in its first weapon slot.
+    if (ctx.resource(Boost).freeTower[0]) {
+      const o = ctx.resource(Offer);
+      for (let s = 0; s < OFFER_SIZE; s++) {
+        if (o.kinds[s] === ItemKind.wall) continue;
+        o.kinds[s] = ItemKind.tower;
+        break;
+      }
+    }
   },
 });
 
-/** Moves the nest mounds, the base and the tray onto the level's board; nest slots the level does not use hide. */
+/** Moves the nest mounds and the base onto the level's board; nest slots the level does not use hide. */
 export const PlaceMarkers = defineSystem({
   name: 'PlaceMarkers',
   after: ['StartRun'],
-  queries: { mounds: query(read(NestMound), write(LocalTransform)), base: query(write(LocalTransform), withTag(Base)), tray: query(read(TraySlot), write(LocalTransform)) },
+  queries: { mounds: query(read(NestMound), write(LocalTransform)), base: query(write(LocalTransform), withTag(Base)) },
   resources: [read(Board), read(Level)],
   events: [RestartRequested],
   runIf: { any: [{ query: query(added(NestMound)) }, { event: RestartRequested }, { changed: Level }] },
@@ -202,28 +230,41 @@ export const PlaceMarkers = defineSystem({
         teleport(c.entity(i));
       }
     }
-    for (const c of q.tray.chunks()) {
-      const ts = c.col(TraySlot);
-      const pos = c.col(LocalTransform).position;
-      for (let i = 0; i < c.length; i++) {
-        pos[i * 3] = trayX(ts.slot[i]!, b.cols[0]!);
-        pos[i * 3 + 1] = trayY(b.rows[0]!);
-        teleport(c.entity(i));
-      }
-    }
   },
 });
 
+/**
+ * Fits the level's board into the screen above the bottom panel, then pins the panel (tray and
+ * HUD) to the bottom of the safe area at the same on-screen size whatever the board's size.
+ */
 export const FitView = defineSystem({
   name: 'FitView',
   after: ['StartRun'],
-  resources: [read(ViewInfo), write(WorldView), read(Board), read(Level)],
+  queries: { tray: query(read(TraySlot), write(LocalTransform)) },
+  resources: [read(ViewInfo), write(WorldView), write(Panel), read(Board), read(Level)],
   events: [RestartRequested],
-  runIf: { any: [{ changed: ViewInfo }, { resource: Board, field: 'version', op: '==', value: 0 }, { changed: Level }, { event: RestartRequested }, { query: query(added(NestMound)) }] },
-  run(ctx) {
+  runIf: { any: [{ changed: ViewInfo }, { resource: Board, field: 'version', op: '==', value: 0 }, { changed: Level }, { event: RestartRequested }, { query: query(added(NestMound)) }, { query: query(added(TraySlot)) }] },
+  run(ctx, q) {
     const b = ctx.resource(Board);
     const r = viewRect(b.cols[0]! || DEFAULT_COLS, b.rows[0]! || DEFAULT_ROWS);
     fitWorldView(ctx, r.x, r.y, r.w, r.h, FIT);
+    const v = ctx.resource(ViewInfo);
+    const wv = ctx.resource(WorldView);
+    const w = v.width[0]!;
+    const h = v.height[0]!;
+    panelLayout(wv.center[0]!, wv.center[1]!, wv.orthoSize[0]!, h, v.safeArea[0]!, v.safeArea[2]!, v.safeArea[3]!, uiScale(w, h, FIT), panel);
+    ctx.set(Panel, panel);
+    for (const c of q.tray.chunks()) {
+      const ts = c.col(TraySlot);
+      const t = c.col(LocalTransform);
+      for (let i = 0; i < c.length; i++) {
+        t.position[i * 3] = trayX(ts.slot[i]!, panel);
+        t.position[i * 3 + 1] = panel.trayY;
+        t.scale[i * 3] = panel.scale;
+        t.scale[i * 3 + 1] = panel.scale;
+        teleport(c.entity(i));
+      }
+    }
   },
 });
 

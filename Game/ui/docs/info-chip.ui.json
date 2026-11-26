@@ -1,0 +1,168 @@
+{
+  "$schemaVersion": 1,
+  "guid": "eb81e73f-f77d-4cc5-a81a-347ccdf89ee7",
+  "name": "info-chip",
+  "title": "Info chip",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Info chip",
+      "style": {
+        "dir": "row",
+        "pad": 0,
+        "align": "center",
+        "bg": "#00000000",
+        "radius": 22,
+        "gap": 0,
+        "grow": 0,
+        "minW": 0,
+        "w": "100%",
+        "h": 78
+      },
+      "children": [
+        "ic_in",
+        "root_ring"
+      ]
+    },
+    "ic_v": {
+      "type": "label",
+      "name": "Label",
+      "text": "{v}",
+      "style": {
+        "fontSize": 42,
+        "fitMin": 22,
+        "weight": 900,
+        "color": "#ffffffff",
+        "font": {
+          "guid": "45be2b88-6a50-4995-8bcb-b8615868b12a"
+        }
+      }
+    },
+    "ic_k": {
+      "type": "label",
+      "name": "Label",
+      "text": "{k}",
+      "style": {
+        "fontSize": 38,
+        "fitMin": 20,
+        "weight": 700,
+        "color": "#b8c4e8ff",
+        "grow": 1,
+        "textAlign": "left",
+        "font": {
+          "guid": "95b2641e-e699-4217-9291-f759580ab645"
+        }
+      }
+    },
+    "ic_in": {
+      "type": "element",
+      "name": "Element",
+      "children": [
+        "ic_icon",
+        "ic_k",
+        "ic_v"
+      ],
+      "style": {
+        "pad": [
+          14,
+          22,
+          14,
+          22
+        ],
+        "dir": "row",
+        "align": "center",
+        "gap": 16,
+        "radius": 22,
+        "bg": "#0b0e24ff",
+        "w": "100%",
+        "h": "100%"
+      }
+    },
+    "ic_icon": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "841ab814-b99a-41c6-8e22-87f2e7bd7761"
+        },
+        "w": 46,
+        "h": 46,
+        "tint": "#ff2ec8ff",
+        "tintMode": "multiply"
+      }
+    },
+    "root_ring": {
+      "type": "element",
+      "name": "Element",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "ae35fd1b-826e-4ef8-bf95-1b985db644a0"
+        },
+        "sliceScale": 1,
+        "tint": "#2f45d6ff",
+        "tintMode": "multiply",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%"
+      }
+    }
+  },
+  "properties": {
+    "k": {
+      "type": "text",
+      "default": "Nests"
+    },
+    "v": {
+      "type": "text",
+      "default": "2"
+    },
+    "color": {
+      "type": "enum",
+      "values": [
+        "pink",
+        "blue",
+        "green",
+        "gold"
+      ],
+      "default": "pink",
+      "poses": {
+        "blue": {
+          "set": {
+            "ic_icon": {
+              "tint": "#3f6bffff"
+            }
+          }
+        },
+        "green": {
+          "set": {
+            "ic_icon": {
+              "tint": "#3dff6eff"
+            }
+          }
+        },
+        "gold": {
+          "set": {
+            "ic_icon": {
+              "tint": "#ffc51fff"
+            }
+          }
+        }
+      }
+    }
+  }
+}

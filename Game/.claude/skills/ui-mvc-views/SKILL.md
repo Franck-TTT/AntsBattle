@@ -1,6 +1,6 @@
 ---
 name: ui-mvc-views
-version: 1.50.0
+version: 1.53.1
 tier: required
 description: Game UI views and controllers — defineView placing a UI document, a controller filling its model from the world, intents, the view stack and its camera order, UI animation, sprites, pooled scrolling lists, text, models and rigs in views, the Unity UI mapping. Use for the code side of any HUD, menu or popup (its looks are ui-documents).
 ---

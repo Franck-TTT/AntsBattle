@@ -1,6 +1,6 @@
 ---
 name: mcp-tools
-version: 1.23.1
+version: 1.24.0
 tier: optional
 description: Driving a Game Engine project through MCP instead of a shell — `gameengine mcp`, registering it in a client, which tool to call for what, and the session/verify loop. Use when your client exposes gameengine_* MCP tools, or to wire the engine into a shell-less agent.
 ---
@@ -83,8 +83,10 @@ Each agent runs its own `gameengine mcp` server, and a server keeps to the sessi
   tools, …) go to the newest live session **this server** started, never to one another agent (or
   the user's `gameengine run --headless`) started later.
 - Before it has started one, and after `session_stop`, they go to the project's newest session, as
-  the CLI does. If its session exits on its own, they fail with "has exited" until you
-  `session_start` again, so a crash never hands your calls to someone else's session.
+  the CLI does. The server keeps its sessions alive while the chat lasts. If one still exits (a
+  crash, or stopped from outside), they fail with "has exited" and the reason until you
+  `session_start` again, so a crash never hands your calls to someone else's session. Restarting
+  the editor or starting a new chat does not help: these tools never use the editor's engines.
 - If `session_start` times out or is cancelled, the engine may still have started: check
   `session_list` and stop the stray session by `session`.
 - Project tools (`tool_*`) that run CLI commands themselves reach the project's newest session, not

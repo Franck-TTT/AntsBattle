@@ -1,0 +1,38 @@
+{
+  "$schemaVersion": 1,
+  "guid": "593695b9-efdd-4843-9410-276c88803cf2",
+  "name": "tile-pips-epic-segment",
+  "title": "Tile pips epic segment",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "Segment",
+      "style": {
+        "w": 26,
+        "h": 10,
+        "bg": "#1f2c7aff",
+        "radius": 3
+      },
+      "children": []
+    }
+  },
+  "owner": "tile-pips-epic",
+  "behaviour": "toggle",
+  "properties": {
+    "on": {
+      "type": "yesno",
+      "default": false,
+      "poses": {
+        "yes": {
+          "set": {
+            "root": {
+              "bg": "#b04cffff"
+            }
+          }
+        }
+      }
+    }
+  }
+}

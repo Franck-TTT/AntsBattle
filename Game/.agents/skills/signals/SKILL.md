@@ -1,8 +1,8 @@
 ---
 name: signals
-version: 1.1.0
+version: 1.2.0
 tier: required
-description: Game signals for listeners outside the sim (analytics, achievements, tutorials, stingers) — ctx.signal, signal(), meta.<doc>.<action> signals, onSignal, expectSignal in tests. Use when adding analytics events, achievement or tutorial triggers, or anything that listens for when X happens.
+description: Game signals for listeners outside the sim (analytics, achievements, tutorials, stingers) — ctx.signal, signal(), meta.<doc>.<action> signals, onSignal, expectSignal in tests. Use when adding analytics events, input or replay logs, achievement or tutorial triggers, or anything that listens for when X happens.
 ---
 
 # Signals
@@ -16,12 +16,13 @@ one listener, not every system.
 | Where the moment happens | Report it with | Source |
 |---|---|---|
 | A sim system (`Update`, `FixedUpdate`, …) | `ctx.signal(Token, fields)` | `sim` |
+| A sim system, with data only listeners outside the sim read (no event) | `ctx.signal('name', fields)` | `sim` |
 | UI / presentation code (a button, a screen opened, a view shown) | `signal(Token or 'name', fields)` from `@gameengine/runtime` | `ui` |
 | A successful meta action (`meta.dispatch`) | automatic: `meta.<doc>.<action>` with `{ payload }` | `meta` |
 
 ## Declare sim signals in the schema
 
-A sim signal is also a typed event, so it lives in the schema with its fields typed and
+A sim signal reported with a token is also a typed event, so it lives in the schema with its fields typed and
 documented. The schema is the catalog of what the game reports; name events after the
 moment, in the past tense.
 
@@ -41,9 +42,21 @@ Run `gameengine gen`, then emit from the system where the moment is decided:
 if (picked) ctx.signal(LootGained, { item: drop.item, count: drop.count });
 ```
 
-`ctx.signal` emits the typed event (other sim systems may read it; it is hashed and replayed)
+With a token, `ctx.signal` emits the typed event (other sim systems may read it; it is hashed and replayed)
 **and** reports the signal. Use it instead of `ctx.events.emit` for anything a listener outside
 the sim cares about. It throws in `LateUpdate`: presentation code uses `signal()`.
+
+### Signals with no event
+
+`ctx.signal('name', fields)` reports the signal only: no schema entry, no event, nothing in the
+world or its hash. Fields are any JSON object. Use dotted names, as for UI signals. Use it for
+data that only listeners outside the sim want, such as each step's input for a level replay log:
+
+```ts
+if (ctx.input.length > 0) ctx.signal('level.input', { input: ctx.input });
+```
+
+Sim systems cannot react to it. If one must, declare the event and use the token form.
 
 UI signals need no schema entry; use dotted names (`'ui.shop.opened'`, `'ui.tutorial.skipped'`).
 A token still gives typed fields when you have one.
@@ -122,8 +135,9 @@ were seen. Run with `--js both`: sim signals must come out the same on V8 and He
   system that needs to react reads the typed event instead.
 - **Replays re-emit sim signals** (the sim runs again); UI signals are not replayed. Do not
   forward to a live analytics backend from a replay or test run.
-- **Names ≤ 128 characters, fields a plain JSON object.** Keep fields small and flat (ids,
-  counts, amounts) — they are serialized every frame.
+- **Names ≤ 128 characters; fields a plain JSON object of at most 4096 bytes serialized**
+  (more throws). Keep them small and flat (ids, counts, amounts) — they are serialized every
+  frame. A per-step log such as input frames is the exception, and uses the name form.
 - **Budget:** 10,000 signals per frame, then they are dropped and counted. A signal per
   entity per step is a design bug: report the aggregate (`EnemiesKilled { count }`).
 - The last 2,000 signals are kept for tests and the console (`signalHistory(since)`).

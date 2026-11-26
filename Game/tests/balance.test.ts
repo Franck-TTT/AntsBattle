@@ -6,13 +6,16 @@
  */
 import { expect } from '@gameengine/test';
 import { worldTest } from './play.ts';
-import { Block, Board, Item, Offer, Run } from '../src/schema.gen.ts';
-import { CELLS, COLS, DEFAULT_BASE, DEFAULT_COLS, DEFAULT_MARKERS, DEFAULT_ROWS, REROLL_SLOT, isMarker, nestsReach, ROWS, cellX, cellY, flowField, footprintCell, footprintX, footprintY, trayX, trayY } from '../src/grid.ts';
+import { Block, Board, Item, Offer, Run, Panel } from '../src/schema.gen.ts';
+import { CELLS, COLS, DEFAULT_BASE, DEFAULT_COLS, DEFAULT_MARKERS, DEFAULT_ROWS, REROLL_SLOT, isMarker, nestsReach, noBuildCells, ROWS, cellX, cellY, flowField, footprintCell, footprintX, footprintY, trayX, trayY } from '../src/grid.ts';
 import { GHOST_LIFT, ITEMS, SHAPES, START_LIVES, itemPrice, rerollPrice, type BlockShapeName } from '../src/balance.ts';
 import { ITEM_NAMES, SHAPE_NAMES } from '../src/kinds.ts';
 
 // Barrier rows and the column each leaves open, alternating sides.
 const BARRIERS: [number, number][] = [[2, 6], [4, 0], [6, 6], [8, 0]];
+
+/** The default board's no-build cells (the 8 around each nest): the bot builds elsewhere. */
+const NO_BUILD = noBuildCells(DEFAULT_MARKERS, DEFAULT_COLS, DEFAULT_ROWS, [], new Uint8Array(CELLS));
 
 function blockSpot(cells: ArrayLike<number>, shape: BlockShapeName): number {
   const [w, h] = SHAPES[shape];
@@ -28,7 +31,7 @@ function blockSpot(cells: ArrayLike<number>, shape: BlockShapeName): number {
         const c = footprintCell(anchor, w, k);
         const r = (c / COLS) | 0;
         const gapHere = BARRIERS.some(([br, bg]) => br === r && bg === c % COLS);
-        if (cells[c] || isMarker(DEFAULT_MARKERS, c) || gapHere) ok = false;
+        if (cells[c] || isMarker(DEFAULT_MARKERS, c) || NO_BUILD[c] || gapHere) ok = false;
       }
       if (!ok) continue;
       for (let c = 0; c < CELLS; c++) blocked[c] = cells[c] ? 1 : 0;
@@ -88,7 +91,8 @@ worldTest('a scripted player taking what the offer gives wins the run', async ({
         if (offer.sold[slot]) continue;
         const kind = ITEM_NAMES[offer.kinds[slot]!]!;
         const shape = SHAPE_NAMES[offer.shapes[slot]!]!;
-        if (kind === 'none') continue;
+        // Ground weapons are left out: the scripted player only builds on blocks (and a boost pad helps the ants).
+        if (kind === 'none' || kind === 'mine' || kind === 'boostPad') continue;
         let target: [number, number] | null = null;
         if (kind === 'wall') {
           const a = blockSpot(board.cells, shape);
@@ -102,14 +106,14 @@ worldTest('a scripted player taking what the offer gives wins the run', async ({
         usable = true;
         if (run.gold < itemPrice(kind, run.wallsBuilt, shape)) continue;
         const before = world.entities(Item).length + world.entities(Block).length;
-        await press([trayX(slot, DEFAULT_COLS), trayY(DEFAULT_ROWS)], target);
+        await press([trayX(slot, world.resource(Panel)), trayY(world.resource(Panel))], target);
         acted = world.entities(Item).length + world.entities(Block).length > before;
         if (acted) bought++;
       }
       if (acted) continue;
       // Nothing usable on offer: pay for a new set when it leaves a cushion.
       if (!usable && run.gold >= rerollPrice(offer.rerolls) + 30) {
-        await press([trayX(REROLL_SLOT, DEFAULT_COLS), trayY(DEFAULT_ROWS)], null);
+        await press([trayX(REROLL_SLOT, world.resource(Panel)), trayY(world.resource(Panel))], null);
         rerolls++;
         continue;
       }

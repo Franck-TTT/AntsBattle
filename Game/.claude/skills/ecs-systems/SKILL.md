@@ -1,6 +1,6 @@
 ---
 name: ecs-systems
-version: 1.17.0
+version: 1.17.1
 tier: required
 description: How to write gameplay as ECS systems in Game Engine — schema components and resources (gameengine gen), defineSystem, queries and chunks, commands, events, stages and ordering, run conditions (runIf, runOn, skipUnchanged) and work that scales with change. Use when adding or changing game logic, components or a system.
 ---
@@ -116,7 +116,7 @@ export const Rise = defineSystem({
 - **Events:** `ctx.events.read(T)` returns decoded copies (declare `T` in `events` or `runOn`); `ctx.events.forEach(T, (e) => …)` hands one refilled object per event (copy what must outlive the call); `ctx.events.count(T)` counts without decoding; `ctx.events.emit(T, v)` / `ctx.signal` need no declaration, so list only events you read.
 - **Comparing strings and assets:** `stringId('red')` / `assetId('texture', ref)` (a reference, a GUID or a path) resolve a value inside `run`, before the loop (never interning it; never keep an id at module level: a rollback or a new world replaces the tables); compare the numbers in the loop, or use `c.is(Gem, i, 'kind', 'red')` / `ctx.is(T, field, value)`. `stringOf(id)` and `assetKey(id)` go the other way. An asset field, and `assetKey(id)`, read as the asset's GUID (`guid` or `guid#part`), never its path: `sprite.image === 'gems/red'` never matches, so compare ids, or a field with another field. `assetPath(id)` gives the path for a log or an overlay and throws in sim systems. Never import `@gameengine/runtime/internal`; lint `no-module-level-ids` flags ids resolved at module level.
 - **Entity fields** (`Parent.entity`, your own `entity()` fields) are two `u32` lanes in a view; read one as an `EntityId` with `c.get(Parent, i).entity` (also native) or `entityAt(c.col(Parent).entity, i)` (TypeScript only), never by building it from the lanes. Compare with `===`: `@gameengine/test`'s `world.get` and `world.events` return the same `EntityId`s.
-- **Small fixed arrays:** `array(f32(), 8)` in the schema (number kinds, up to 64) is one column of 8 lanes: `c.col(T).samples[i * 8 + k]`, decoded as `number[]`.
+- **Small fixed arrays:** `array(f32(), 8)` in the schema (number kinds, up to 255) is one column of 8 lanes: `c.col(T).samples[i * 8 + k]`, decoded as `number[]`.
 - **Numbers designers tweak** (speeds, rewards, production times) go in a data asset read through `const Tuning = defineTunables(TuningDef, 'data/tuning.json')`; call `Tuning.get()` inside `run`, never copy it into a module constant, so a dev edit applies at the next step (skill `content-database`).
 - Large changing JSON from presentation uses an empty event marker, `emitInputData(marker, encodedJson)`
   and `ctx.inputData<T>(marker)`, with the marker declared in `events` and `runIf`/`runOn`.

@@ -1,6 +1,6 @@
-/** The level menu's sim side: picking a level loads it (StartRun restarts on it), Menu pauses the run. */
+/** The level menu's sim side: picking a level loads it (StartRun restarts on it), Menu pauses the run (and closes the settings popup). */
 import { defineSystem, write } from '@gameengine/runtime';
-import { Level, LevelPicked, MenuRequested, Placement, Run } from '../schema.gen.ts';
+import { Level, LevelPicked, MenuRequested, Placement, Run, SettingsMenu } from '../schema.gen.ts';
 import { menuLevels } from '../levels.ts';
 
 export const PickLevel = defineSystem({
@@ -20,11 +20,12 @@ export const PickLevel = defineSystem({
 
 export const OpenMenu = defineSystem({
   name: 'OpenMenu',
-  resources: [write(Run), write(Placement)],
+  resources: [write(Run), write(Placement), write(SettingsMenu)],
   events: [MenuRequested],
   runIf: { event: MenuRequested },
   run(ctx) {
     ctx.set(Run, { phase: 'menu', speed: 1 });
     ctx.set(Placement, { active: false, cell: -1, valid: false, previewLen: 0, returnSteps: 0 });
+    ctx.set(SettingsMenu, { open: false });
   },
 });

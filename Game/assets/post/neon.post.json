@@ -1,5 +1,14 @@
 {
   "tonemap": "none",
   "bloom": { "enabled": true, "threshold": 0.55, "knee": 0.3, "intensity": 0.9, "radius": 0.6 },
-  "ssao": { "enabled": false }
+  "ssao": { "enabled": false },
+  "effects": {
+    "crtSweep": { "material": { "guid": "5e9a4542-881c-4945-99fe-7130a4c2db5d" }, "optional": true },
+    "chromaticEdges": {
+      "material": { "guid": "d53ee11b-aa8e-42e4-9808-867dca363031" },
+      "order": 1,
+      "optional": true,
+      "values": "strength=6; inner=0.55; outer=1"
+    }
+  }
 }
