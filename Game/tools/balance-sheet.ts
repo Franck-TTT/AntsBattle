@@ -47,6 +47,7 @@ const GENERAL: Record<string, Field> = {
   'single pick offers': { key: 'singlePick', kind: 'int' },
   'drag game speed': { key: 'dragSpeed', kind: 'num' },
   'speed recovery': { key: 'speedRecovery', kind: 'num' },
+  'move grace window': { key: 'moveGrace', kind: 'num' },
   'roll spin first gap': { key: 'spinFirstGap', kind: 'num' },
   'roll spin last gap': { key: 'spinLastGap', kind: 'num' },
   'roll spin growth': { key: 'spinGrowth', kind: 'num' },
@@ -54,6 +55,16 @@ const GENERAL: Record<string, Field> = {
   'chromatic aberration strength': { key: 'caStrength', kind: 'num' },
   'chromatic aberration inner': { key: 'caInner', kind: 'num' },
   'chromatic aberration outer': { key: 'caOuter', kind: 'num' },
+  'chromatic aberration inset top': { key: 'caInsetTop', kind: 'num' },
+  'chromatic aberration inset bottom': { key: 'caInsetBottom', kind: 'num' },
+  'chromatic aberration inset left': { key: 'caInsetLeft', kind: 'num' },
+  'chromatic aberration inset right': { key: 'caInsetRight', kind: 'num' },
+  'crt sweep period': { key: 'crtPeriod', kind: 'num' },
+  'crt sweep duration': { key: 'crtSweep', kind: 'num' },
+  'crt sweep height': { key: 'crtWidth', kind: 'num' },
+  'crt sweep jitter': { key: 'crtShift', kind: 'num' },
+  'crt sweep colour split': { key: 'crtSplit', kind: 'num' },
+  'crt sweep glow': { key: 'crtGlow', kind: 'num' },
 };
 
 /** Meta (the progression between runs): sheet label → field. */

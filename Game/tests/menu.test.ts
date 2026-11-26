@@ -1,6 +1,6 @@
 import { worldTest, expect } from '@gameengine/test';
-import { loadData } from '@gameengine/runtime';
-import { Block, Level, LevelDef, LevelPicked, MenuRequested, Run } from '../src/schema.gen.ts';
+import { listData, loadData } from '@gameengine/runtime';
+import { Block, Level, LevelDef, LevelPicked, MenuRequested, Run, WorldsDef } from '../src/schema.gen.ts';
 import { menuLevels } from '../src/levels.ts';
 
 worldTest('the game opens on the level menu and no wave comes while it is up', async ({ world, step }) => {
@@ -11,11 +11,18 @@ worldTest('the game opens on the level menu and no wave comes while it is up', a
   expect(world.resource(Run).wave).toBe(0);
 });
 
-worldTest('the menu lists the levels in order, without test layouts', async () => {
+worldTest('the menu follows the world structure (assets/levels/worlds.json), without test layouts', async () => {
   const levels = menuLevels();
   expect(levels.length).toBeGreaterThan(1);
-  const orders = levels.map((l) => loadData(LevelDef, l.guid).order);
-  expect(orders.every((o, i) => o > 0 && (i === 0 || o >= orders[i - 1]!))).toBe(true);
+  const worlds = loadData(WorldsDef, listData(WorldsDef)[0]!).worlds;
+  const placed = worlds.flatMap((w) => w.levels.filter((id) => id));
+  expect(levels.map((l) => l.id)).toEqual(placed);
+  // Worlds in order, slots numbered from 0, the last level of each world its boss.
+  for (const [i, l] of levels.entries()) {
+    const next = levels[i + 1];
+    expect(l.last).toBe(!next || next.world !== l.world);
+    if (i > 0) expect(l.slot).toBe(levels[i - 1]!.world === l.world ? levels[i - 1]!.slot + 1 : 0);
+  }
   expect(levels.some((l) => l.id === 'test-layout-fixture')).toBe(false);
 });
 

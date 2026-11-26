@@ -64,7 +64,8 @@
         "enemy",
         "noBlock",
         "fixed",
-        "noBuild"
+        "noBuild",
+        "moveLocked"
       ],
       "package": "AntsBattle"
     },
@@ -216,7 +217,7 @@
           "kind": "u8",
           "scalar": "u8",
           "lanes": 1,
-          "doc": "Shake left after a refused pick-up (blocks never move)"
+          "doc": "Shake left after a refused pick-up"
         },
         {
           "name": "locked",
@@ -224,6 +225,20 @@
           "scalar": "u8",
           "lanes": 1,
           "doc": "Pre-placed by the level: never moved, never destroyed"
+        },
+        {
+          "name": "grace",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds left of its move grace window (counted from its first drop; a move does not restart it); 0: locked in place, unless MOVE_GRACE is 0 (no limit)"
+        },
+        {
+          "name": "held",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Picked up by the finger right now (being moved)"
         }
       ],
       "package": "AntsBattle"
@@ -662,11 +677,11 @@
           "lanes": 1
         },
         {
-          "name": "cooldown",
+          "name": "grace",
           "kind": "f32",
           "scalar": "f32",
           "lanes": 1,
-          "doc": "Game seconds before it can be moved again"
+          "doc": "Game seconds left of its move grace window (counted from its first drop; a move does not restart it); 0: locked in place, unless MOVE_GRACE is 0 (no limit)"
         },
         {
           "name": "reload",
@@ -1123,6 +1138,14 @@
           "scalar": "u8",
           "lanes": 1,
           "enumName": "BlockShape"
+        },
+        {
+          "name": "moveGrace",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "default": -1,
+          "doc": "Move grace window override, game seconds (cheat placement.moveGrace; kept across restarts): -1 the sheet's MOVE_GRACE, 0 no limit"
         }
       ],
       "package": "AntsBattle"
@@ -1518,6 +1541,13 @@
           "scalar": "u32",
           "lanes": 1,
           "doc": "Meta coins this run paid"
+        },
+        {
+          "name": "graced",
+          "kind": "u16",
+          "scalar": "u16",
+          "lanes": 1,
+          "doc": "Placed blocks and weapons still inside their move grace window (MoveGrace runs, and the overlay draws their rings, only while it is above 0)"
         }
       ],
       "package": "AntsBattle"
@@ -1930,6 +1960,46 @@
       },
       "package": "AntsBattle",
       "doc": "A level layout: its nests, its base, and what stands on the board when a run starts."
+    },
+    {
+      "name": "WorldsDef",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "worlds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Shown to the player"
+                },
+                "levels": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "A LevelDef id; empty: no level in this slot yet"
+                  },
+                  "description": "The world's level slots, in play order"
+                }
+              },
+              "required": [
+                "name",
+                "levels"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Worlds in play order"
+          }
+        },
+        "required": [
+          "worlds"
+        ],
+        "additionalProperties": false
+      },
+      "package": "AntsBattle",
+      "doc": "The world structure: each world and the levels it holds, in order."
     }
   ]
 }

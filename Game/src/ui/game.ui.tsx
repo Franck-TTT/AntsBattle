@@ -20,7 +20,7 @@ import { menuLevels } from '../levels.ts';
 import { loadData } from '@gameengine/runtime';
 import { LevelDef } from '../schema.gen.ts';
 import { checkLayout } from '../layout.ts';
-import { COLS } from '../grid.ts';
+import { COLS, DEFAULT_COLS, DEFAULT_ROWS, boardRect } from '../grid.ts';
 import { META, UPGRADES, levelOf, levelOpen, luxuryCharges, luxuryProgress, maxLevel, power, progress, rollCost, rollPool, upgradeDef, type MetaState, type UpgradeDef } from '../meta.ts';
 import { ITEM_NAMES } from '../kinds.ts';
 import type { ItemKindName, UpgradeKindName } from '../kinds.ts';
@@ -256,7 +256,9 @@ export const GameUI = defineUI({
 
     // Banners: "Wave X" at each wave start, "BOSS!" when the boss walks out.
     const banner = (m: BannerModel) => {
-      const b = views.push(BannerView, m);
+      const bd = untrack(board);
+      const r = boardRect(bd?.cols || DEFAULT_COLS, bd?.rows || DEFAULT_ROWS);
+      const b = views.push(BannerView, { ...m, at: [r.x, r.y] });
       let start = -1;
       const stop = onUiFrame((now) => {
         if (start < 0) start = now;
@@ -299,12 +301,12 @@ export const GameUI = defineUI({
     const menuModel = (): LevelMenuModel => {
       const s = meta();
       const cur = currentIndex(s);
-      // The chapter holding the current level: MAP_PATH.length levels a chapter, the last one a boss.
-      const per = MAP_PATH.length;
-      const first = Math.floor(cur / per) * per;
-      const nodes: MapNode[] = levels.slice(first, first + per).map((l, k) => {
+      // The world holding the current level (src/levels.ts), its last level a boss.
+      const world = levels[cur]?.world ?? 0;
+      const first = Math.max(0, levels.findIndex((l) => l.world === world));
+      const nodes: MapNode[] = levels.slice(first, first + MAP_PATH.length).filter((l) => l.world === world).map((l, k) => {
         const i = first + k;
-        const state = i === cur ? 'current' : k === per - 1 ? 'boss' : levelOpen(s, ids, i) ? 'done' : 'locked';
+        const state = i === cur ? 'current' : l.last ? 'boss' : levelOpen(s, ids, i) ? 'done' : 'locked';
         return { key: l.id, num: i + 1, state, stars: s.stars[l.id] ?? 0 };
       });
       const charges = luxuryCharges(s);
@@ -312,7 +314,7 @@ export const GameUI = defineUI({
       return {
         coins: fmt(s.coins),
         stars: fmt(s.starTotal),
-        chapter: `CHAPTER ${first / per + 1}`,
+        chapter: (levels[cur]?.worldName ?? `World ${world + 1}`).toUpperCase(),
         nodes,
         luxText: `${luxuryProgress(s)} / ${META.starsPerLuxury}`,
         luxStars: luxuryProgress(s),
@@ -338,7 +340,7 @@ export const GameUI = defineUI({
           cells.push(cell === lay.base ? 3 : lay.nests.some((n) => n.cell === cell) ? 2 : lay.weaponAt[cell]! >= 0 ? 4 : lay.cells[cell] ? 1 : 0);
         }
       }
-      const boss = index % MAP_PATH.length === MAP_PATH.length - 1;
+      const boss = l.last;
       return {
         key: l.id,
         kicker: `LEVEL ${index + 1}${boss ? ' · BOSS' : ''}`,

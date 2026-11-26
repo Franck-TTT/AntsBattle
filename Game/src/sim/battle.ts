@@ -505,14 +505,13 @@ export const Combat = defineSystem({
       }
     }
 
-    // 3. Weapons: move cooldown, reload, aim at the nearest-to-base enemy in range, fire.
+    // 3. Weapons: reload, aim at the nearest-to-base enemy in range, fire.
     let casings = 0;
     for (const c of q.items.chunks()) {
       const it = c.col(Item);
       const tr = c.col(LocalTransform);
       for (let i = 0; i < c.length; i++) {
         if (it.denySteps[i]! > 0) it.denySteps[i] = it.denySteps[i]! - 1;
-        if (it.cooldown[i]! > 0) it.cooldown[i] = Math.max(0, it.cooldown[i]! - dt);
         const kind = it.kind[i]!;
         if (kind === ItemKind.none || kind === ItemKind.wall) continue;
         if (it.held[i]) continue;

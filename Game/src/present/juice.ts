@@ -45,7 +45,7 @@ export const Juice = defineSystem({
   queries: {
     enemies: query(read(Enemy), write(VisualOffset), withTag(Big)),
     items: query(read(Item), write(Shape), write(VisualOffset)),
-    blocks: query(read(Block), write(VisualOffset)),
+    blocks: query(read(Block), write(Shape), write(VisualOffset)),
     base: query(withTag(Base), write(Shape), write(VisualOffset)),
     slots: query(read(TraySlot), write(VisualOffset)),
     puddles: query(read(Puddle), write(Shape)),
@@ -205,10 +205,11 @@ export const Juice = defineSystem({
       for (let i = 0; i < c.length; i++) col[i * 4 + 3] = PUDDLE.alpha * Math.max(0, Math.min(1, pd.left[i]! / 0.5, (pd.life[i]! - pd.left[i]!) / 0.15));
     }
 
-    // Blocks: a heavier squash on drop, a shake when the player tries to move one (they are fixed).
+    // Blocks: a heavier squash on drop, a shake when a pick-up is refused, faded while held (moved in its grace window).
     for (const c of q.blocks.chunks()) {
       const b = c.col(Block);
       const vo = c.col(VisualOffset);
+      const col = c.col(Shape).color;
       for (let i = 0; i < c.length; i++) {
         const age = time - b.placedAt[i]!;
         let k = 0;
@@ -218,6 +219,8 @@ export const Juice = defineSystem({
         vo.scale[i * 3 + 2] = 1;
         const deny = b.denySteps[i]!;
         vo.position[i * 3] = deny > 0 ? Math.sin(deny * 1.6) * 0.07 : 0;
+        const alpha = b.held[i] ? 0.35 : 1;
+        if (col[i * 4 + 3] !== alpha) col[i * 4 + 3] = alpha;
       }
     }
 

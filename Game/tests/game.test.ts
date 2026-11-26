@@ -19,7 +19,7 @@ const GROUND = 'assets/test-data/ground-fixture.level.json';
 /** The default board with no-build cells painted at (3, 5) and (0, 5), a locked block on (0, 5). */
 const NO_BUILD = 'assets/test-data/no-build-fixture.level.json';
 import { CELLS, COLS, DEFAULT_COLS, DEFAULT_ROWS, TRAY_REROLL_W, TRAY_SLOT_H, TRAY_SLOT_W, boardRect, DEFAULT_BASE as BASE_CELL, DEFAULT_NESTS as NESTS, REROLL_SLOT, cellX, cellY, footprintX, footprintY, nearestCell, trayX, trayY } from '../src/grid.ts';
-import { DRAG_SPEED, GHOST_LIFT, ITEMS, MOVE_COOLDOWN, OFFER_POOL, inWaveWindow, offeredAt, SHAPES, START_GOLD, START_LIVES, rerollPrice, wallPrice } from '../src/balance.ts';
+import { DRAG_SPEED, GHOST_LIFT, ITEMS, MOVE_GRACE, OFFER_POOL, inWaveWindow, offeredAt, SHAPES, START_GOLD, START_LIVES, rerollPrice, wallPrice } from '../src/balance.ts';
 
 type Ctx = Parameters<Parameters<typeof worldTest>[1]>[0];
 
@@ -145,10 +145,11 @@ worldTest('weapons only drop on a free block cell', async (t) => {
   expect(t.world.resource(Board).pathLen).toBe(11);
 });
 
-worldTest('blocks never move', async (t) => {
+worldTest('blocks never move once their move grace window is over', async (t) => {
   t.input.view(...PHONE);
   await t.step(2);
   await block(t, cell(1, 3));
+  await t.step(Math.ceil(MOVE_GRACE * 60) + 30);
   await dragAt(t, fromCell(cell(1, 3)), cellX(cell(5, 3)), cellY(cell(5, 3)));
   const [b] = t.world.entities(Block);
   expect(t.world.get(b!, Block).cell).toBe(cell(1, 3));
@@ -304,7 +305,7 @@ worldTest('the largest and smallest boards stay whole on screen above a tray of 
   }
 });
 
-worldTest('a moved weapon cannot move again until its cooldown ends', async (t) => {
+worldTest('a placed weapon moves within its grace window, only onto a free block cell', async (t) => {
   t.input.view(...PHONE);
   await t.step(2);
   await block(t, cell(1, 3), 'b3x1');
@@ -313,11 +314,7 @@ worldTest('a moved weapon cannot move again until its cooldown ends', async (t) 
   await dragAt(t, fromCell(cell(1, 3)), cellX(cell(3, 3)), cellY(cell(3, 3)));
   const [tw] = t.world.entities(Item);
   expect(t.world.get(tw!, Item).cell).toBe(cell(3, 3));
-  expect(t.world.get(tw!, Item).cooldown).toBeGreaterThan(MOVE_COOLDOWN - 0.5);
-  // Not onto bare ground, and not while cooling down.
-  await dragAt(t, fromCell(cell(3, 3)), cellX(cell(4, 6)), cellY(cell(4, 6)));
-  expect(t.world.get(tw!, Item).cell).toBe(cell(3, 3));
-  await t.step(Math.ceil(MOVE_COOLDOWN * 60) + 10);
+  // Not onto bare ground.
   await dragAt(t, fromCell(cell(3, 3)), cellX(cell(3, 8)), cellY(cell(3, 8)));
   expect(t.world.get(tw!, Item).cell).toBe(cell(3, 3));
   await dragAt(t, fromCell(cell(3, 3)), cellX(cell(5, 6)), cellY(cell(5, 6)));

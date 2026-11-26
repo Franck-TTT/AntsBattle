@@ -2,6 +2,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { defineTool } from '@gameengine/tools';
+import { POST_PROFILE, withPostValues } from '../src/post-profile.ts';
 import { OUT, SHEET_URL, TABS, diff, downloadTab, parseCsv, parseSheet, readEnums, readGenerated, render, type Grid, type TabKey } from './balance-sheet.ts';
 
 function readTabFromDir(dir: string, key: TabKey): Grid {
@@ -38,6 +39,13 @@ export const sheetSync = defineTool({
     const changes = before ? diff(before.data, data) : [`${OUT} created`];
     const write = !args.preview && (changes.length > 0 || !before || before.hash !== before.actual);
     if (write) writeFileSync(path, render(data));
+    // Post effect values live in the post profile (src/post-profile.ts): the sheet's, with live tweaks on top.
+    const tweaksPath = join(ctx.project, 'src/balance.tweaks.json');
+    const tweaks = existsSync(tweaksPath) ? (JSON.parse(readFileSync(tweaksPath, 'utf8') || '{}') as Partial<typeof data.general>) : {};
+    const profilePath = join(ctx.project, POST_PROFILE);
+    const profile = withPostValues(readFileSync(profilePath, 'utf8'), { ...data.general, ...tweaks });
+    if (profile && !args.preview) writeFileSync(profilePath, profile);
+    if (profile) changes.push(`${POST_PROFILE}: post effect values updated`);
     ctx.log(changes.length ? `${changes.length} value(s) changed` : 'No value changed');
     return { sheet: SHEET_URL, file: OUT, written: write, waves: data.waves.length, changes };
   },

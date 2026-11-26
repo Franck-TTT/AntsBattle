@@ -71,7 +71,8 @@ export const schemaIr = {
         "enemy",
         "noBlock",
         "fixed",
-        "noBuild"
+        "noBuild",
+        "moveLocked"
       ],
       "package": "AntsBattle"
     },
@@ -223,7 +224,7 @@ export const schemaIr = {
           "kind": "u8",
           "scalar": "u8",
           "lanes": 1,
-          "doc": "Shake left after a refused pick-up (blocks never move)"
+          "doc": "Shake left after a refused pick-up"
         },
         {
           "name": "locked",
@@ -231,6 +232,20 @@ export const schemaIr = {
           "scalar": "u8",
           "lanes": 1,
           "doc": "Pre-placed by the level: never moved, never destroyed"
+        },
+        {
+          "name": "grace",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "doc": "Game seconds left of its move grace window (counted from its first drop; a move does not restart it); 0: locked in place, unless MOVE_GRACE is 0 (no limit)"
+        },
+        {
+          "name": "held",
+          "kind": "bool",
+          "scalar": "u8",
+          "lanes": 1,
+          "doc": "Picked up by the finger right now (being moved)"
         }
       ],
       "package": "AntsBattle"
@@ -669,11 +684,11 @@ export const schemaIr = {
           "lanes": 1
         },
         {
-          "name": "cooldown",
+          "name": "grace",
           "kind": "f32",
           "scalar": "f32",
           "lanes": 1,
-          "doc": "Game seconds before it can be moved again"
+          "doc": "Game seconds left of its move grace window (counted from its first drop; a move does not restart it); 0: locked in place, unless MOVE_GRACE is 0 (no limit)"
         },
         {
           "name": "reload",
@@ -1130,6 +1145,14 @@ export const schemaIr = {
           "scalar": "u8",
           "lanes": 1,
           "enumName": "BlockShape"
+        },
+        {
+          "name": "moveGrace",
+          "kind": "f32",
+          "scalar": "f32",
+          "lanes": 1,
+          "default": -1,
+          "doc": "Move grace window override, game seconds (cheat placement.moveGrace; kept across restarts): -1 the sheet's MOVE_GRACE, 0 no limit"
         }
       ],
       "package": "AntsBattle"
@@ -1525,6 +1548,13 @@ export const schemaIr = {
           "scalar": "u32",
           "lanes": 1,
           "doc": "Meta coins this run paid"
+        },
+        {
+          "name": "graced",
+          "kind": "u16",
+          "scalar": "u16",
+          "lanes": 1,
+          "doc": "Placed blocks and weapons still inside their move grace window (MoveGrace runs, and the overlay draws their rings, only while it is above 0)"
         }
       ],
       "package": "AntsBattle"
@@ -1937,6 +1967,46 @@ export const schemaIr = {
       },
       "package": "AntsBattle",
       "doc": "A level layout: its nests, its base, and what stands on the board when a run starts."
+    },
+    {
+      "name": "WorldsDef",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "worlds": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Shown to the player"
+                },
+                "levels": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "description": "A LevelDef id; empty: no level in this slot yet"
+                  },
+                  "description": "The world's level slots, in play order"
+                }
+              },
+              "required": [
+                "name",
+                "levels"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Worlds in play order"
+          }
+        },
+        "required": [
+          "worlds"
+        ],
+        "additionalProperties": false
+      },
+      "package": "AntsBattle",
+      "doc": "The world structure: each world and the levels it holds, in order."
     }
   ]
 } as const;
@@ -1995,8 +2065,9 @@ export const PlaceReason = {
   noBlock: 6,
   fixed: 7,
   noBuild: 8,
+  moveLocked: 9,
 } as const;
-export type PlaceReasonName = 'ok' | 'offBoard' | 'occupied' | 'blocks' | 'gold' | 'enemy' | 'noBlock' | 'fixed' | 'noBuild';
+export type PlaceReasonName = 'ok' | 'offBoard' | 'occupied' | 'blocks' | 'gold' | 'enemy' | 'noBlock' | 'fixed' | 'noBuild' | 'moveLocked';
 
 export const RunPhase = {
   playing: 0,
@@ -2079,23 +2150,31 @@ export interface BlockViews {
   /** Top-left cell */
   cell: Uint8Array;
   placedAt: Float32Array;
-  /** Shake left after a refused pick-up (blocks never move) */
+  /** Shake left after a refused pick-up */
   denySteps: Uint8Array;
   /** Pre-placed by the level: never moved, never destroyed */
   locked: Uint8Array;
+  /** Game seconds left of its move grace window (counted from its first drop; a move does not restart it); 0: locked in place, unless MOVE_GRACE is 0 (no limit) */
+  grace: Float32Array;
+  /** Picked up by the finger right now (being moved) */
+  held: Uint8Array;
 }
 export interface BlockValue {
   shape: BlockShapeName | number;
   /** Top-left cell */
   cell: number;
   placedAt: number;
-  /** Shake left after a refused pick-up (blocks never move) */
+  /** Shake left after a refused pick-up */
   denySteps: number;
   /** Pre-placed by the level: never moved, never destroyed */
   locked: boolean;
+  /** Game seconds left of its move grace window (counted from its first drop; a move does not restart it); 0: locked in place, unless MOVE_GRACE is 0 (no limit) */
+  grace: number;
+  /** Picked up by the finger right now (being moved) */
+  held: boolean;
 }
 /** Block (component, sim) */
-export const Block = typeToken<BlockViews, BlockValue>('Block', 'component', { sig: 'shape:enum:1,cell:u8:1,placedAt:f32:1,denySteps:u8:1,locked:bool:1', read: (v: BlockViews, i: number, o: Record<string, unknown>) => { o.shape = $r.enm('BlockShape', v.shape[i]!); o.cell = v.cell[i]; o.placedAt = v.placedAt[i]; o.denySteps = v.denySteps[i]; o.locked = v.locked[i] !== 0; return o; } });
+export const Block = typeToken<BlockViews, BlockValue>('Block', 'component', { sig: 'shape:enum:1,cell:u8:1,placedAt:f32:1,denySteps:u8:1,locked:bool:1,grace:f32:1,held:bool:1', read: (v: BlockViews, i: number, o: Record<string, unknown>) => { o.shape = $r.enm('BlockShape', v.shape[i]!); o.cell = v.cell[i]; o.placedAt = v.placedAt[i]; o.denySteps = v.denySteps[i]; o.locked = v.locked[i] !== 0; o.grace = v.grace[i]; o.held = v.held[i] !== 0; return o; } });
 
 export interface BoardViews {
   /** 1 where a block stands (blocks the ants), 0 free */
@@ -2325,8 +2404,8 @@ export const FxHost = typeToken<FxHostViews, FxHostValue>('FxHost', 'component',
 export interface ItemViews {
   kind: Uint8Array;
   cell: Uint8Array;
-  /** Game seconds before it can be moved again */
-  cooldown: Float32Array;
+  /** Game seconds left of its move grace window (counted from its first drop; a move does not restart it); 0: locked in place, unless MOVE_GRACE is 0 (no limit) */
+  grace: Float32Array;
   /** Game seconds before it fires again */
   reload: Float32Array;
   /** Barrel angle, radians */
@@ -2343,8 +2422,8 @@ export interface ItemViews {
 export interface ItemValue {
   kind: ItemKindName | number;
   cell: number;
-  /** Game seconds before it can be moved again */
-  cooldown: number;
+  /** Game seconds left of its move grace window (counted from its first drop; a move does not restart it); 0: locked in place, unless MOVE_GRACE is 0 (no limit) */
+  grace: number;
   /** Game seconds before it fires again */
   reload: number;
   /** Barrel angle, radians */
@@ -2359,7 +2438,7 @@ export interface ItemValue {
   locked: boolean;
 }
 /** Item (component, sim) */
-export const Item = typeToken<ItemViews, ItemValue>('Item', 'component', { sig: 'kind:enum:1,cell:u8:1,cooldown:f32:1,reload:f32:1,aim:f32:1,placedAt:f32:1,denySteps:u8:1,held:bool:1,locked:bool:1', read: (v: ItemViews, i: number, o: Record<string, unknown>) => { o.kind = $r.enm('ItemKind', v.kind[i]!); o.cell = v.cell[i]; o.cooldown = v.cooldown[i]; o.reload = v.reload[i]; o.aim = v.aim[i]; o.placedAt = v.placedAt[i]; o.denySteps = v.denySteps[i]; o.held = v.held[i] !== 0; o.locked = v.locked[i] !== 0; return o; } });
+export const Item = typeToken<ItemViews, ItemValue>('Item', 'component', { sig: 'kind:enum:1,cell:u8:1,grace:f32:1,reload:f32:1,aim:f32:1,placedAt:f32:1,denySteps:u8:1,held:bool:1,locked:bool:1', read: (v: ItemViews, i: number, o: Record<string, unknown>) => { o.kind = $r.enm('ItemKind', v.kind[i]!); o.cell = v.cell[i]; o.grace = v.grace[i]; o.reload = v.reload[i]; o.aim = v.aim[i]; o.placedAt = v.placedAt[i]; o.denySteps = v.denySteps[i]; o.held = v.held[i] !== 0; o.locked = v.locked[i] !== 0; return o; } });
 
 export interface ItemPlacedViews {
   kind: Uint8Array;
@@ -2546,6 +2625,8 @@ export interface PlacementViews {
   retToY: Float32Array;
   retKind: Uint8Array;
   retShape: Uint8Array;
+  /** Move grace window override, game seconds (cheat placement.moveGrace; kept across restarts): -1 the sheet's MOVE_GRACE, 0 no limit */
+  moveGrace: Float32Array;
 }
 export interface PlacementValue {
   active: boolean;
@@ -2573,9 +2654,11 @@ export interface PlacementValue {
   retToY: number;
   retKind: ItemKindName | number;
   retShape: BlockShapeName | number;
+  /** Move grace window override, game seconds (cheat placement.moveGrace; kept across restarts): -1 the sheet's MOVE_GRACE, 0 no limit */
+  moveGrace: number;
 }
 /** Placement (resource, sim) */
-export const Placement = typeToken<PlacementViews, PlacementValue>('Placement', 'resource', { sig: 'active:bool:1,kind:enum:1,shape:enum:1,fromItem:entity:2,fromCell:i16:1,slot:i8:1,x:f32:1,y:f32:1,cell:i16:1,valid:bool:1,reason:enum:1,previewDist:array:140,previewLen:u8:1,returnSteps:u8:1,retFromX:f32:1,retFromY:f32:1,retToX:f32:1,retToY:f32:1,retKind:enum:1,retShape:enum:1', read: (v: PlacementViews, i: number, o: Record<string, unknown>) => { o.active = v.active[i] !== 0; o.kind = $r.enm('ItemKind', v.kind[i]!); o.shape = $r.enm('BlockShape', v.shape[i]!); o.fromItem = $r.ent(v.fromItem, i); o.fromCell = v.fromCell[i]; o.slot = v.slot[i]; o.x = v.x[i]; o.y = v.y[i]; o.cell = v.cell[i]; o.valid = v.valid[i] !== 0; o.reason = $r.enm('PlaceReason', v.reason[i]!); o.previewDist = $r.lanes(v.previewDist, i, 140, o.previewDist); o.previewLen = v.previewLen[i]; o.returnSteps = v.returnSteps[i]; o.retFromX = v.retFromX[i]; o.retFromY = v.retFromY[i]; o.retToX = v.retToX[i]; o.retToY = v.retToY[i]; o.retKind = $r.enm('ItemKind', v.retKind[i]!); o.retShape = $r.enm('BlockShape', v.retShape[i]!); return o; } });
+export const Placement = typeToken<PlacementViews, PlacementValue>('Placement', 'resource', { sig: 'active:bool:1,kind:enum:1,shape:enum:1,fromItem:entity:2,fromCell:i16:1,slot:i8:1,x:f32:1,y:f32:1,cell:i16:1,valid:bool:1,reason:enum:1,previewDist:array:140,previewLen:u8:1,returnSteps:u8:1,retFromX:f32:1,retFromY:f32:1,retToX:f32:1,retToY:f32:1,retKind:enum:1,retShape:enum:1,moveGrace:f32:1', read: (v: PlacementViews, i: number, o: Record<string, unknown>) => { o.active = v.active[i] !== 0; o.kind = $r.enm('ItemKind', v.kind[i]!); o.shape = $r.enm('BlockShape', v.shape[i]!); o.fromItem = $r.ent(v.fromItem, i); o.fromCell = v.fromCell[i]; o.slot = v.slot[i]; o.x = v.x[i]; o.y = v.y[i]; o.cell = v.cell[i]; o.valid = v.valid[i] !== 0; o.reason = $r.enm('PlaceReason', v.reason[i]!); o.previewDist = $r.lanes(v.previewDist, i, 140, o.previewDist); o.previewLen = v.previewLen[i]; o.returnSteps = v.returnSteps[i]; o.retFromX = v.retFromX[i]; o.retFromY = v.retFromY[i]; o.retToX = v.retToX[i]; o.retToY = v.retToY[i]; o.retKind = $r.enm('ItemKind', v.retKind[i]!); o.retShape = $r.enm('BlockShape', v.retShape[i]!); o.moveGrace = v.moveGrace[i]; return o; } });
 
 export interface PlacementRefusedViews {
   reason: Uint8Array;
@@ -2728,6 +2811,8 @@ export interface RunViews {
   newStars: Uint8Array;
   /** Meta coins this run paid */
   coinsWon: Uint32Array;
+  /** Placed blocks and weapons still inside their move grace window (MoveGrace runs, and the overlay draws their rings, only while it is above 0) */
+  graced: Uint16Array;
 }
 export interface RunValue {
   phase: RunPhaseName | number;
@@ -2775,9 +2860,11 @@ export interface RunValue {
   newStars: number;
   /** Meta coins this run paid */
   coinsWon: number;
+  /** Placed blocks and weapons still inside their move grace window (MoveGrace runs, and the overlay draws their rings, only while it is above 0) */
+  graced: number;
 }
 /** Run (resource, sim) */
-export const Run = typeToken<RunViews, RunValue>('Run', 'resource', { sig: 'phase:enum:1,runId:u32:1,time:f32:1,speed:f32:1,wave:u32:1,lives:u32:1,gold:u32:1,goldFrac:f32:1,wallsBuilt:u32:1,nextWaveAt:f32:1,group:u32:1,groupSpawned:u32:1,spawnAt:f32:1,spawning:bool:1,alive:u32:1,kills:u32:1,bossSteps:u32:1,placements:u32:1,refusals:u32:1,shots:u32:1,booms:u32:1,hurts:u32:1,baseHits:u32:1,bosses:u32:1,nestTurn:u32:1,nestsOpen:u32:1,paid:bool:1,stars:u8:1,newStars:u8:1,coinsWon:u32:1', read: (v: RunViews, i: number, o: Record<string, unknown>) => { o.phase = $r.enm('RunPhase', v.phase[i]!); o.runId = v.runId[i]; o.time = v.time[i]; o.speed = v.speed[i]; o.wave = v.wave[i]; o.lives = v.lives[i]; o.gold = v.gold[i]; o.goldFrac = v.goldFrac[i]; o.wallsBuilt = v.wallsBuilt[i]; o.nextWaveAt = v.nextWaveAt[i]; o.group = v.group[i]; o.groupSpawned = v.groupSpawned[i]; o.spawnAt = v.spawnAt[i]; o.spawning = v.spawning[i] !== 0; o.alive = v.alive[i]; o.kills = v.kills[i]; o.bossSteps = v.bossSteps[i]; o.placements = v.placements[i]; o.refusals = v.refusals[i]; o.shots = v.shots[i]; o.booms = v.booms[i]; o.hurts = v.hurts[i]; o.baseHits = v.baseHits[i]; o.bosses = v.bosses[i]; o.nestTurn = v.nestTurn[i]; o.nestsOpen = v.nestsOpen[i]; o.paid = v.paid[i] !== 0; o.stars = v.stars[i]; o.newStars = v.newStars[i]; o.coinsWon = v.coinsWon[i]; return o; } });
+export const Run = typeToken<RunViews, RunValue>('Run', 'resource', { sig: 'phase:enum:1,runId:u32:1,time:f32:1,speed:f32:1,wave:u32:1,lives:u32:1,gold:u32:1,goldFrac:f32:1,wallsBuilt:u32:1,nextWaveAt:f32:1,group:u32:1,groupSpawned:u32:1,spawnAt:f32:1,spawning:bool:1,alive:u32:1,kills:u32:1,bossSteps:u32:1,placements:u32:1,refusals:u32:1,shots:u32:1,booms:u32:1,hurts:u32:1,baseHits:u32:1,bosses:u32:1,nestTurn:u32:1,nestsOpen:u32:1,paid:bool:1,stars:u8:1,newStars:u8:1,coinsWon:u32:1,graced:u16:1', read: (v: RunViews, i: number, o: Record<string, unknown>) => { o.phase = $r.enm('RunPhase', v.phase[i]!); o.runId = v.runId[i]; o.time = v.time[i]; o.speed = v.speed[i]; o.wave = v.wave[i]; o.lives = v.lives[i]; o.gold = v.gold[i]; o.goldFrac = v.goldFrac[i]; o.wallsBuilt = v.wallsBuilt[i]; o.nextWaveAt = v.nextWaveAt[i]; o.group = v.group[i]; o.groupSpawned = v.groupSpawned[i]; o.spawnAt = v.spawnAt[i]; o.spawning = v.spawning[i] !== 0; o.alive = v.alive[i]; o.kills = v.kills[i]; o.bossSteps = v.bossSteps[i]; o.placements = v.placements[i]; o.refusals = v.refusals[i]; o.shots = v.shots[i]; o.booms = v.booms[i]; o.hurts = v.hurts[i]; o.baseHits = v.baseHits[i]; o.bosses = v.bosses[i]; o.nestTurn = v.nestTurn[i]; o.nestsOpen = v.nestsOpen[i]; o.paid = v.paid[i] !== 0; o.stars = v.stars[i]; o.newStars = v.newStars[i]; o.coinsWon = v.coinsWon[i]; o.graced = v.graced[i]; return o; } });
 
 export interface SettingsMenuViews {
   /** The popup is open: the run is paused */
@@ -2958,3 +3045,17 @@ export type LevelDefData = {
 /** A loaded LevelDef as `loadData` returns it (frozen). */
 export type ReadonlyLevelDefData = DataRecord<LevelDefData>;
 export const LevelDef = dataToken<LevelDefData>('LevelDef');
+
+/** The world structure: each world and the levels it holds, in order. */
+export type WorldsDefData = {
+  /** Worlds in play order */
+  worlds: {
+    /** Shown to the player */
+    name: string;
+    /** The world's level slots, in play order */
+    levels: string[];
+  }[];
+};
+/** A loaded WorldsDef as `loadData` returns it (frozen). */
+export type ReadonlyWorldsDefData = DataRecord<WorldsDefData>;
+export const WorldsDef = dataToken<WorldsDefData>('WorldsDef');

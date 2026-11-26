@@ -1,0 +1,7 @@
+{
+  "$type": "WorldsDef",
+  "worlds": [
+    { "name": "World 1", "levels": ["level-01", "demo", "proposal-twin-gates", "proposal-crossfire", "proposal-funnel", "proposal-side-base", "proposal-heart", "size-small-5x7", "size-compact-6x9", "size-big-8x12"] },
+    { "name": "World 2", "levels": ["size-max-10x14", "", "", "", "", "", "", "", "", ""] }
+  ]
+}

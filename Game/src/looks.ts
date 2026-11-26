@@ -5,7 +5,7 @@
  */
 import { SWARM, type ItemKindName, type EnemyKindName } from './balance.ts';
 
-export const ORDER = { ground: 0, tile: 1, path: 2, highlight: 3, base: 4, block: 5, enemy: 6, item: 7, shot: 10, tray: 11, bar: 15, ghost: 16 } as const;
+export const ORDER = { ground: 0, tile: 1, path: 2, highlight: 3, base: 4, block: 5, blockDetail: 6, enemy: 7, item: 8, shot: 10, tray: 11, bar: 15, ghost: 16 } as const;
 
 export const COLORS = {
   /** Neon arcade look: near-black space, a blue grid, outlined shapes that glow. */
@@ -158,10 +158,112 @@ export function enemyScale(kind: EnemyKindName): number {
 
 /** A w×h block: a dark slab with a neon rim and a faint inner rim, one per footprint. */
 export function blockBody(w: number, h: number): ShapeLook {
-  return { kind: 'Rect', size: [w - 0.1, h - 0.1], radius: 0.04, color: '#0b1030', strokeColor: '#3f6bff', strokeWidth: 0.06 };
+  return { kind: 'Rect', size: [w - 0.1, h - 0.1], radius: 0.18, color: '#0b1030', strokeColor: '#3f6bff', strokeWidth: 0.06 };
 }
 export function blockTop(w: number, h: number): ShapeLook {
   return { kind: 'Rect', size: [w - 0.4, h - 0.4], radius: 0.02, color: '#00000000', strokeColor: '#3f6bff66', strokeWidth: 0.03 };
+}
+
+/**
+ * Flat "city plan" details inside a block, one small layout per footprint cell (rooftops, a
+ * helipad, a row of tanks). Dim and unoutlined so they stay under the bloom threshold: no glow.
+ */
+const DETAIL = '#18225a';
+const rr = (w: number, h: number, r = 0.035): ShapeLook => ({ kind: 'Rect', size: [w, h], radius: r, color: DETAIL });
+const circ = (d: number): ShapeLook => ({ kind: 'Circle', size: [d, d], radius: d / 2, color: DETAIL });
+const CELL_DETAILS: { x: number; y: number; look: ShapeLook }[][] = [
+  // Tall roof top-left, three stacked tanks right, a long roof at the bottom.
+  [
+    { x: -0.12, y: 0.1, look: rr(0.18, 0.3) },
+    { x: 0.13, y: 0.14, look: rr(0.16, 0.08, 0.04) },
+    { x: 0.13, y: 0.03, look: rr(0.16, 0.08, 0.04) },
+    { x: 0.13, y: -0.08, look: rr(0.16, 0.08, 0.04) },
+    { x: 0.02, y: -0.19, look: rr(0.36, 0.1) },
+  ],
+  // Helipad: a ring with an H, a low roof under it.
+  [
+    { x: 0, y: 0.06, look: { kind: 'Ring', size: [0.32, 0.32], radius: 0.16, thickness: 0.035, color: DETAIL } },
+    { x: -0.05, y: 0.06, look: rr(0.035, 0.15, 0) },
+    { x: 0.05, y: 0.06, look: rr(0.035, 0.15, 0) },
+    { x: 0, y: 0.06, look: rr(0.1, 0.035, 0) },
+    { x: -0.04, y: -0.19, look: rr(0.3, 0.09) },
+  ],
+  // Two roofs side by side and a square courtyard.
+  [
+    { x: -0.11, y: 0.12, look: rr(0.2, 0.2) },
+    { x: 0.13, y: 0.12, look: rr(0.14, 0.2) },
+    { x: 0, y: -0.14, look: rr(0.44, 0.16) },
+  ],
+  // Park: a few round trees along a path.
+  [
+    { x: 0, y: -0.02, look: rr(0.46, 0.05, 0.025) },
+    { x: -0.14, y: 0.13, look: circ(0.14) },
+    { x: 0.06, y: 0.15, look: circ(0.1) },
+    { x: 0.17, y: 0.1, look: circ(0.08) },
+    { x: -0.06, y: -0.16, look: circ(0.12) },
+    { x: 0.14, y: -0.17, look: circ(0.1) },
+  ],
+  // Car park: two rows of bays.
+  [
+    ...[-0.15, -0.05, 0.05, 0.15].map((x) => ({ x, y: 0.12, look: rr(0.06, 0.16, 0.02) })),
+    ...[-0.15, -0.05, 0.05, 0.15].map((x) => ({ x, y: -0.12, look: rr(0.06, 0.16, 0.02) })),
+  ],
+  // Roundabout: a ring with an island and two roads leaving it.
+  [
+    { x: 0, y: 0, look: { kind: 'Ring', size: [0.3, 0.3], radius: 0.15, thickness: 0.05, color: DETAIL } },
+    { x: 0, y: 0, look: circ(0.08) },
+    { x: 0, y: 0.2, look: rr(0.05, 0.1, 0) },
+    { x: 0.2, y: 0, look: rr(0.1, 0.05, 0) },
+  ],
+  // L-shaped block with a small annex.
+  [
+    { x: -0.12, y: 0.02, look: rr(0.16, 0.42) },
+    { x: 0.06, y: -0.14, look: rr(0.22, 0.14) },
+    { x: 0.12, y: 0.13, look: rr(0.12, 0.12) },
+  ],
+  // Solar roof: a grid of panels.
+  [
+    ...[-0.13, 0, 0.13].flatMap((x) => [0.09, -0.09].map((y) => ({ x, y, look: rr(0.1, 0.14, 0.015) }))),
+  ],
+  // Stadium: a pill-shaped pitch with stands on two sides.
+  [
+    { x: 0, y: 0, look: rr(0.3, 0.2, 0.1) },
+    { x: 0, y: 0.18, look: rr(0.3, 0.05, 0.02) },
+    { x: 0, y: -0.18, look: rr(0.3, 0.05, 0.02) },
+  ],
+  // Cross-shaped roof with a dish.
+  [
+    { x: -0.04, y: 0.02, look: rr(0.32, 0.1, 0.02) },
+    { x: -0.04, y: 0.02, look: rr(0.1, 0.36, 0.02) },
+    { x: 0.16, y: -0.16, look: circ(0.1) },
+  ],
+];
+
+/** Layouts above are drawn for a ±0.25 cell; this stretches them to fill the block's cell. */
+const DETAIL_SCALE = 1.4;
+const scaled = (l: ShapeLook): ShapeLook => ({
+  ...l,
+  size: [l.size[0] * DETAIL_SCALE, l.size[1] * DETAIL_SCALE],
+  radius: l.radius * DETAIL_SCALE,
+  thickness: l.thickness === undefined ? undefined : l.thickness * DETAIL_SCALE,
+});
+
+/** Detail shapes of a w×h block whose top-left cell is `cell`, as offsets from the block's centre. */
+export function blockDetails(w: number, h: number, cell: number): { x: number; y: number; look: ShapeLook }[] {
+  const out: { x: number; y: number; look: ShapeLook }[] = [];
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      // A fixed pattern per cell, picked from the cell index so a block keeps its look.
+      const pick = ((cell + i + j * 7) * 2654435761) >>> 0;
+      // High bits: the low bits of a multiplicative hash just follow the cell's parity.
+      const layout = CELL_DETAILS[(pick >>> 16) % CELL_DETAILS.length];
+      const flip = (pick >>> 8) & 1 ? -1 : 1;
+      const cx = i - (w - 1) / 2;
+      const cy = (h - 1) / 2 - j;
+      for (const d of layout) out.push({ x: cx + d.x * flip * DETAIL_SCALE, y: cy + d.y * DETAIL_SCALE, look: scaled(d.look) });
+    }
+  }
+  return out;
 }
 
 /**
@@ -170,7 +272,7 @@ export function blockTop(w: number, h: number): ShapeLook {
  */
 export const LOCKED = { rim: '#c3cdf0', fill: '#10142a', rivet: 0.12 } as const;
 export function lockedBlockBody(w: number, h: number): ShapeLook {
-  return { kind: 'Rect', size: [w - 0.1, h - 0.1], radius: 0.04, color: LOCKED.fill, strokeColor: LOCKED.rim, strokeWidth: 0.07 };
+  return { kind: 'Rect', size: [w - 0.1, h - 0.1], radius: 0.18, color: LOCKED.fill, strokeColor: LOCKED.rim, strokeWidth: 0.07 };
 }
 export const LOCKED_RIVET: ShapeLook = { kind: 'Rect', size: [LOCKED.rivet, LOCKED.rivet], radius: 0.02, color: LOCKED.rim };
 /** Rivet offsets from a w×h block's centre, one per corner. */

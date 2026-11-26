@@ -7,6 +7,7 @@
  */
 import { defineEditorWidget, type EditorModeApi } from '@gameengine/editor-api';
 import { SHEET, type BalanceSheet } from '../../src/balance.sheet.ts';
+import { POST_PROFILE, withPostValues } from '../../src/post-profile.ts';
 
 type Key = keyof BalanceSheet['general'];
 type Tweaks = Partial<Record<Key, number>>;
@@ -49,6 +50,7 @@ const SECTIONS: { title: string; rows: { key: Key; label: string; int?: boolean;
     rows: [
       { key: 'dragSpeed', label: 'Drag game speed' },
       { key: 'speedRecovery', label: 'Speed recovery (per s)' },
+      { key: 'moveGrace', label: 'Move grace window (s, 0 no limit)' },
     ],
   },
   {
@@ -66,6 +68,16 @@ const SECTIONS: { title: string; rows: { key: Key; label: string; int?: boolean;
       { key: 'caStrength', label: 'Chromatic aberration strength (px at 1080p)' },
       { key: 'caInner', label: 'Chromatic aberration inner (0 centre, 1 corner)' },
       { key: 'caOuter', label: 'Chromatic aberration outer (0 centre, 1 corner)' },
+      { key: 'caInsetTop', label: 'Chromatic aberration inset top (screen heights)' },
+      { key: 'caInsetBottom', label: 'Chromatic aberration inset bottom (screen heights)' },
+      { key: 'caInsetLeft', label: 'Chromatic aberration inset left (screen widths)' },
+      { key: 'caInsetRight', label: 'Chromatic aberration inset right (screen widths)' },
+      { key: 'crtPeriod', label: 'CRT sweep period (s between two sweeps)' },
+      { key: 'crtSweep', label: 'CRT sweep duration (s to cross the screen)' },
+      { key: 'crtWidth', label: 'CRT sweep height (screen heights)' },
+      { key: 'crtShift', label: 'CRT sweep jitter (px at 1080p)' },
+      { key: 'crtSplit', label: 'CRT sweep colour split (px at 1080p)' },
+      { key: 'crtGlow', label: 'CRT sweep glow (0 to 1)' },
     ],
   },
 ];
@@ -103,6 +115,10 @@ export default defineEditorWidget(({ React, ui }) => {
         const r = (await api.execute('asset.setText', { path: FILE, text: renderTweaks(next), ...(hash ? { expectedHash: hash } : {}) })) as { hash?: string };
         setTweaks(next);
         setHash(r?.hash);
+        // Post effect values live in the post profile, not in the game code (src/post-profile.ts).
+        const cur = (await api.query('asset.read', { path: POST_PROFILE })) as { text?: string; hash?: string };
+        const profile = withPostValues(cur.text ?? '', { ...SHEET.general, ...next });
+        if (profile) await api.execute('asset.setText', { path: POST_PROFILE, text: profile, ...(cur.hash ? { expectedHash: cur.hash } : {}) });
         setStatus(`✓ ${label}`);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);

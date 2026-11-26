@@ -1,9 +1,9 @@
 /**
  * The board: built once, reset on every run (its grid redrawn at the level's size), fitted to the screen. Sim code.
  */
-import { added, defineSystem, fitWorldView, math, uiScale, query, read, teleport, withTag, write, LocalTransform, Shape, Text2D, ViewInfo, WorldView, type Commands, type EntityId, type SystemContext } from '@gameengine/runtime';
+import { added, CameraFit, defineSystem, math, uiScale, worldFit, query, read, teleport, withTag, write, LocalTransform, Shape, Text2D, ViewInfo, WorldView, type Commands, type EntityId, type SystemContext } from '@gameengine/runtime';
 import { Base, BaseLabel, Block, Board, Boost, ItemKind, Panel, BoardTile, Level, TraySlot, NestLabel, NestMound, NestOpened, NestSpot, Offer, WaveStarted, Run, Placement, Item, Enemy, Projectile, Puddle, RestartRequested } from '../schema.gen.ts';
-import { CELLS, DEFAULT_BASE, DEFAULT_COLS, DEFAULT_NESTS, DEFAULT_ROWS, MAX_NESTS, REROLL_SLOT, PANEL_RESERVE_REF, TRAY_SLOTS, TRAY_SLOT_H, boardRect, cellX, cellY, flowField, isMarker, type Markers, panelLayout, tracePath, trayW, trayX, viewRect, type PanelLayout } from '../grid.ts';
+import { CELLS, DEFAULT_BASE, DEFAULT_COLS, DEFAULT_NESTS, DEFAULT_ROWS, MAX_NESTS, REROLL_SLOT, PANEL_RESERVE_REF, PANEL_SIDE_RESERVE_REF, TRAY_SLOTS, TRAY_SLOT_H, boardRect, cellX, cellY, flowField, isMarker, type Markers, panelLayout, sideLayout, tracePath, trayW, trayX, viewRect, type PanelLayout } from '../grid.ts';
 import { FIRST_WAVE_AT, OFFER_SIZE } from '../balance.ts';
 import { progress } from '../meta.ts';
 import { applyBoost, runGold, runLives } from './progress.ts';
@@ -11,9 +11,13 @@ import { COIN, COLORS, ORDER, REROLL_ICON, shapeValue } from '../looks.ts';
 import { drawOffer } from './offer.ts';
 import { loadLevel } from './level.ts';
 
+/** The project's ui.scaleLimits (project.gameengine.json): the UI stays a thumb's size in landscape. */
+export const UI_SCALE_LIMITS = [0.29, 0.6] as const;
 /** Screen margins the board stays clear of, in UI reference px: the bottom one is the panel (tray and HUD, grid.ts PANEL_RESERVE_REF). */
 /** Top: 36 margin + the 120 settings gear (.hud-gear in ui/game.style.css) + 16 gap. */
-export const FIT = { reserve: { top: 172, bottom: PANEL_RESERVE_REF, left: 16, right: 16 }, uiReference: [1080, 1920] } as const;
+export const FIT = { reserve: { top: 172, bottom: PANEL_RESERVE_REF, left: 16, right: 16 }, uiReference: [1080, 1920], uiScaleLimits: UI_SCALE_LIMITS } as const;
+/** Wide screens: the panel stands right of the board (grid.ts sideLayout), the gear sits above it. */
+export const FIT_SIDE = { reserve: { top: 24, bottom: 24, left: 24, right: PANEL_SIDE_RESERVE_REF }, uiReference: [1080, 1920], uiScaleLimits: UI_SCALE_LIMITS } as const;
 /** Scratch panel placement: fully written by panelLayout before every read. */
 const panel: PanelLayout = { x: 0, trayY: 0, hudY: 0, scale: 1 };
 
@@ -66,20 +70,25 @@ function spawnGrid(cmd: Commands, cols: number, rows: number, noBuild: ArrayLike
   const r = boardRect(cols, rows);
   const hw = cols / 2;
   const hh = rows / 2;
-  const FAR = 14;
+  // Half extents of the far grid: tall enough for thin phones, wide enough for landscape phones.
+  const FAR_X = 24;
+  const FAR_Y = 14;
   // Far grid, outside the board only: lines crossing the board are cut into the parts above and below it.
   const far = (x: number, y: number, w: number, h: number) => line(x, y, w, h, COLORS.gridFar, ORDER.ground);
-  for (let k = -FAR * 2; k <= FAR * 2; k++) {
+  for (let k = -FAR_X * 2; k <= FAR_X * 2; k++) {
     const d = k / 2;
-    if (d < -hw || d > hw) far(r.x + d, r.y, 0.025, FAR * 2);
+    if (d < -hw || d > hw) far(r.x + d, r.y, 0.025, FAR_Y * 2);
     else {
-      far(r.x + d, r.y + (hh + FAR) / 2, 0.025, FAR - hh);
-      far(r.x + d, r.y - (hh + FAR) / 2, 0.025, FAR - hh);
+      far(r.x + d, r.y + (hh + FAR_Y) / 2, 0.025, FAR_Y - hh);
+      far(r.x + d, r.y - (hh + FAR_Y) / 2, 0.025, FAR_Y - hh);
     }
-    if (d < -hh || d > hh) far(r.x, r.y + d, FAR * 2, 0.025);
+  }
+  for (let k = -FAR_Y * 2; k <= FAR_Y * 2; k++) {
+    const d = k / 2;
+    if (d < -hh || d > hh) far(r.x, r.y + d, FAR_X * 2, 0.025);
     else {
-      far(r.x - (hw + FAR) / 2, r.y + d, FAR - hw, 0.025);
-      far(r.x + (hw + FAR) / 2, r.y + d, FAR - hw, 0.025);
+      far(r.x - (hw + FAR_X) / 2, r.y + d, FAR_X - hw, 0.025);
+      far(r.x + (hw + FAR_X) / 2, r.y + d, FAR_X - hw, 0.025);
     }
   }
   cmd.spawn({ LocalTransform: at(r.x, r.y), Shape: { kind: 'Rect', size: [cols, rows], radius: 0, color: COLORS.board, order: ORDER.ground, sortingLayer: 'Default' }, BoardTile: {} });
@@ -169,7 +178,7 @@ export const StartRun = defineSystem({
       phase: boot ? 'menu' : 'playing', runId, time: 0, speed: 1, wave: 0, lives: runLives(meta), gold: runGold(meta), wallsBuilt: 0,
       nextWaveAt: FIRST_WAVE_AT, group: 0, groupSpawned: 0, spawnAt: 1e9, spawning: false, alive: 0, kills: 0, bossSteps: 0,
       placements: 0, refusals: 0, shots: 0, booms: 0, baseHits: 0, bosses: 0, nestTurn: 0, nestsOpen: 0, goldFrac: 0,
-      paid: false, stars: 0, newStars: 0, coinsWon: 0,
+      paid: false, stars: 0, newStars: 0, coinsWon: 0, graced: 0,
     });
     const b = ctx.resource(Board);
     for (let c = 0; c < CELLS; c++) {
@@ -247,12 +256,29 @@ export const FitView = defineSystem({
   run(ctx, q) {
     const b = ctx.resource(Board);
     const r = viewRect(b.cols[0]! || DEFAULT_COLS, b.rows[0]! || DEFAULT_ROWS);
-    fitWorldView(ctx, r.x, r.y, r.w, r.h, FIT);
     const v = ctx.resource(ViewInfo);
-    const wv = ctx.resource(WorldView);
     const w = v.width[0]!;
     const h = v.height[0]!;
-    panelLayout(wv.center[0]!, wv.center[1]!, wv.orthoSize[0]!, h, v.safeArea[0]!, v.safeArea[2]!, v.safeArea[3]!, uiScale(w, h, FIT), panel);
+    const view = { width: w, height: h, safeArea: v.safeArea };
+    const rect = { x: r.x, y: r.y, width: r.w, height: r.h };
+    // The panel goes under the board or beside it, whichever shows the board larger (landscape: beside).
+    const below = worldFit(view, rect, FIT);
+    const beside = worldFit(view, rect, FIT_SIDE);
+    if (!below) return;
+    let ortho: number;
+    let cx: number;
+    let cy: number;
+    if (beside && beside.orthoSize < below.orthoSize * 0.98) {
+      [ortho, cy] = [beside.orthoSize, beside.center[1]];
+      cx = sideLayout(r.x, r.w, cy, ortho, w, h, v.safeArea, uiScale(w, h, FIT_SIDE), panel);
+    } else {
+      [ortho, cx, cy] = [below.orthoSize, below.center[0], below.center[1]];
+      panelLayout(cx, cy, ortho, h, v.safeArea[0]!, v.safeArea[2]!, v.safeArea[3]!, uiScale(w, h, FIT), panel);
+    }
+    const wv = ctx.resource(WorldView);
+    if (wv.orthoSize[0] !== math.fround(ortho) || wv.center[0] !== math.fround(cx) || wv.center[1] !== math.fround(cy) || wv.fit[0] !== CameraFit.Height) {
+      ctx.set(WorldView, { orthoSize: ortho, center: [cx, cy], fit: 'Height' });
+    }
     ctx.set(Panel, panel);
     for (const c of q.tray.chunks()) {
       const ts = c.col(TraySlot);

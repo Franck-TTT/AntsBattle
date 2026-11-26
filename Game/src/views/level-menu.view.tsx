@@ -43,7 +43,7 @@ export const MAP_PATH: readonly (readonly [number, number])[] = [
 const DOT_GAP = 26;
 const NODE_CLEAR = 80;
 const MAP_H_EST = 900;
-/** Width of the map box, reference px (map-root in ui/game.style.css). */
+/** Width of the map box in portrait, reference px (--map-w in ui/game.style.css), to space the path dots. */
 const MAP_W = 1000;
 
 function dots(nodes: readonly MapNode[]): { x: number; y: number; lit: boolean }[] {
@@ -80,8 +80,8 @@ export const LevelMenuView = defineView<LevelMenuModel>({
     mid: { coins: '1,240', stars: '12', chapter: 'CHAPTER 1', nodes: sampleNodes(6), luxText: '2 / 10', luxStars: 2, luxGoal: 10, luxReady: true, luxCount: '1', playDetail: 'Level 6 · Crossfire', upReady: true, upBadge: '1' },
   },
   render: (model, { intent }) => {
-    // The map box is MAP_W wide and --map-h tall (ui/game.style.css: taller on narrow phones).
-    const at = (x: number, y: number) => ({ left: `${(x * MAP_W) / 100}px`, top: `calc(var(--map-h) * ${y / 100})` });
+    // The map box is --map-w wide and --map-h tall (ui/game.style.css: taller on narrow phones, wider and lower in landscape).
+    const at = (x: number, y: number) => ({ left: `calc(var(--map-w) * ${x / 100})`, top: `calc(var(--map-h) * ${y / 100})` });
     return (
     <Widget
       doc="home"

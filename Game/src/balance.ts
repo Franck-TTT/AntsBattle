@@ -31,8 +31,13 @@ export const START_LIVES = G.startLives * SWARM;
  */
 export const FREE_WALLS = G.freeWalls;
 export const WALL_STEP = G.wallStep;
-/** Game seconds a moved item waits before it can be moved again. */
-export const MOVE_COOLDOWN = 5;
+/**
+ * Move grace window: game seconds after its first drop during which a block or weapon the player
+ * placed can still be moved (a move does not restart it); then it is locked in place. 0: no limit.
+ */
+export const MOVE_GRACE = G.moveGrace;
+/** The move grace window in play: the cheat's override (Placement.moveGrace) when it is 0 or more, else MOVE_GRACE. */
+export const moveGraceOf = (override: number): number => (override >= 0 ? override : MOVE_GRACE);
 /** Game speed while a finger holds an item. */
 export const DRAG_SPEED = G.dragSpeed;
 /** Speed regained per real second after the finger lifts (back to 1 in ~0.2 s). */

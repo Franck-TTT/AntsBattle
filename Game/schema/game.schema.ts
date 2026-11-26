@@ -1,4 +1,4 @@
-import { array, asset, bool, component, dataAsset, entity, enumOf, event, f32, i16, i32, i8, p, resource, tag, u32, u8 } from '@gameengine/schema';
+import { array, asset, bool, component, dataAsset, entity, enumOf, event, f32, i16, i32, i8, p, resource, tag, u16, u32, u8 } from '@gameengine/schema';
 
 // Item kinds: index 0 is "nothing". New weapons are added at the end of this list and in src/balance.ts.
 export const ITEM_KINDS = ['none', 'wall', 'tower', 'cannon', 'frost', 'mine', 'boostPad', 'mortar', 'flamethrower', 'radar', 'bank'] as const;
@@ -66,6 +66,21 @@ export const LevelDef = dataAsset(
   { doc: 'A level layout: its nests, its base, and what stands on the board when a run starts.' },
 );
 
+/** The world structure: which levels make up each world, in order (assets/levels/worlds.json). */
+export const WorldsDef = dataAsset(
+  'WorldsDef',
+  {
+    worlds: p.arr(
+      p.obj({
+        name: p.str('Shown to the player'),
+        levels: p.arr(p.str('A LevelDef id; empty: no level in this slot yet'), 'The world\'s level slots, in play order'),
+      }),
+      'Worlds in play order',
+    ),
+  },
+  { doc: 'The world structure: each world and the levels it holds, in order.' },
+);
+
 /** The level this scene plays. */
 export const Level = resource(
   'Level',
@@ -112,6 +127,7 @@ export const Run = resource(
     stars: u8({ doc: 'Stars this run earned (0 on a defeat)' }),
     newStars: u8({ doc: 'Stars above the best already won on this level (they charge the Luxury roll)' }),
     coinsWon: u32({ doc: 'Meta coins this run paid' }),
+    graced: u16({ doc: 'Placed blocks and weapons still inside their move grace window (MoveGrace runs, and the overlay draws their rings, only while it is above 0)' }),
   },
   { sim: true },
 );
@@ -187,7 +203,7 @@ export const Placement = resource(
     y: f32(),
     cell: i16({ default: -1, doc: 'Hovered cell (a block: its top-left cell), -1 off the board' }),
     valid: bool(),
-    reason: enumOf('PlaceReason', ['ok', 'offBoard', 'occupied', 'blocks', 'gold', 'enemy', 'noBlock', 'fixed', 'noBuild']),
+    reason: enumOf('PlaceReason', ['ok', 'offBoard', 'occupied', 'blocks', 'gold', 'enemy', 'noBlock', 'fixed', 'noBuild', 'moveLocked']),
     previewDist: array(i16(), MAX_CELLS, { doc: 'Flow field if the hovered drop happened (each nest preview path is traced from it)' }),
     previewLen: u8({ doc: '1 when previewDist holds a valid preview' }),
     // Snap back after a refused drop.
@@ -198,6 +214,7 @@ export const Placement = resource(
     retToY: f32(),
     retKind: enumOf('ItemKind', ITEM_KINDS),
     retShape: enumOf('BlockShape', BLOCK_SHAPES),
+    moveGrace: f32({ default: -1, doc: "Move grace window override, game seconds (cheat placement.moveGrace; kept across restarts): -1 the sheet's MOVE_GRACE, 0 no limit" }),
   },
   { sim: true },
 );
@@ -218,15 +235,17 @@ export const WeaponInfo = resource(
 /** The settings popup: the gear in the HUD opens it and pauses the run until it closes. */
 export const SettingsMenu = resource('SettingsMenu', { open: bool({ doc: 'The popup is open: the run is paused' }) }, { sim: true });
 
-/** A block on the board: fixed once placed, blocks the ants, carries weapons. */
+/** A block on the board: movable during its grace window, then fixed; blocks the ants, carries weapons. */
 export const Block = component(
   'Block',
   {
     shape: enumOf('BlockShape', BLOCK_SHAPES),
     cell: u8({ doc: 'Top-left cell' }),
     placedAt: f32(),
-    denySteps: u8({ doc: 'Shake left after a refused pick-up (blocks never move)' }),
+    denySteps: u8({ doc: 'Shake left after a refused pick-up' }),
     locked: bool({ doc: 'Pre-placed by the level: never moved, never destroyed' }),
+    grace: f32({ doc: 'Game seconds left of its move grace window (counted from its first drop; a move does not restart it); 0: locked in place, unless MOVE_GRACE is 0 (no limit)' }),
+    held: bool({ doc: 'Picked up by the finger right now (being moved)' }),
   },
   { sim: true },
 );
@@ -237,7 +256,7 @@ export const Item = component(
   {
     kind: enumOf('ItemKind', ITEM_KINDS),
     cell: u8(),
-    cooldown: f32({ doc: 'Game seconds before it can be moved again' }),
+    grace: f32({ doc: 'Game seconds left of its move grace window (counted from its first drop; a move does not restart it); 0: locked in place, unless MOVE_GRACE is 0 (no limit)' }),
     reload: f32({ doc: 'Game seconds before it fires again' }),
     aim: f32({ doc: 'Barrel angle, radians' }),
     placedAt: f32({ doc: 'Run.time of its last drop (squash and stretch)' }),
@@ -363,4 +382,4 @@ export const MenuRequested = event('MenuRequested', {}, { sim: true, doc: 'The p
 export const EnemyKilled = event('EnemyKilled', { x: f32(), y: f32(), gold: u32(), kind: enumOf('EnemyKind', ENEMY_KINDS) }, { sim: true, doc: 'Signal: an enemy died; gold flies to the counter.' });
 export const WaveStarted = event('WaveStarted', { wave: u32(), boss: bool(), newNest: bool() }, { sim: true, doc: 'Signal: a wave started.' });
 export const ItemPlaced = event('ItemPlaced', { kind: enumOf('ItemKind', ITEM_KINDS), shape: enumOf('BlockShape', BLOCK_SHAPES), cell: u8(), moved: bool(), cost: u32() }, { sim: true, doc: 'Signal: an item was dropped on the board.' });
-export const PlacementRefused = event('PlacementRefused', { reason: enumOf('PlaceReason', ['ok', 'offBoard', 'occupied', 'blocks', 'gold', 'enemy', 'noBlock', 'fixed', 'noBuild']) }, { sim: true, doc: 'Signal: a drop was refused.' });
+export const PlacementRefused = event('PlacementRefused', { reason: enumOf('PlaceReason', ['ok', 'offBoard', 'occupied', 'blocks', 'gold', 'enemy', 'noBlock', 'fixed', 'noBuild', 'moveLocked']) }, { sim: true, doc: 'Signal: a drop was refused.' });

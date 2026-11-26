@@ -48,7 +48,8 @@
       1080,
       1920
     ],
-    "orientation": "portrait"
+    "orientation": "any",
+    "scaleLimits": [0.29, 0.6]
   },
   "text": {
     "defaultFont": { "guid": "4a03a64a-aed5-4392-ad71-a6e92d044143" }

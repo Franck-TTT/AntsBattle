@@ -21,6 +21,9 @@ registerContent({
       "ba736d6e-1f69-4603-96c9-7bd8fd7fd768",
       "d7445649-abf7-4524-9546-893a451611c4",
       "f636f33d-1351-486b-9618-94db56e10a4f"
+    ],
+    "WorldsDef": [
+      "16b79d74-eec3-4451-b853-e66333d3d678"
     ]
   },
   "collections": {}

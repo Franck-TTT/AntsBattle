@@ -1,8 +1,10 @@
 /**
- * Drag and drop. Blocks (1×1 to 2×2 and 1×3 footprints) come from the tray, drop on free cells,
- * block the ants and never move again. Weapons come from the tray or off a block, drop only on a
- * free block cell (mines and boost pads: on a free ground cell, where the ants walk), and can be moved again after their cooldown.
- * Nothing drops on a no-build cell (Board.noBuild: the level's, and the 8 around each nest). A hovered drop gets a live
+ * Drag and drop. Blocks (1×1 to 2×2 and 1×3 footprints) come from the tray, drop on free cells and
+ * block the ants. Weapons come from the tray or off a block, drop only on a free block cell (mines
+ * and boost pads: on a free ground cell, where the ants walk). Move grace window: a block or weapon
+ * the player placed can be picked up and moved again for MOVE_GRACE game seconds after its first
+ * drop (a move does not restart it; a block carries its weapons along), then it is locked in place
+ * (refusal `moveLocked`); pre-placed level items never move (`fixed`). Nothing drops on a no-build cell (Board.noBuild: the level's, and the 8 around each nest). A hovered drop gets a live
  * validity check and path preview; a refused one snaps back. A tap (no drag) on a weapon, in the
  * offer or on the board, opens its info popup instead and pauses the run (WeaponInfo). Sim code: the pointer arrives as
  * recorded input, so a replay reproduces every placement.
@@ -13,7 +15,7 @@ import { CELLS, cellAt, isMarker, nestsReach, cellX, cellY, flowField, footprint
 
 /** Scratch copy of the Panel resource: fully written before every read. */
 const panel: PanelLayout = { x: 0, trayY: 0, hudY: 0, scale: 1 };
-import { DRAG_SPEED, GHOST_LIFT, MOVE_COOLDOWN, ON_GROUND, SHAPES, itemPrice, rerollPrice, shapeCells, type BlockShapeName, type ItemKindName } from '../balance.ts';
+import { DRAG_SPEED, GHOST_LIFT, ON_GROUND, moveGraceOf, SHAPES, itemPrice, rerollPrice, shapeCells, type BlockShapeName, type ItemKindName } from '../balance.ts';
 import { ITEM_NAMES as ITEM_KINDS, FX_NAMES as FX_KINDS, SHAPE_NAMES } from '../kinds.ts';
 import { recomputeBoard } from './board.ts';
 import { drawOffer, sellOffer } from './offer.ts';
@@ -23,7 +25,7 @@ const blocked = new Uint8Array(CELLS);
 const dist = new Int16Array(CELLS);
 const queue = new Int16Array(CELLS);
 
-const REASONS = ['ok', 'offBoard', 'occupied', 'blocks', 'gold', 'enemy', 'noBlock', 'fixed', 'noBuild'] as const;
+const REASONS = ['ok', 'offBoard', 'occupied', 'blocks', 'gold', 'enemy', 'noBlock', 'fixed', 'noBuild', 'moveLocked'] as const;
 type Reason = (typeof REASONS)[number];
 const RETURN_STEPS = 16;
 const WALL = ITEM_KINDS.indexOf('wall');
@@ -31,6 +33,10 @@ const WALL = ITEM_KINDS.indexOf('wall');
 const GROUND = ITEM_KINDS.map((k) => ON_GROUND.has(k));
 
 const oldDist = new Int16Array(CELLS);
+/** Cells of the block being moved (they count as free for its new place). */
+const own = new Uint8Array(CELLS);
+/** Weapon kind on each footprint cell of a moved block, carried to the same cell of its new place. */
+const carried = new Uint8Array(9);
 const newPath = new Int16Array(CELLS);
 
 /**
@@ -91,7 +97,7 @@ export const DragItems = defineSystem({
   after: ['StartRun'],
   queries: {
     items: query(write(Item), write(LocalTransform)),
-    blocks: query(write(Block)),
+    blocks: query(write(Block), write(LocalTransform)),
     enemies: query(write(Enemy), write(LocalTransform)),
     fx: query(read(FxHost)),
   },
@@ -117,25 +123,36 @@ export const DragItems = defineSystem({
     panel.hudY = pr.hudY[0]!;
     panel.scale = pr.scale[0]!;
     if (p.returnSteps[0]! > 0) p.returnSteps[0] = p.returnSteps[0]! - 1;
+    const graceWindow = moveGraceOf(p.moveGrace[0]!);
+    /** A placed item the finger may pick up: not pre-placed, and inside its move grace window (or no limit). */
+    const movable = (locked: number, grace: number): boolean => !locked && (graceWindow <= 0 || grace > 0);
+    /** Grace window a new drop starts with (0 when there is no limit: nothing to count down). */
+    const START_GRACE = Math.max(0, graceWindow);
 
     const refuse = (reason: Reason): void => {
       run.refusals[0] = run.refusals[0]! + 1;
       ctx.signal(PlacementRefused, { reason });
     };
 
-    /** A block of `shape` with its top-left cell at `cell`: free cells, affordable, path kept. */
-    const evaluateBlock = (shape: BlockShapeName, cell: number): Reason => {
+    /**
+     * A block of `shape` with its top-left cell at `cell`: free cells, affordable, path kept. A block
+     * moved from `fromCell` (-1: from the tray) costs nothing, and its own cells count as free.
+     */
+    const evaluateBlock = (shape: BlockShapeName, cell: number, fromCell: number): Reason => {
       p.previewLen[0] = 0;
       if (cell < 0) return 'offBoard';
+      if (cell === fromCell) return 'ok';
       const [w] = SHAPES[shape];
       const n = shapeCells(shape);
+      own.fill(0);
+      if (fromCell >= 0) for (let k = 0; k < n; k++) own[footprintCell(fromCell, w, k)] = 1;
       for (let k = 0; k < n; k++) {
         const c = footprintCell(cell, w, k);
-        if (isMarker(board, c) || board.cells[c]! > 0 || board.weapons[c]! > 0) return 'occupied';
+        if (isMarker(board, c) || (!own[c] && (board.cells[c]! > 0 || board.weapons[c]! > 0))) return 'occupied';
         if (board.noBuild[c]) return 'noBuild';
       }
-      if (run.gold[0]! < itemPrice('wall', run.wallsBuilt[0]!, shape, freeWalls)) return 'gold';
-      for (let c = 0; c < CELLS; c++) blocked[c] = board.cells[c]! > 0 ? 1 : 0;
+      if (fromCell < 0 && run.gold[0]! < itemPrice('wall', run.wallsBuilt[0]!, shape, freeWalls)) return 'gold';
+      for (let c = 0; c < CELLS; c++) blocked[c] = board.cells[c]! > 0 && !own[c] ? 1 : 0;
       for (let k = 0; k < n; k++) blocked[footprintCell(cell, w, k)] = 1;
       flowField(blocked, dist, queue, board.baseCell[0]!, cols, rows);
       // Every nest, open or not yet, must keep a way to the base.
@@ -174,7 +191,7 @@ export const DragItems = defineSystem({
       return footprintAt(gx, gy, w, h, cols, rows);
     };
     const evaluate = (kind: number, shape: BlockShapeName, cell: number, fromCell: number): Reason =>
-      kind === WALL ? evaluateBlock(shape, cell) : evaluateWeapon(kind, cell, fromCell);
+      kind === WALL ? evaluateBlock(shape, cell, fromCell) : evaluateWeapon(kind, cell, fromCell);
 
     /** Opens the info popup of the weapon in offer `slot` or on board `cell`: the run pauses (GameSpeed). */
     const openInfo = (kind: number, slot: number, cell: number): void => {
@@ -196,6 +213,7 @@ export const DragItems = defineSystem({
 
     const setHeld = (e: EntityId, held: boolean): void => {
       for (const c of q.items.chunks()) for (let i = 0; i < c.length; i++) if (c.entity(i) === e) c.setField(Item, i, 'held', held);
+      for (const c of q.blocks.chunks()) for (let i = 0; i < c.length; i++) if (c.entity(i) === e) c.setField(Block, i, 'held', held);
     };
 
     // Pick up.
@@ -237,34 +255,45 @@ export const DragItems = defineSystem({
         // A free cell holds nothing to pick up, unless a mine or a boost pad lies on it.
         if (cell < 0 || (board.cells[cell] === 0 && board.weapons[cell] === 0)) continue;
         if (board.weapons[cell]! > 0) {
-          // A weapon: movable once its cooldown is over, unless the level pre-placed it.
+          // A weapon: movable during its grace window, unless the level pre-placed it.
           for (const c of q.items.chunks()) {
             const it = c.col(Item);
             for (let i = 0; i < c.length; i++) {
               if (it.cell[i] !== cell) continue;
-              // Locked or cooling down: a tap opens its info, a drag is refused (below).
-              if (!it.locked[i] && it.cooldown[i]! <= 0) {
+              // Locked (by the level, or its grace window closed): a tap opens its info, a drag is refused (below).
+              if (movable(it.locked[i]!, it.grace[i]!)) {
                 c.setField(Item, i, 'held', true);
                 ctx.set(Placement, { active: true, kind: ITEM_KINDS[it.kind[i]!]!, shape: 'b1x1', fromItem: c.entity(i), fromCell: cell, slot: -1, cell: -2, valid: false, returnSteps: 0 });
               }
             }
           }
         } else {
-          // A bare block: blocks never move.
+          // A bare block cell: the block moves (with its weapons) during its grace window; else it shakes.
+          let refusal: Reason = 'ok';
           for (const c of q.blocks.chunks()) {
             const b = c.col(Block);
             for (let i = 0; i < c.length; i++) {
-              const [w] = SHAPES[SHAPE_NAMES[b.shape[i]!]!];
-              const n = shapeCells(SHAPE_NAMES[b.shape[i]!]!);
-              for (let k = 0; k < n; k++) if (footprintCell(b.cell[i]!, w, k) === cell) c.setField(Block, i, 'denySteps', 12);
+              const shape = SHAPE_NAMES[b.shape[i]!]!;
+              const [w] = SHAPES[shape];
+              const n = shapeCells(shape);
+              let hit = false;
+              for (let k = 0; k < n; k++) if (footprintCell(b.cell[i]!, w, k) === cell) hit = true;
+              if (!hit) continue;
+              if (movable(b.locked[i]!, b.grace[i]!)) {
+                c.setField(Block, i, 'held', true);
+                ctx.set(Placement, { active: true, kind: 'wall', shape, fromItem: c.entity(i), fromCell: b.cell[i]!, slot: -1, cell: -2, valid: false, returnSteps: 0 });
+              } else {
+                c.setField(Block, i, 'denySteps', 12);
+                refusal = b.locked[i] ? 'fixed' : 'moveLocked';
+              }
             }
           }
-          refuse('fixed');
+          if (refusal !== 'ok') refuse(refusal);
         }
         break;
       }
       if (!p.active[0]) {
-        // A tap on a weapon nothing picked up (unaffordable, locked, cooling down): its info.
+        // A tap on a weapon nothing picked up (unaffordable, pre-placed, past its grace window): its info.
         for (const t of ctx.events.read(Tap)) {
           const w = weaponAt(t.world[0], t.world[1]);
           if (w) return openInfo(w.kind, w.slot, w.cell);
@@ -283,7 +312,7 @@ export const DragItems = defineSystem({
             for (let i = 0; i < c.length; i++) {
               if (it.cell[i] !== w.cell) continue;
               c.setField(Item, i, 'denySteps', 14);
-              refuse(it.locked[i] ? 'fixed' : 'occupied');
+              refuse(it.locked[i] ? 'fixed' : 'moveLocked');
             }
           }
         }
@@ -313,12 +342,14 @@ export const DragItems = defineSystem({
     if (!released) return;
 
     // A tap on a weapon picked up (no drag): put it back and show its info instead of dropping it.
-    if (kind !== WALL && ctx.events.count(Tap) > 0) {
+    // A tap on a block picked up from the board: put it back where it stands (blocks have no info).
+    if ((kind !== WALL || fromCell >= 0) && ctx.events.count(Tap) > 0) {
       const fromItem = entityAt(p.fromItem, 0);
       if (fromItem !== NO_ENTITY) setHeld(fromItem, false);
       p.active[0] = 0;
       p.cell[0] = -1;
       p.previewLen[0] = 0;
+      if (kind === WALL) return;
       return openInfo(kind, fromCell >= 0 ? -1 : p.slot[0]!, fromCell);
     }
 
@@ -331,12 +362,59 @@ export const DragItems = defineSystem({
     p.previewLen[0] = 0;
     if (r === 'ok' && cell !== fromCell) {
       const time = run.time[0]!;
-      if (kindName === 'wall') {
+      if (kindName === 'wall' && fromCell >= 0) {
+        // A block moved in its grace window: its weapons ride along, footprint cell k to cell k.
+        const [w, h] = SHAPES[shape];
+        const n = shapeCells(shape);
+        for (let c = 0; c < CELLS; c++) oldDist[c] = board.dist[c]!;
+        for (let k = 0; k < n; k++) {
+          const o = footprintCell(fromCell, w, k);
+          carried[k] = board.weapons[o]!;
+          board.weapons[o] = 0;
+          board.cells[o] = 0;
+        }
+        for (let k = 0; k < n; k++) {
+          const nc = footprintCell(cell, w, k);
+          board.cells[nc] = 1;
+          board.weapons[nc] = carried[k]!;
+        }
+        for (const c of q.items.chunks()) {
+          const it = c.col(Item);
+          const pos = c.col(LocalTransform).position;
+          for (let i = 0; i < c.length; i++) {
+            for (let k = 0; k < n; k++) {
+              if (it.cell[i] !== footprintCell(fromCell, w, k)) continue;
+              const nc = footprintCell(cell, w, k);
+              it.cell[i] = nc;
+              pos[i * 3] = cellX(nc);
+              pos[i * 3 + 1] = cellY(nc);
+              teleport(c.entity(i));
+              break;
+            }
+          }
+        }
+        for (const c of q.blocks.chunks()) for (let i = 0; i < c.length; i++) {
+          if (c.entity(i) !== fromItem) continue;
+          const b = c.col(Block);
+          b.cell[i] = cell;
+          b.placedAt[i] = time;
+          b.held[i] = 0;
+          const pos = c.col(LocalTransform).position;
+          pos[i * 3] = footprintX(cell, w);
+          pos[i * 3 + 1] = footprintY(cell, h);
+          teleport(fromItem);
+        }
+        recomputeBoard(ctx);
+        moveCrushed(q.enemies, oldDist, board.dist, board.cells, cols, rows);
+        fxAt(ctx, q.fx, 'dust', footprintX(cell, w), footprintY(cell, h));
+        ctx.signal(ItemPlaced, { kind: kindName, shape, cell, moved: true, cost: 0 });
+      } else if (kindName === 'wall') {
         const cost = itemPrice('wall', run.wallsBuilt[0]!, shape, freeWalls);
         const [w, h] = SHAPES[shape];
         run.gold[0] = run.gold[0]! - cost;
         run.wallsBuilt[0] = run.wallsBuilt[0]! + 1;
-        spawnBlock(ctx, shape, cell, time);
+        spawnBlock(ctx, shape, cell, time, false, START_GRACE);
+        if (START_GRACE > 0) run.graced[0] = run.graced[0]! + 1;
         for (let c = 0; c < CELLS; c++) oldDist[c] = board.dist[c]!;
         for (let k = 0; k < shapeCells(shape); k++) board.cells[footprintCell(cell, w, k)] = 1;
         recomputeBoard(ctx);
@@ -346,7 +424,8 @@ export const DragItems = defineSystem({
       } else if (fromCell < 0) {
         const cost = itemPrice(kindName, run.wallsBuilt[0]!);
         run.gold[0] = run.gold[0]! - cost;
-        spawnItem(ctx, kindName, cell, time);
+        spawnItem(ctx, kindName, cell, time, false, START_GRACE);
+        if (START_GRACE > 0) run.graced[0] = run.graced[0]! + 1;
         board.weapons[cell] = kind;
         fxAt(ctx, q.fx, 'dust', cellX(cell), cellY(cell));
         ctx.signal(ItemPlaced, { kind: kindName, shape: 'b1x1', cell, moved: false, cost });
@@ -354,8 +433,8 @@ export const DragItems = defineSystem({
         for (const c of q.items.chunks()) for (let i = 0; i < c.length; i++) {
           if (c.entity(i) !== fromItem) continue;
           const it = c.col(Item);
+          // The grace window keeps running from the first drop: a move does not restart it.
           it.cell[i] = cell;
-          it.cooldown[i] = MOVE_COOLDOWN;
           it.placedAt[i] = time;
           it.held[i] = 0;
           const pos = c.col(LocalTransform).position;
@@ -380,8 +459,9 @@ export const DragItems = defineSystem({
     p.retShape[0] = p.shape[0]!;
     p.retFromX[0] = gx;
     p.retFromY[0] = gy;
-    p.retToX[0] = fromCell >= 0 ? cellX(fromCell) : trayX(p.slot[0]!, panel);
-    p.retToY[0] = fromCell >= 0 ? cellY(fromCell) : panel.trayY;
+    const [rw, rh] = kind === WALL ? SHAPES[shape] : [1, 1];
+    p.retToX[0] = fromCell >= 0 ? footprintX(fromCell, rw) : trayX(p.slot[0]!, panel);
+    p.retToY[0] = fromCell >= 0 ? footprintY(fromCell, rh) : panel.trayY;
     if (r !== 'offBoard') refuse(r);
   },
 });
@@ -407,6 +487,48 @@ export const GameSpeed = defineSystem({
     const s = run.speed[0]!;
     run.speed[0] = target < s ? target : Math.min(target, s + ctx.dt * 5);
     run.time[0] = run.time[0]! + ctx.dt * run.speed[0]!;
+  },
+});
+
+/**
+ * Move grace window: counts down, in game time (slow motion while dragging, frozen while a popup
+ * pauses the run), the window of every block and weapon the player placed. Runs only while one is
+ * still open (Run.graced), so a board of locked buildings costs nothing.
+ */
+export const MoveGrace = defineSystem({
+  name: 'MoveGrace',
+  after: ['GameSpeed'],
+  queries: { items: query(write(Item)), blocks: query(write(Block)) },
+  resources: [write(Run)],
+  runIf: [{ resource: Run, field: 'phase', value: 'playing' }, { resource: Run, field: 'graced', op: '>', value: 0 }],
+  run(ctx, q) {
+    const run = ctx.resource(Run);
+    const dt = ctx.dt * run.speed[0]!;
+    if (dt <= 0) return;
+    let closed = 0;
+    for (const c of q.items.chunks()) {
+      const g = c.col(Item).grace;
+      for (let i = 0; i < c.length; i++) {
+        if (g[i]! <= 0) continue;
+        g[i] = g[i]! - dt;
+        if (g[i]! <= 0) {
+          g[i] = 0;
+          closed++;
+        }
+      }
+    }
+    for (const c of q.blocks.chunks()) {
+      const g = c.col(Block).grace;
+      for (let i = 0; i < c.length; i++) {
+        if (g[i]! <= 0) continue;
+        g[i] = g[i]! - dt;
+        if (g[i]! <= 0) {
+          g[i] = 0;
+          closed++;
+        }
+      }
+    }
+    run.graced[0] = Math.max(0, run.graced[0]! - closed);
   },
 });
 

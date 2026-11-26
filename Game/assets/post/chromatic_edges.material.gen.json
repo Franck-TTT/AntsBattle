@@ -5,7 +5,7 @@
   "blend": "opaque",
   "alphaCutoff": 0.5,
   "doubleSided": false,
-  "uniformSize": 16,
+  "uniformSize": 32,
   "params": [
     {
       "name": "strength",
@@ -45,13 +45,65 @@
         "min": 0,
         "max": 1.5
       }
+    },
+    {
+      "name": "insetTop",
+      "type": "f32",
+      "offset": 12,
+      "default": [
+        0
+      ],
+      "doc": "Reference box: margin from the top edge, in screen heights",
+      "ui": {
+        "min": 0,
+        "max": 0.9
+      }
+    },
+    {
+      "name": "insetBottom",
+      "type": "f32",
+      "offset": 16,
+      "default": [
+        0
+      ],
+      "doc": "Reference box: margin from the bottom edge, in screen heights",
+      "ui": {
+        "min": 0,
+        "max": 0.9
+      }
+    },
+    {
+      "name": "insetLeft",
+      "type": "f32",
+      "offset": 20,
+      "default": [
+        0
+      ],
+      "doc": "Reference box: margin from the left edge, in screen widths",
+      "ui": {
+        "min": 0,
+        "max": 0.9
+      }
+    },
+    {
+      "name": "insetRight",
+      "type": "f32",
+      "offset": 24,
+      "default": [
+        0
+      ],
+      "doc": "Reference box: margin from the right edge, in screen widths",
+      "ui": {
+        "min": 0,
+        "max": 0.9
+      }
     }
   ],
   "textures": [],
   "samplerBinding": 1,
-  "wgsl": "// Post effect ChromaticEdges (@gameengine/materials, compiled; do not edit).\nstruct MaterialParams {\n  p_strength: f32,\n  p_inner: f32,\n  p_outer: f32,\n};\n@group(1) @binding(0) var<uniform> material: MaterialParams;\nfn material_post(in: PostInput) -> vec3f {\n  let v0: vec2f = (in.screen_uv - 0.5);\n  let v1: f32 = in.size.x;\n  let v2: f32 = in.size.y;\n  let v3: f32 = (v1 / v2);\n  let v4: vec2f = vec2f(v3, 1.0);\n  let v5: vec2f = (v0 * v4);\n  let v6: f32 = length(v5);\n  let v7: f32 = max(v6, 0.0001);\n  let v8: vec2f = (v5 / v7);\n  let v9: f32 = (v2 / 1080.0);\n  let v10: f32 = (material.p_strength * v9);\n  let v11: f32 = (v3 * 0.5);\n  let v12: vec2f = vec2f(v11, 0.5);\n  let v13: f32 = length(v12);\n  let v14: f32 = (v6 / v13);\n  let v15: f32 = smoothstep(material.p_inner, material.p_outer, v14);\n  let v16: f32 = clamp(v15, 0.0, 1.0);\n  let v17: f32 = (v10 * v16);\n  let v18: vec2f = (v8 * v17);\n  let v19: vec2f = (v18 * in.texel);\n  let v20: vec2f = (in.screen_uv + v19);\n  let v21: vec3f = post_color(v20);\n  let v22: f32 = v21.x;\n  let v23: vec3f = post_color(in.screen_uv);\n  let v24: f32 = v23.y;\n  let v25: vec2f = (in.screen_uv - v19);\n  let v26: vec3f = post_color(v25);\n  let v27: f32 = v26.z;\n  let v28: vec3f = vec3f(v22, v24, v27);\n  return v28;\n}\n",
+  "wgsl": "// Post effect ChromaticEdges (@gameengine/materials, compiled; do not edit).\nstruct MaterialParams {\n  p_strength: f32,\n  p_inner: f32,\n  p_outer: f32,\n  p_insetTop: f32,\n  p_insetBottom: f32,\n  p_insetLeft: f32,\n  p_insetRight: f32,\n};\n@group(1) @binding(0) var<uniform> material: MaterialParams;\nfn material_post(in: PostInput) -> vec3f {\n  let v0: f32 = (material.p_insetLeft - material.p_insetRight);\n  let v1: f32 = (v0 + 1.0);\n  let v2: f32 = (v1 * 0.5);\n  let v3: f32 = (material.p_insetTop - material.p_insetBottom);\n  let v4: f32 = (v3 + 1.0);\n  let v5: f32 = (v4 * 0.5);\n  let v6: vec2f = vec2f(v2, v5);\n  let v7: vec2f = (in.screen_uv - v6);\n  let v8: vec2f = (v7 * in.size);\n  let v9: f32 = length(v8);\n  let v10: f32 = max(v9, 0.0001);\n  let v11: vec2f = (v8 / v10);\n  let v12: f32 = in.size.y;\n  let v13: f32 = (v12 / 1080.0);\n  let v14: f32 = (material.p_strength * v13);\n  let v15: f32 = (material.p_insetLeft + material.p_insetRight);\n  let v16: f32 = (v15 * -1.0);\n  let v17: f32 = (v16 + 1.0);\n  let v18: f32 = (material.p_insetTop + material.p_insetBottom);\n  let v19: f32 = (v18 * -1.0);\n  let v20: f32 = (v19 + 1.0);\n  let v21: vec2f = vec2f(v17, v20);\n  let v22: vec2f = (v21 * 0.5);\n  let v23: vec2f = (v22 * in.size);\n  let v24: f32 = length(v23);\n  let v25: f32 = max(v24, 1.0);\n  let v26: f32 = (v9 / v25);\n  let v27: f32 = smoothstep(material.p_inner, material.p_outer, v26);\n  let v28: f32 = clamp(v27, 0.0, 1.0);\n  let v29: f32 = (v14 * v28);\n  let v30: vec2f = (v11 * v29);\n  let v31: vec2f = (v30 * in.texel);\n  let v32: vec2f = (in.screen_uv + v31);\n  let v33: vec3f = post_color(v32);\n  let v34: f32 = v33.x;\n  let v35: vec3f = post_color(in.screen_uv);\n  let v36: f32 = v35.y;\n  let v37: vec2f = (in.screen_uv - v31);\n  let v38: vec3f = post_color(v37);\n  let v39: f32 = v38.z;\n  let v40: vec3f = vec3f(v34, v36, v39);\n  return v40;\n}\n",
   "domain": "post",
   "stage": "overlay",
-  "hash": "07382dee44ab52d3",
-  "sourceHash": "3f3b06d8820fed9a"
+  "hash": "8af53b3c964b2b61",
+  "sourceHash": "5fccd7127a6a437c"
 }

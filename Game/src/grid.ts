@@ -143,6 +143,14 @@ const PANEL_GAP_REF = 20;
 const HUD_REF = 104;
 /** Screen band the panel takes at the bottom, above the safe area: the board stays clear of it. */
 export const PANEL_RESERVE_REF = PANEL_MARGIN_REF + TRAY_SLOT_H * PANEL_REF_PER_UNIT + 2 * PANEL_GAP_REF + HUD_REF;
+/** Height of the panel's stack (tray, gap, HUD bar), in UI reference px. */
+const PANEL_STACK_REF = TRAY_SLOT_H * PANEL_REF_PER_UNIT + PANEL_GAP_REF + HUD_REF;
+/** Width of the panel (the tray), in UI reference px. */
+const PANEL_W_REF = TRAY_W * PANEL_REF_PER_UNIT;
+/** Gap between the board and the panel when the panel stands beside it (wide screens). */
+const PANEL_SIDE_GAP_REF = 64;
+/** Screen band the panel takes on the right when it stands beside the board: the board stays clear of it. */
+export const PANEL_SIDE_RESERVE_REF = PANEL_W_REF + PANEL_SIDE_GAP_REF + PANEL_MARGIN_REF;
 
 /** Where the panel stands in the world: written into the Panel resource by FitView. */
 export interface PanelLayout {
@@ -161,13 +169,41 @@ export interface PanelLayout {
 export function panelLayout(cx: number, cy: number, orthoSize: number, height: number, safeLeft: number, safeRight: number, safeBottom: number, uiScale: number, out: PanelLayout): PanelLayout {
   const worldPerPt = (2 * orthoSize) / Math.max(height, 1);
   const worldPerRef = worldPerPt * uiScale;
-  const scale = worldPerRef * PANEL_REF_PER_UNIT;
   const bottom = cy - orthoSize + safeBottom * worldPerPt + PANEL_MARGIN_REF * worldPerRef;
-  out.x = cx + ((safeLeft - safeRight) / 2) * worldPerPt;
+  return stackAt(cx + ((safeLeft - safeRight) / 2) * worldPerPt, bottom, worldPerRef, out);
+}
+
+/** The panel's stack (tray, then the HUD bar above it) centred on world x `x`, its bottom at world y `bottom`. */
+function stackAt(x: number, bottom: number, worldPerRef: number, out: PanelLayout): PanelLayout {
+  const scale = worldPerRef * PANEL_REF_PER_UNIT;
+  out.x = x;
   out.trayY = bottom + (scale * TRAY_SLOT_H) / 2;
   out.hudY = bottom + scale * TRAY_SLOT_H + (PANEL_GAP_REF + HUD_REF / 2) * worldPerRef;
   out.scale = scale;
   return out;
+}
+
+/**
+ * Wide screens (landscape): the board and the panel side by side, the pair centred across the
+ * safe area and the panel centred on its height. Takes the world view `fitWorldView` gave for the
+ * side reserve (`orthoSize`, centre y) and the board's world rect (`bx`, `bw`); returns the world
+ * view's centre x that centres the pair, and writes the panel into `out`.
+ */
+export function sideLayout(bx: number, bw: number, cy: number, orthoSize: number, width: number, height: number, safe: ArrayLike<number>, uiScale: number, out: PanelLayout): number {
+  const worldPerPt = (2 * orthoSize) / Math.max(height, 1);
+  const worldPerRef = worldPerPt * uiScale;
+  const [sl, st, sr, sb] = [safe[0] ?? 0, safe[1] ?? 0, safe[2] ?? 0, safe[3] ?? 0];
+  const boardPt = bw / worldPerPt;
+  const gapPt = PANEL_SIDE_GAP_REF * uiScale;
+  const panelPt = PANEL_W_REF * uiScale;
+  const left = sl + (width - sl - sr - (boardPt + gapPt + panelPt)) / 2;
+  // Screen x (points from the left) to world x, once the board's centre sits at `left + boardPt / 2`.
+  const cx = bx - (left + boardPt / 2 - width / 2) * worldPerPt;
+  const worldX = (pt: number) => cx + (pt - width / 2) * worldPerPt;
+  const worldY = (pt: number) => cy + (height / 2 - pt) * worldPerPt;
+  const midPt = (st + height - sb) / 2;
+  stackAt(worldX(left + boardPt + gapPt + panelPt / 2), worldY(midPt + (PANEL_STACK_REF * uiScale) / 2), worldPerRef, out);
+  return cx;
 }
 
 /** Centre x of a tray slot. */

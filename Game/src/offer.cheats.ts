@@ -1,7 +1,7 @@
-/** QA and tests: put chosen items on offer. */
+/** QA and tests: put chosen items on offer, switch the offer variant, set the move grace window. */
 import { write } from '@gameengine/runtime';
 import { defineCheat } from '@gameengine/runtime/cheats';
-import { BlockShape, ItemKind, Offer } from './schema.gen.ts';
+import { BlockShape, ItemKind, Offer, Placement } from './schema.gen.ts';
 
 const ITEMS = ['b1x1', 'b2x1', 'b1x2', 'b3x1', 'b1x3', 'b2x2', 'tower', 'cannon', 'frost', 'mine', 'boostPad', 'mortar', 'flamethrower', 'radar', 'bank'] as const;
 const WEAPONS = new Set<string>(['tower', 'cannon', 'frost', 'mine', 'boostPad', 'mortar', 'flamethrower', 'radar', 'bank']);
@@ -36,5 +36,17 @@ export const SinglePick = defineCheat({
   resources: [write(Offer)],
   run(ctx, { mode }) {
     ctx.resource(Offer).singlePick[0] = mode === 'on' ? 1 : mode === 'off' ? 2 : 0;
+  },
+});
+
+export const MoveGrace = defineCheat({
+  id: 'placement.moveGrace',
+  group: 'Offer',
+  title: "Move grace window, game seconds (-1: the sheet's, 0: no limit); kept across restarts",
+  params: { seconds: { type: 'int', default: -1, min: -1, max: 60 } },
+  current: (world) => ({ seconds: Math.round(world.resource(Placement).moveGrace) }),
+  resources: [write(Placement)],
+  run(ctx, { seconds }) {
+    ctx.resource(Placement).moveGrace[0] = seconds;
   },
 });

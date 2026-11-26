@@ -1,5 +1,8 @@
 {
   "spinGrowth": 1.1,
   "spinHold": 0.65,
-  "singlePick": 1
+  "singlePick": 1,
+  "caInner": 0.75,
+  "caStrength": 5,
+  "caInsetTop": 0.08
 }
