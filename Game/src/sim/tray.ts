@@ -7,7 +7,7 @@ import { Boost, EnemyKilled, ItemPlaced, Offer, OfferRerolled, RestartRequested,
 import { OFFER_SIZE, SHAPES, itemPrice, rerollPrice, type BlockShapeName, type ItemKindName } from '../balance.ts';
 import { REROLL_SLOT } from '../grid.ts';
 import { ITEM_NAMES, SHAPE_NAMES } from '../kinds.ts';
-import { COIN, COIN_DIM, COLORS, ITEM_LOOKS, ORDER, blockBody, blockTop, shapeValue, type ShapeLook } from '../looks.ts';
+import { COIN, COIN_DIM, COLORS, ITEM_DETAIL_X, ITEM_LOOKS, ORDER, blockBody, blockTop, shapeValue, type ShapeLook } from '../looks.ts';
 
 /** Price layout: the coin, a gap, then the amount, centred together. Digit width is an estimate of the label font at size 0.32. */
 const COIN_D = 0.24;
@@ -15,9 +15,9 @@ const COIN_GAP = 0.05;
 const DIGIT_W = 0.2;
 
 function spawnIcons(ctx: SystemContext, parent: EntityId, slot: number, kind: Exclude<ItemKindName, 'none'>, shape: BlockShapeName): void {
-  const icon = (look: ShapeLook, k: number, order: number) =>
+  const icon = (look: ShapeLook, k: number, order: number, x = 0) =>
     ctx.commands.spawn({
-      LocalTransform: { position: [0, 0.16, 0], rotation: [0, 0, 0, 1], scale: [k, k, 1] },
+      LocalTransform: { position: [x, 0.16, 0], rotation: [0, 0, 0, 1], scale: [k, k, 1] },
       Shape: shapeValue(look, order),
       Parent: { entity: parent },
       TrayIcon: { slot },
@@ -29,11 +29,10 @@ function spawnIcons(ctx: SystemContext, parent: EntityId, slot: number, kind: Ex
     icon(blockTop(w, h), k, ORDER.tray + 2);
     return;
   }
-  // A weapon is shown on a small block: it only drops on blocks.
+  // A weapon looks as it does on the board, at board size: no block under it, its barrel to the right.
   const look = ITEM_LOOKS[kind];
-  icon(blockBody(1, 1), 0.78, ORDER.tray + 1);
-  icon(look.body, 0.78, ORDER.tray + 2);
-  if (look.detail) icon(look.detail, 0.78, ORDER.tray + 3);
+  icon(look.body, 1, ORDER.tray + 2);
+  if (look.detail) icon(look.detail, 1, ORDER.tray + 3, ITEM_DETAIL_X);
 }
 
 export const TraySync = defineSystem({

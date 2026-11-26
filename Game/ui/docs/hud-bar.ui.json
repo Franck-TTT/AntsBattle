@@ -5,11 +5,6 @@
   "title": "HUD bar",
   "kind": "widget",
   "properties": {
-    "wave": {
-      "type": "number",
-      "default": 1,
-      "format": "value"
-    },
     "gold": {
       "type": "number",
       "default": 60,
@@ -22,7 +17,6 @@
       "type": "element",
       "name": "Element",
       "children": [
-        "hud_statchip",
         "hud_statchip2"
       ],
       "style": {
@@ -36,20 +30,7 @@
         "h": 104,
         "gap": 12,
         "align": "center",
-        "w": "clamp(300, 100%, 960)"
-      }
-    },
-    "hud_statchip": {
-      "type": "use",
-      "doc": "stat-chip",
-      "key": "wave",
-      "props": {
-        "caption": "WAVE",
-        "amount": {
-          "property": "wave"
-        },
-        "suffix": "/10",
-        "tone": "wave"
+        "w": "clamp(300, 50%, 480)"
       }
     },
     "hud_statchip2": {
@@ -67,11 +48,9 @@
   },
   "samples": {
     "start": {
-      "wave": 1,
       "gold": 60
     },
     "late": {
-      "wave": 9,
       "gold": 1250
     }
   }

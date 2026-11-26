@@ -4,7 +4,7 @@
 import { type EntityId, type SystemContext } from '@gameengine/runtime';
 import { cellX, cellY, footprintX, footprintY } from '../grid.ts';
 import { SHAPES, type BlockShapeName, type ItemKindName } from '../balance.ts';
-import { ITEM_LOOKS, LOCKED_RING, ORDER, blockBody, blockDetails, blockTop, shapeValue, type ShapeLook } from '../looks.ts';
+import { ITEM_DETAIL_X, ITEM_LOOKS, LOCKED_RING, ORDER, blockBody, blockDetails, blockTop, shapeValue, type ShapeLook } from '../looks.ts';
 
 export type WeaponKind = Exclude<ItemKindName, 'none' | 'wall'>;
 
@@ -46,7 +46,7 @@ export function spawnItem(ctx: SystemContext, kind: WeaponKind, cell: number, ti
     VisualOffset: {},
     Item: { kind, cell, grace, reload: 0.4, aim: Math.PI / 2, placedAt: time, locked },
   });
-  if (look.detail) child(ctx, e, 0.16, 0, look.detail, ORDER.item + 1);
+  if (look.detail) child(ctx, e, ITEM_DETAIL_X, 0, look.detail, ORDER.item + 1);
   if (locked) child(ctx, e, 0, 0, LOCKED_RING, ORDER.enemy);
   return e;
 }

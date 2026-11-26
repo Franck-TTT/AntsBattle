@@ -167,6 +167,7 @@ export const GameUI = defineUI({
       const r = run();
       return {
         wave: Math.max(1, r?.wave ?? 1),
+        waveCount: waveCount(),
         gold: r?.gold ?? 0,
         at: hudPoint(),
         flights: flights(),

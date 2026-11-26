@@ -195,7 +195,7 @@ export const HP_PER_WAVE = G.hpPerWave;
 export const ENEMY_SPEED = G.enemySpeed;
 
 export const FIRST_WAVE_AT = G.firstWaveAt;
-/** Game seconds from one wave's start to the next one's: 10 waves in about 5 minutes. */
+/** Game seconds from one wave's start to the next one's: 8 waves in about 4 minutes. */
 export const WAVE_GAP = G.waveGap;
 
 export interface SpawnGroup {

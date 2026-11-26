@@ -85,17 +85,16 @@ declare module '@gameengine/ui' {
      * HUD bar: a widget (ui/docs/hud-bar.ui.json)
      *
      * Properties:
-     *   - `wave`: number, default 1
      *   - `gold`: number, default 60
      * Events: none
      * Code areas: none
-     * Refs: `wave`, `wave.target`, `gold`, `gold.target`
+     * Refs: `gold`, `gold.target`
      * Samples (`view render doc:hud-bar --sample …`): `start`, `late`
      */
     'hud-bar': {
-      props: { wave: number; gold: number };
+      props: { gold: number };
       areas: never;
-      refs: 'wave' | 'wave.target' | 'gold' | 'gold.target';
+      refs: 'gold' | 'gold.target';
     };
     /**
      * Icon button: a widget, button (ui/docs/icon-button.ui.json)

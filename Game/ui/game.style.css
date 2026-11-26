@@ -6,6 +6,15 @@
   top: calc(env(safe-area-inset-top) + 36px);
   right: calc(env(safe-area-inset-right) + 40px);
 }
+.hud-wave {
+  /* Top centre, level with the gear (120 px tall at top 36): the chip is 96 px tall. */
+  position: absolute;
+  top: calc(env(safe-area-inset-top) + 48px);
+  left: 50%;
+  width: 280px;
+  margin-left: -140px;
+  flex-direction: row;
+}
 .hud-flights { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
 .hud-coin {
   position: absolute;

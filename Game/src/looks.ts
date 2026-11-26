@@ -13,6 +13,8 @@ export const COLORS = {
   board: '#080a1c',
   frame: '#3f6bff',
   gridMajor: '#2f45d6',
+  /** The board's cell lines: gridMajor at 45% (lowered after the 2026-11-26 playtest). */
+  gridLine: '#2f45d673',
   gridFar: '#121a5c',
   preview: '#ffd84a',
   valid: '#3dff6e',
@@ -62,7 +64,8 @@ export const REROLL_ICON = {
   tip: { kind: 'Polygon', size: [0.27, 0.27], radius: 0.02, sides: 3, color: '#ffffff' } as ShapeLook,
 };
 
-/** Body and detail of each item; the detail turns with the barrel. Dark fill, neon rim. */
+/** Body and detail of each item; the detail turns with the barrel, set ITEM_DETAIL_X off the centre. Dark fill, neon rim. */
+export const ITEM_DETAIL_X = 0.16;
 export const ITEM_LOOKS: Record<Exclude<ItemKindName, 'none'>, { body: ShapeLook; detail: ShapeLook | null }> = {
   wall: {
     body: { kind: 'Rect', size: [0.9, 0.9], radius: 0.04, color: '#0b1030', strokeColor: '#3f6bff', strokeWidth: 0.06 },
@@ -158,7 +161,7 @@ export function enemyScale(kind: EnemyKindName): number {
 
 /** A w×h block: a dark slab with a neon rim and a faint inner rim, one per footprint. */
 export function blockBody(w: number, h: number): ShapeLook {
-  return { kind: 'Rect', size: [w - 0.1, h - 0.1], radius: 0.18, color: '#0b1030', strokeColor: '#3f6bff', strokeWidth: 0.06 };
+  return { kind: 'Rect', size: [w - 0.1, h - 0.1], radius: 0.18, color: '#1d3570', strokeColor: '#3f6bff', strokeWidth: 0.06 };
 }
 export function blockTop(w: number, h: number): ShapeLook {
   return { kind: 'Rect', size: [w - 0.4, h - 0.4], radius: 0.02, color: '#00000000', strokeColor: '#3f6bff66', strokeWidth: 0.03 };
@@ -168,6 +171,8 @@ export function blockTop(w: number, h: number): ShapeLook {
  * Flat "city plan" details inside a block, one small layout per footprint cell (rooftops, a
  * helipad, a row of tanks). Dim and unoutlined so they stay under the bloom threshold: no glow.
  */
+/** Off for now (art test kept for later): set to true to draw the details again. */
+const SHOW_BLOCK_DETAILS = false;
 const DETAIL = '#18225a';
 const rr = (w: number, h: number, r = 0.035): ShapeLook => ({ kind: 'Rect', size: [w, h], radius: r, color: DETAIL });
 const circ = (d: number): ShapeLook => ({ kind: 'Circle', size: [d, d], radius: d / 2, color: DETAIL });
@@ -251,6 +256,7 @@ const scaled = (l: ShapeLook): ShapeLook => ({
 /** Detail shapes of a w×h block whose top-left cell is `cell`, as offsets from the block's centre. */
 export function blockDetails(w: number, h: number, cell: number): { x: number; y: number; look: ShapeLook }[] {
   const out: { x: number; y: number; look: ShapeLook }[] = [];
+  if (!SHOW_BLOCK_DETAILS) return out;
   for (let j = 0; j < h; j++) {
     for (let i = 0; i < w; i++) {
       // A fixed pattern per cell, picked from the cell index so a block keeps its look.
@@ -283,13 +289,16 @@ export function rivetOffsets(w: number, h: number): [number, number][] {
 }
 export const LOCKED_RING: ShapeLook = { kind: 'Ring', size: [0.86, 0.86], radius: 0.43, thickness: 0.05, color: LOCKED.rim };
 
-/** Projectiles: a white-hot streak (tower), a glowing shell (cannon), an ice shard (frost), a green shell (mortar); a mine's blast is never seen. */
+/**
+ * Projectiles: a white-hot streak (tower), a glowing shell (cannon), an ice shard (frost), a green shell (mortar); a mine's blast is never seen.
+ * 1.5× their first size since the 2026-11-26 playtest (they read too small).
+ */
 export const SHOT_LOOKS = {
-  tower: { kind: 'Rect', size: [0.34, 0.09], radius: 0.045, color: '#f2ffff', strokeColor: '#29f2ff', strokeWidth: 0.035 },
-  cannon: { kind: 'Circle', size: [0.3, 0.3], radius: 0.15, color: '#ffe0b0', strokeColor: '#ff7a1a', strokeWidth: 0.07 },
-  frost: { kind: 'Polygon', size: [0.22, 0.22], radius: 0.02, sides: 4, color: '#e6f8ff', strokeColor: '#7fd8ff', strokeWidth: 0.04 },
+  tower: { kind: 'Rect', size: [0.51, 0.135], radius: 0.0675, color: '#f2ffff', strokeColor: '#29f2ff', strokeWidth: 0.05 },
+  cannon: { kind: 'Circle', size: [0.45, 0.45], radius: 0.225, color: '#ffe0b0', strokeColor: '#ff7a1a', strokeWidth: 0.1 },
+  frost: { kind: 'Polygon', size: [0.33, 0.33], radius: 0.03, sides: 4, color: '#e6f8ff', strokeColor: '#7fd8ff', strokeWidth: 0.06 },
   mine: { kind: 'Circle', size: [0.1, 0.1], radius: 0.05, color: '#ff2e4d' },
-  mortar: { kind: 'Circle', size: [0.24, 0.24], radius: 0.12, color: '#d8ffe0', strokeColor: '#3dff6e', strokeWidth: 0.06 },
+  mortar: { kind: 'Circle', size: [0.36, 0.36], radius: 0.18, color: '#d8ffe0', strokeColor: '#3dff6e', strokeWidth: 0.09 },
 } as const satisfies Record<string, ShapeLook>;
 
 /** Base flash and enemy flash colours. */

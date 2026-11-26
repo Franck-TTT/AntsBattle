@@ -10,6 +10,8 @@ export interface Flight {
 
 export interface HudModel {
   wave: number;
+  /** Waves of the level being played, shown as the counter's "/N". */
+  waveCount: number;
   gold: number;
   /** World point the bar is centred on: above the tray (Panel.hudY). */
   at: [number, number];
@@ -18,10 +20,10 @@ export interface HudModel {
 
 export const HudView = defineView<HudModel>({
   name: 'Hud',
-  description: 'Wave and gold, just above the tray in the bottom panel (lives are shown on the base); coins fly from kills to the gold counter. Intents: coinLanded (payload: flight id), settings (the gear, top right like on the level menu).',
+  description: 'Wave counter at the top centre, gold just above the tray in the bottom panel (lives are shown on the base); coins fly from kills to the gold counter. Intents: coinLanded (payload: flight id), settings (the gear, top right like on the level menu).',
   samples: {
-    start: { wave: 1, gold: 60, at: [0, 0], flights: [] },
-    late: { wave: 9, gold: 1250, at: [0, 0], flights: [] },
+    start: { wave: 1, waveCount: 8, gold: 60, at: [0, 0], flights: [] },
+    late: { wave: 7, waveCount: 8, gold: 1250, at: [0, 0], flights: [] },
   },
   render: (model, { intent }) => {
     // Keeps the bar centred on the band whatever the safe area does to its container: each frame,
@@ -44,9 +46,12 @@ export const HudView = defineView<HudModel>({
       <Widget
         doc="hud-bar"
         id="hud"
-        props={{ wave: () => model().wave, gold: () => model().gold }}
+        props={{ gold: () => model().gold }}
         follow={() => ({ point: model().at, offset: nudge() })}
       />
+      <View class="hud-wave">
+        <Widget doc="stat-chip" id="wave" props={{ caption: 'WAVE', amount: () => model().wave, suffix: () => `/${model().waveCount}`, tone: 'wave' }} />
+      </View>
       <View class="hud-gear">
         <Widget doc="gear-button" id="settings" onIntent={() => intent('settings')} />
       </View>

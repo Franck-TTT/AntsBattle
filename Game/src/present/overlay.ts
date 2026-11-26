@@ -13,7 +13,7 @@ const pathScratch = new Uint8Array(CELLS);
 const claimed = new Uint8Array(CELLS * CELLS);
 import { GHOST_LIFT, ITEMS, SHAPES, moveGraceOf, type BlockShapeName, type ItemKindName } from '../balance.ts';
 import { ITEM_NAMES, SHAPE_NAMES } from '../kinds.ts';
-import { COLORS, FLOW_COLORS, ITEM_LOOKS, ORDER, blockBody, blockTop, type ShapeLook } from '../looks.ts';
+import { COLORS, FLOW_COLORS, ITEM_DETAIL_X, ITEM_LOOKS, ORDER, blockBody, blockTop, type ShapeLook } from '../looks.ts';
 
 export const shapes = visualPool({ name: 'shapes', prefab: 'assets/prefabs/shape.prefab.json', size: 640, draws: Shape });
 export const rings = visualPool({ name: 'rings', prefab: 'assets/prefabs/ring.prefab.json', size: 40, draws: Sprite });
@@ -28,9 +28,10 @@ const linear = (hex: string, alpha = 1): [number, number, number, number] => {
 
 // Colours resolved once (plain constants, presentation only).
 const C = {
-  flow: FLOW_COLORS.map((c) => linear(c, 0.6)),
-  flowDim: FLOW_COLORS.map((c) => linear(c, 0.2)),
-  flowPreview: FLOW_COLORS.map((c) => linear(c, 1)),
+  // Lowered after the 2026-11-26 playtest (were 0.6, 0.2 and 1): the paths sit behind the action.
+  flow: FLOW_COLORS.map((c) => linear(c, 0.35)),
+  flowDim: FLOW_COLORS.map((c) => linear(c, 0.12)),
+  flowPreview: FLOW_COLORS.map((c) => linear(c, 0.6)),
   valid: linear(COLORS.valid, 0.35),
   validRim: linear(COLORS.valid, 0.95),
   invalid: linear(COLORS.invalid, 0.4),
@@ -212,7 +213,7 @@ export const Overlay = defineSystem({
         put(f, gx + 0.08, gy - 0.16, { kind: 'Rect', w: w * 0.9, h: h * 0.75, radius: 0.3, color: C.shadow, order: ORDER.ghost - 1 });
         const tint = cell >= 0 && !valid ? C.invalidRim : undefined;
         put(f, gx, gy, lookDraw(body, ORDER.ghost, 0.95, 0, tint), bob);
-        if (detail) put(f, gx, gy, lookDraw(detail, ORDER.ghost + 1, 0.95, kind === 'wall' ? 0 : Math.PI / 2, tint), bob);
+        if (detail) put(f, gx + (kind === 'wall' ? 0 : ITEM_DETAIL_X * bob), gy, lookDraw(detail, ORDER.ghost + 1, 0.95, 0, tint), bob);
       }
     } else if (p.returnSteps[0]! > 0) {
       // Refused: fly back to the tray (or the cell it came from) with a shake.
@@ -226,7 +227,7 @@ export const Overlay = defineSystem({
         const [body, detail] = ghostLooks(kind, SHAPE_NAMES[p.retShape[0]!]!);
         const sc = (1.1 - 0.3 * e) * (kind === 'wall' ? 1 - 0.4 * e : 1);
         put(f, x, y, lookDraw(body, ORDER.ghost, 1 - 0.4 * e, 0, C.invalidRim), sc);
-        if (detail) put(f, x, y, lookDraw(detail, ORDER.ghost + 1, 1 - 0.4 * e, kind === 'wall' ? 0 : Math.PI / 2, C.invalidRim), sc);
+        if (detail) put(f, x + (kind === 'wall' ? 0 : ITEM_DETAIL_X * sc), y, lookDraw(detail, ORDER.ghost + 1, 1 - 0.4 * e, 0, C.invalidRim), sc);
       }
     }
     f.end();

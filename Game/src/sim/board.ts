@@ -100,8 +100,8 @@ function spawnGrid(cmd: Commands, cols: number, rows: number, noBuild: ArrayLike
       cmd.spawn({ LocalTransform: { position: [cellX(c), cellY(c), 0], rotation: diag(a), scale: [1, 1, 1] }, Shape: { kind: 'Rect', size: [1.4142135623730951, 0.015], radius: 0.0075, color: COLORS.noBuild, order: ORDER.tile, sortingLayer: 'Default' }, BoardTile: {} });
     }
   }
-  for (let k = 1; k < cols; k++) line(r.x - hw + k, r.y, 0.04, rows);
-  for (let k = 1; k < rows; k++) line(r.x, r.y - hh + k, cols, 0.04);
+  for (let k = 1; k < cols; k++) line(r.x - hw + k, r.y, 0.04, rows, COLORS.gridLine);
+  for (let k = 1; k < rows; k++) line(r.x, r.y - hh + k, cols, 0.04, COLORS.gridLine);
   cmd.spawn({ LocalTransform: at(r.x, r.y), Shape: { kind: 'Rect', size: [cols + 0.14, rows + 0.14], radius: 0.04, color: '#00000000', strokeColor: COLORS.frame, strokeWidth: 0.07, order: ORDER.highlight, sortingLayer: 'Default' }, BoardTile: {} });
 }
 
