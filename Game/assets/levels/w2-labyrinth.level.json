@@ -1,0 +1,31 @@
+{
+  "$type": "LevelDef",
+  "id": "w2-labyrinth",
+  "name": "Labyrinth",
+  "order": 49,
+  "cols": 9,
+  "rows": 13,
+  "nests": [
+    { "col": 0, "row": 0, "fromWave": 1 },
+    { "col": 8, "row": 0, "fromWave": 3 },
+    { "col": 4, "row": 0, "fromWave": 6 },
+    { "col": 8, "row": 7, "fromWave": 9 }
+  ],
+  "base": { "col": 4, "row": 12 },
+  "blocks": [
+    { "shape": "b3x1", "col": 0, "row": 3 },
+    { "shape": "b3x1", "col": 6, "row": 3 },
+    { "shape": "b3x1", "col": 2, "row": 6 },
+    { "shape": "b1x3", "col": 1, "row": 9 },
+    { "shape": "b2x1", "col": 3, "row": 9 },
+    { "shape": "b1x3", "col": 7, "row": 9 }
+  ],
+  "weapons": [
+    { "kind": "tower", "col": 1, "row": 3 },
+    { "kind": "tower", "col": 7, "row": 3 },
+    { "kind": "cannon", "col": 3, "row": 6 },
+    { "kind": "frost", "col": 4, "row": 9 },
+    { "kind": "tower", "col": 1, "row": 10 },
+    { "kind": "tower", "col": 7, "row": 10 }
+  ]
+}

@@ -1,0 +1,166 @@
+{
+  "$schemaVersion": 1,
+  "guid": "491347a7-865a-487d-a16e-25958dfa5d90",
+  "name": "world-arrow",
+  "title": "World arrow",
+  "kind": "widget",
+  "root": "root",
+  "nodes": {
+    "root": {
+      "type": "element",
+      "name": "World arrow",
+      "style": {
+        "dir": "row",
+        "pad": 0,
+        "align": "center",
+        "bg": "#0b0e24ff",
+        "radius": 24,
+        "w": 84,
+        "h": 84,
+        "justify": "center"
+      },
+      "children": [
+        "wa_icon",
+        "wa_ring"
+      ]
+    },
+    "wa_icon": {
+      "type": "element",
+      "name": "Arrow",
+      "children": [
+        "wa_top",
+        "wa_bot"
+      ],
+      "style": {
+        "pad": 0,
+        "w": 44,
+        "h": 44
+      }
+    },
+    "wa_ring": {
+      "type": "element",
+      "name": "Rim",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "image": {
+          "guid": "fe3e60fe-b048-4ac5-8d8c-0bca59f46642"
+        },
+        "sliceScale": 1,
+        "tint": "#ffc51fff",
+        "tintMode": "multiply",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "attach": true,
+        "w": "100%",
+        "h": "100%"
+      }
+    },
+    "wa_top": {
+      "type": "element",
+      "name": "Chevron top",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "w": 28,
+        "h": 8,
+        "radius": 4,
+        "bg": "#ffc51fff",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "rotate": 45,
+        "ty": -8,
+        "tx": 0
+      }
+    },
+    "wa_bot": {
+      "type": "element",
+      "name": "Chevron bot",
+      "children": [],
+      "style": {
+        "pad": 0,
+        "w": 28,
+        "h": 8,
+        "radius": 4,
+        "bg": "#ffc51fff",
+        "position": "anchored",
+        "anchor": [
+          0.5,
+          0.5
+        ],
+        "pivot": [
+          0.5,
+          0.5
+        ],
+        "rotate": -45,
+        "ty": 8,
+        "tx": 0
+      }
+    }
+  },
+  "behaviour": "button",
+  "properties": {
+    "dir": {
+      "type": "enum",
+      "values": [
+        "left",
+        "right"
+      ],
+      "default": "left",
+      "poses": {
+        "left": {
+          "set": {
+            "wa_icon": {
+              "rotate": 180
+            }
+          }
+        },
+        "right": {
+          "set": {
+            "wa_icon": {
+              "rotate": 0
+            }
+          }
+        }
+      }
+    }
+  },
+  "states": {
+    "pressed": {
+      "set": {
+        "root": {
+          "scale": 0.9
+        }
+      }
+    },
+    "disabled": {
+      "set": {
+        "root": {
+          "opacity": 0.25
+        }
+      }
+    }
+  },
+  "samples": {
+    "left": {
+      "dir": "left"
+    },
+    "right": {
+      "dir": "right"
+    }
+  }
+}

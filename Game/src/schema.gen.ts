@@ -1554,7 +1554,7 @@ export const schemaIr = {
           "kind": "u16",
           "scalar": "u16",
           "lanes": 1,
-          "doc": "Placed blocks and weapons still inside their move grace window (MoveGrace runs, and the overlay draws their rings, only while it is above 0)"
+          "doc": "Placed blocks and weapons still inside their move grace window (MoveGrace runs only while it is above 0)"
         }
       ],
       "package": "AntsBattle"
@@ -2811,7 +2811,7 @@ export interface RunViews {
   newStars: Uint8Array;
   /** Meta coins this run paid */
   coinsWon: Uint32Array;
-  /** Placed blocks and weapons still inside their move grace window (MoveGrace runs, and the overlay draws their rings, only while it is above 0) */
+  /** Placed blocks and weapons still inside their move grace window (MoveGrace runs only while it is above 0) */
   graced: Uint16Array;
 }
 export interface RunValue {
@@ -2860,7 +2860,7 @@ export interface RunValue {
   newStars: number;
   /** Meta coins this run paid */
   coinsWon: number;
-  /** Placed blocks and weapons still inside their move grace window (MoveGrace runs, and the overlay draws their rings, only while it is above 0) */
+  /** Placed blocks and weapons still inside their move grace window (MoveGrace runs only while it is above 0) */
   graced: number;
 }
 /** Run (resource, sim) */

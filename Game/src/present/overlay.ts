@@ -1,24 +1,22 @@
 /**
  * Immediate-mode overlay drawn each frame from sim state: the ants' path, the path preview while
- * dragging, the hovered cell, the item under the finger, range rings, move grace rings, HP bars.
+ * dragging, the hovered cell, the item under the finger, range rings, HP bars.
  * Presentation only (LateUpdate): it writes pooled visuals, never sim state.
  */
-import { defineSystem, query, read, visualPool, withTag, write, LocalTransform, PointerState, RenderTime, Shape, Sprite, VisualOffset, parseColor, type Chunk, type VisualPoolFrame } from '@gameengine/runtime';
-import { Big, Block, Board, Enemy, Item, Placement, Run } from '../schema.gen.ts';
+import { defineSystem, query, read, visualPool, withTag, write, LocalTransform, PointerState, RenderTime, Shape, VisualOffset, parseColor, type Chunk, type VisualPoolFrame } from '@gameengine/runtime';
+import { Big, Board, Enemy, Placement, Run } from '../schema.gen.ts';
 import { cellX, cellY, CELLS, DEFAULT_COLS, DEFAULT_ROWS, boardRect, footprintCell, tracePath } from '../grid.ts';
 
 // Scratch for tracing a path: fully written by tracePath before it is read.
 const pathScratch = new Uint8Array(CELLS);
 // Segments already drawn this frame (key: smaller cell × CELLS + larger cell), cleared before use.
 const claimed = new Uint8Array(CELLS * CELLS);
-import { GHOST_LIFT, ITEMS, SHAPES, moveGraceOf, type BlockShapeName, type ItemKindName } from '../balance.ts';
+import { GHOST_LIFT, ITEMS, SHAPES, type BlockShapeName, type ItemKindName } from '../balance.ts';
 import { ITEM_NAMES, SHAPE_NAMES } from '../kinds.ts';
 import { COLORS, FLOW_COLORS, ITEM_DETAIL_X, ITEM_LOOKS, ORDER, blockBody, blockTop, type ShapeLook } from '../looks.ts';
 
 export const shapes = visualPool({ name: 'shapes', prefab: 'assets/prefabs/shape.prefab.json', size: 640, draws: Shape });
-export const rings = visualPool({ name: 'rings', prefab: 'assets/prefabs/ring.prefab.json', size: 40, draws: Sprite });
 export const shapesPool = shapes.system;
-export const ringsPool = rings.system;
 
 const KINDS = ['Rect', 'Circle', 'Line', 'Ring', 'Polygon'] as const;
 const linear = (hex: string, alpha = 1): [number, number, number, number] => {
@@ -125,7 +123,7 @@ function drawPath(f: VisualPoolFrame, cells: ArrayLike<number>, len: number, per
 export const Overlay = defineSystem({
   name: 'Overlay',
   stage: 'LateUpdate',
-  queries: { pool: shapes.query(), rings: rings.query(), enemies: query(read(Enemy), read(LocalTransform), withTag(Big)), items: query(read(Item), read(LocalTransform)), blocks: query(read(Block), read(LocalTransform)) },
+  queries: { pool: shapes.query(), enemies: query(read(Enemy), read(LocalTransform), withTag(Big)) },
   resources: [read(Board), read(Placement), read(Run), read(PointerState), read(RenderTime)],
   run(ctx, q) {
     const s = ctx.local(() => ({
@@ -231,35 +229,6 @@ export const Overlay = defineSystem({
       }
     }
     f.end();
-
-    // Move grace rings: an arc on each block and weapon still movable, emptying as its window runs
-    // out. Skipped outright once every building is locked (Run.graced 0); a held one shows none.
-    const rf = rings.begin(q.rings);
-    const graceWindow = moveGraceOf(p.moveGrace[0]!);
-    if (run.graced[0]! > 0 && graceWindow > 0) {
-      for (const c of q.items.chunks()) {
-        const it = c.col(Item);
-        const pos = c.col(LocalTransform).position;
-        for (let i = 0; i < c.length; i++) {
-          const g = it.grace[i]!;
-          if (g <= 0 || it.held[i]) continue;
-          if (!rf.show(pos[i * 3]!, pos[i * 3 + 1]!, 0, 1)) break;
-          (rf.chunk as Chunk).col(Sprite).fillAmount[rf.row] = Math.min(1, g / graceWindow);
-        }
-      }
-      for (const c of q.blocks.chunks()) {
-        const b = c.col(Block);
-        const pos = c.col(LocalTransform).position;
-        for (let i = 0; i < c.length; i++) {
-          const g = b.grace[i]!;
-          // A 1×1 block carrying a weapon: the weapon's ring already sits on that spot.
-          if (g <= 0 || b.held[i] || (b.shape[i] === 0 && board.weapons[b.cell[i]!]! > 0)) continue;
-          if (!rf.show(pos[i * 3]!, pos[i * 3 + 1]!, 0, 1)) break;
-          (rf.chunk as Chunk).col(Sprite).fillAmount[rf.row] = Math.min(1, g / graceWindow);
-        }
-      }
-    }
-    rf.end();
   },
 });
 

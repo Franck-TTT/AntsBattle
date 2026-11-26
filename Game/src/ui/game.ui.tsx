@@ -174,6 +174,7 @@ export const GameUI = defineUI({
       };
     };
     const hud = views.push(HudView, untrack(model), {
+      order: 0,
       onIntent: (name, payload) => {
         if (name === 'coinLanded') setFlights((fs) => fs.filter((f) => f.id !== payload));
         if (name === 'settings') emit(SettingsToggled, { open: true });
@@ -299,11 +300,14 @@ export const GameUI = defineUI({
       return last;
     };
     const fmt = (n: number) => n.toLocaleString('en-US');
+    const worldCount = levels.reduce((n, l) => Math.max(n, l.world + 1), 0);
+    /** The world the map shows when the player browsed with the arrows; null: the current level's. */
+    const [shownWorld, setShownWorld] = createSignal<number | null>(null);
     const menuModel = (): LevelMenuModel => {
       const s = meta();
       const cur = currentIndex(s);
-      // The world holding the current level (src/levels.ts), its last level a boss.
-      const world = levels[cur]?.world ?? 0;
+      // The world picked with the arrows, else the one holding the current level (src/levels.ts), its last level a boss.
+      const world = shownWorld() ?? levels[cur]?.world ?? 0;
       const first = Math.max(0, levels.findIndex((l) => l.world === world));
       const nodes: MapNode[] = levels.slice(first, first + MAP_PATH.length).filter((l) => l.world === world).map((l, k) => {
         const i = first + k;
@@ -315,7 +319,9 @@ export const GameUI = defineUI({
       return {
         coins: fmt(s.coins),
         stars: fmt(s.starTotal),
-        chapter: (levels[cur]?.worldName ?? `World ${world + 1}`).toUpperCase(),
+        chapter: (levels[first]?.worldName ?? `World ${world + 1}`).toUpperCase(),
+        hasPrev: world > 0,
+        hasNext: world + 1 < worldCount,
         nodes,
         luxText: `${luxuryProgress(s)} / ${META.starsPerLuxury}`,
         luxStars: luxuryProgress(s),
@@ -573,10 +579,15 @@ export const GameUI = defineUI({
         end?.close();
         end = null;
         menu ??= views.push(LevelMenuView, untrack(menuModel), {
+          order: 0,
           onIntent: (name, id) => {
             if (name === 'settings') return emit(SettingsToggled, { open: true });
             if (name === 'upgrades') return openUpgrades();
             if (name === 'play') return emit(LevelPicked, { index: currentIndex(untrack(meta)) });
+            if (name === 'prev-world' || name === 'next-world') {
+              const from = untrack(shownWorld) ?? levels[currentIndex(untrack(meta))]?.world ?? 0;
+              return setShownWorld(Math.max(0, Math.min(worldCount - 1, from + (name === 'next-world' ? 1 : -1))));
+            }
             const index = levels.findIndex((l) => l.id === id);
             if (name === 'pick' && index >= 0) openPopup(index);
           },
@@ -588,6 +599,8 @@ export const GameUI = defineUI({
       popup = null;
       menu?.close();
       menu = null;
+      // Back on the menu after a run, the map opens on the current level's world again.
+      setShownWorld(null);
       if (phase === 'playing') {
         end?.close();
         end = null;

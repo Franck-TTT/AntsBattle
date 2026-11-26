@@ -1,0 +1,21 @@
+{
+  "$type": "LevelDef",
+  "id": "w2-nook",
+  "name": "Nook",
+  "order": 41,
+  "cols": 5,
+  "rows": 7,
+  "nests": [
+    { "col": 0, "row": 0, "fromWave": 1 },
+    { "col": 4, "row": 0, "fromWave": 3 }
+  ],
+  "base": { "col": 2, "row": 6 },
+  "blocks": [
+    { "shape": "b1x1", "col": 2, "row": 2 },
+    { "shape": "b1x1", "col": 0, "row": 4 }
+  ],
+  "weapons": [
+    { "kind": "tower", "col": 2, "row": 2 },
+    { "kind": "frost", "col": 0, "row": 4 }
+  ]
+}

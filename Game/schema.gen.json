@@ -1547,7 +1547,7 @@
           "kind": "u16",
           "scalar": "u16",
           "lanes": 1,
-          "doc": "Placed blocks and weapons still inside their move grace window (MoveGrace runs, and the overlay draws their rings, only while it is above 0)"
+          "doc": "Placed blocks and weapons still inside their move grace window (MoveGrace runs only while it is above 0)"
         }
       ],
       "package": "AntsBattle"

@@ -1,0 +1,24 @@
+{
+  "$type": "LevelDef",
+  "id": "w2-ring-road",
+  "name": "Ring Road",
+  "order": 47,
+  "cols": 8,
+  "rows": 11,
+  "nests": [
+    { "col": 0, "row": 0, "fromWave": 1 },
+    { "col": 7, "row": 0, "fromWave": 3 },
+    { "col": 7, "row": 10, "fromWave": 6 }
+  ],
+  "base": { "col": 3, "row": 5 },
+  "blocks": [
+    { "shape": "b1x2", "col": 2, "row": 4 },
+    { "shape": "b1x2", "col": 5, "row": 4 },
+    { "shape": "b3x1", "col": 2, "row": 8 }
+  ],
+  "weapons": [
+    { "kind": "tower", "col": 2, "row": 4 },
+    { "kind": "tower", "col": 5, "row": 5 },
+    { "kind": "frost", "col": 3, "row": 8 }
+  ]
+}

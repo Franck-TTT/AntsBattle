@@ -1,0 +1,109 @@
+{
+  "format": 1,
+  "name": "CrtPause",
+  "model": "unlit",
+  "blend": "opaque",
+  "alphaCutoff": 0.5,
+  "doubleSided": false,
+  "uniformSize": 32,
+  "params": [
+    {
+      "name": "shift",
+      "type": "f32",
+      "offset": 0,
+      "default": [
+        1.2
+      ],
+      "doc": "Jitter of every line, in pixels at 1080p",
+      "ui": {
+        "min": 0,
+        "max": 64
+      }
+    },
+    {
+      "name": "tear",
+      "type": "f32",
+      "offset": 4,
+      "default": [
+        18
+      ],
+      "doc": "Sideways jump of the torn lines, in pixels at 1080p",
+      "ui": {
+        "min": 0,
+        "max": 128
+      }
+    },
+    {
+      "name": "split",
+      "type": "f32",
+      "offset": 8,
+      "default": [
+        2.5
+      ],
+      "doc": "Red/blue split, in pixels at 1080p",
+      "ui": {
+        "min": 0,
+        "max": 32
+      }
+    },
+    {
+      "name": "scan",
+      "type": "f32",
+      "offset": 12,
+      "default": [
+        0.25
+      ],
+      "doc": "How dark the scanlines get",
+      "ui": {
+        "min": 0,
+        "max": 1
+      }
+    },
+    {
+      "name": "roll",
+      "type": "f32",
+      "offset": 16,
+      "default": [
+        2.5
+      ],
+      "doc": "Seconds the bright band takes to roll down the screen",
+      "ui": {
+        "min": 0.2,
+        "max": 20
+      }
+    },
+    {
+      "name": "rollWidth",
+      "type": "f32",
+      "offset": 20,
+      "default": [
+        0.18
+      ],
+      "doc": "Rolling band height, in screen units",
+      "ui": {
+        "min": 0.01,
+        "max": 1
+      }
+    },
+    {
+      "name": "glow",
+      "type": "f32",
+      "offset": 24,
+      "default": [
+        0.2
+      ],
+      "doc": "Extra brightness inside the rolling band",
+      "ui": {
+        "min": 0,
+        "max": 1
+      }
+    }
+  ],
+  "textures": [],
+  "samplerBinding": 1,
+  "wgsl": "// Post effect CrtPause (@gameengine/materials, compiled; do not edit).\nstruct MaterialParams {\n  p_shift: f32,\n  p_tear: f32,\n  p_split: f32,\n  p_scan: f32,\n  p_roll: f32,\n  p_rollWidth: f32,\n  p_glow: f32,\n};\n@group(1) @binding(0) var<uniform> material: MaterialParams;\nfn material_post(in: PostInput) -> vec3f {\n  let v0: f32 = in.screen_uv.y;\n  let v1: f32 = (v0 * 260.0);\n  let v2: f32 = (in.time * 45.0);\n  let v3: f32 = (v1 + v2);\n  let v4: f32 = sin(v3);\n  let v5: f32 = (v4 * material.p_shift);\n  let v6: f32 = (in.time * 31.0);\n  let v7: f32 = (v0 * 40.0);\n  let v8: f32 = (v6 + v7);\n  let v9: f32 = sin(v8);\n  let v10: f32 = (v9 * material.p_tear);\n  let v11: f32 = (v0 * 9.0);\n  let v12: f32 = (in.time * 2.3);\n  let v13: f32 = (v11 + v12);\n  let v14: f32 = sin(v13);\n  let v15: f32 = (v0 * 23.0);\n  let v16: f32 = (in.time * 5.1);\n  let v17: f32 = (v15 - v16);\n  let v18: f32 = sin(v17);\n  let v19: f32 = (v14 * v18);\n  let v20: f32 = step(0.96, v19);\n  let v21: f32 = (v10 * v20);\n  let v22: f32 = (v5 + v21);\n  let v23: f32 = (in.time / material.p_roll);\n  let v24: f32 = fract(v23);\n  let v25: f32 = (material.p_rollWidth * 2.0);\n  let v26: f32 = (v25 + 1.0);\n  let v27: f32 = (v24 * v26);\n  let v28: f32 = (v27 - material.p_rollWidth);\n  let v29: f32 = (v0 - v28);\n  let v30: f32 = abs(v29);\n  let v31: f32 = smoothstep(0.0, material.p_rollWidth, v30);\n  let v32: f32 = (v31 * -1.0);\n  let v33: f32 = (v32 + 1.0);\n  let v34: f32 = (v33 * material.p_shift);\n  let v35: f32 = (v34 * 2.0);\n  let v36: f32 = (v22 + v35);\n  let v37: f32 = in.size.y;\n  let v38: f32 = (v37 / 1080.0);\n  let v39: f32 = (v36 * v38);\n  let v40: vec2f = vec2f(v39, 0.0);\n  let v41: vec2f = (v40 * in.texel);\n  let v42: vec2f = (in.screen_uv + v41);\n  let v43: f32 = (material.p_split * v38);\n  let v44: f32 = (v33 + 1.0);\n  let v45: f32 = (v43 * v44);\n  let v46: vec2f = vec2f(v45, 0.0);\n  let v47: vec2f = (v46 * in.texel);\n  let v48: vec2f = (v42 + v47);\n  let v49: vec3f = post_color(v48);\n  let v50: f32 = v49.x;\n  let v51: vec3f = post_color(v42);\n  let v52: f32 = v51.y;\n  let v53: vec2f = (v42 - v47);\n  let v54: vec3f = post_color(v53);\n  let v55: f32 = v54.z;\n  let v56: vec3f = vec3f(v50, v52, v55);\n  let v57: f32 = (v0 * v37);\n  let v58: f32 = (v57 * 1.6);\n  let v59: f32 = sin(v58);\n  let v60: f32 = (v59 * 0.5);\n  let v61: f32 = (v60 + 0.5);\n  let v62: f32 = (v61 * material.p_scan);\n  let v63: f32 = (v62 * -1.0);\n  let v64: f32 = (v63 + 1.0);\n  let v65: vec3f = (v56 * v64);\n  let v66: f32 = (v33 * material.p_glow);\n  let v67: f32 = (v66 + 1.0);\n  let v68: f32 = clamp(v67, 1.0, 2.0);\n  let v69: vec3f = (v65 * v68);\n  return v69;\n}\n",
+  "domain": "post",
+  "stage": "display",
+  "hash": "5e52228e90294427",
+  "sourceHash": "be577fc763311611"
+}

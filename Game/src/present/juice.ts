@@ -2,7 +2,7 @@
  * Game feel, derived from sim state each frame: enemy flashes and waddle, squash and stretch on
  * drop, refused-pick shakes, the base's red flash, camera shakes and sounds. Presentation only.
  */
-import { audio, burstAt, defineSystem, onSignal, parseColor, query, read, shakeCamera, withTag, write, Camera, RenderTime, Shape, VisualOffset, type EntityId } from '@gameengine/runtime';
+import { audio, burstAt, defineSystem, onSignal, parseColor, query, read, shakeCamera, withTag, write, Camera, CameraShake, RenderTime, Shape, VisualOffset, type EntityId } from '@gameengine/runtime';
 import { Base, Big, Block, Board, Enemy, FxHost, FxKind, Item, Placement, PlacementRefused, Puddle, Run, TraySlot, WaveStarted } from '../schema.gen.ts';
 import { ENEMY_NAMES, ITEM_NAMES } from '../kinds.ts';
 import { cellX, cellY } from '../grid.ts';
@@ -49,7 +49,7 @@ export const Juice = defineSystem({
     base: query(withTag(Base), write(Shape), write(VisualOffset)),
     slots: query(read(TraySlot), write(VisualOffset)),
     puddles: query(read(Puddle), write(Shape)),
-    camera: query(read(Camera)),
+    camera: query(read(Camera), read(CameraShake)),
     fx: query(read(FxHost)),
   },
   resources: [read(Run), read(Placement), read(RenderTime), read(Board)],

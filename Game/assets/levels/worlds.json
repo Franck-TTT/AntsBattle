@@ -1,7 +1,7 @@
 {
   "$type": "WorldsDef",
   "worlds": [
-    { "name": "World 1", "levels": ["size-small-5x7", "size-compact-6x9", "proposal-twin-gates", "proposal-crossfire", "proposal-funnel", "proposal-side-base", "proposal-heart", "size-small-5x7", "size-compact-6x9", "size-big-8x12"] },
-    { "name": "World 2", "levels": ["size-max-10x14", "", "", "", "", "", "", "", "", ""] }
+    { "name": "World 1", "levels": ["size-small-5x7", "w1-sprout", "size-compact-6x9", "w1-two-lanes", "level-01", "proposal-twin-gates", "proposal-crossfire", "demo", "size-big-8x12", "w1-gauntlet"] },
+    { "name": "World 2", "levels": ["w2-nook", "w2-zigzag", "w2-pinch", "proposal-funnel", "proposal-side-base", "proposal-heart", "w2-ring-road", "w2-bastion", "w2-labyrinth", "size-max-10x14"] }
   ]
 }

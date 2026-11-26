@@ -71,15 +71,17 @@ declare module '@gameengine/ui' {
      *   - `upReady`: yesno, default false
      *   - `luxStars`: number, default 2
      *   - `luxGoal`: number, default 10
-     * Events: `topbar: settings`, `play`, `bottomnav: upgrades`, `bottomnav: maptab`
+     *   - `hasPrev`: yesno, default false
+     *   - `hasNext`: yesno, default true
+     * Events: `topbar: settings`, `prev-world`, `next-world`, `play`, `bottomnav: upgrades`, `bottomnav: maptab`
      * Code areas: `map`
-     * Refs: `topbar`, `topbar.coins`, `topbar.starchip`, `topbar.settings`, `luxsteps`, `play`, `bottomnav`, `bottomnav.upgrades`, `bottomnav.maptab`
+     * Refs: `topbar`, `topbar.coins`, `topbar.starchip`, `topbar.settings`, `luxsteps`, `prev-world`, `next-world`, `play`, `bottomnav`, `bottomnav.upgrades`, `bottomnav.maptab`
      * Samples (`view render doc:home --sample …`): `half`
      */
     'home': {
-      props: { coins: string | TextSourceRef; stars: string | TextSourceRef; luxText: string | TextSourceRef; chapter: string | TextSourceRef; playDetail: string | TextSourceRef; upBadge: string | TextSourceRef; luxReady: boolean; luxCount: string | TextSourceRef; upReady: boolean; luxStars: number; luxGoal: number };
+      props: { coins: string | TextSourceRef; stars: string | TextSourceRef; luxText: string | TextSourceRef; chapter: string | TextSourceRef; playDetail: string | TextSourceRef; upBadge: string | TextSourceRef; luxReady: boolean; luxCount: string | TextSourceRef; upReady: boolean; luxStars: number; luxGoal: number; hasPrev: boolean; hasNext: boolean };
       areas: 'map';
-      refs: 'topbar' | 'topbar.coins' | 'topbar.starchip' | 'topbar.settings' | 'luxsteps' | 'play' | 'bottomnav' | 'bottomnav.upgrades' | 'bottomnav.maptab';
+      refs: 'topbar' | 'topbar.coins' | 'topbar.starchip' | 'topbar.settings' | 'luxsteps' | 'prev-world' | 'next-world' | 'play' | 'bottomnav' | 'bottomnav.upgrades' | 'bottomnav.maptab';
     };
     /**
      * HUD bar: a widget (ui/docs/hud-bar.ui.json)
@@ -619,6 +621,21 @@ declare module '@gameengine/ui' {
       props: { kicker: string | TextSourceRef; name: string | TextSourceRef; desc: string | TextSourceRef; info: readonly { key: string; k?: string | TextSourceRef; v?: string | TextSourceRef; color?: 'pink' | 'blue' | 'green' | 'gold' }[] };
       areas: never;
       refs: 'close';
+    };
+    /**
+     * World arrow: a widget, button (ui/docs/world-arrow.ui.json)
+     *
+     * Properties:
+     *   - `dir`: enum left | right, default "left"
+     * Events: `<id>`
+     * Code areas: none
+     * Refs: none
+     * Samples (`view render doc:world-arrow --sample …`): `left`, `right`
+     */
+    'world-arrow': {
+      props: { dir: 'left' | 'right' };
+      areas: never;
+      refs: never;
     };
   }
 }

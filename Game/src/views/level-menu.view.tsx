@@ -19,6 +19,9 @@ export interface LevelMenuModel {
   coins: string;
   stars: string;
   chapter: string;
+  /** Whether there is a world before / after the one shown (the arrows beside the title). */
+  hasPrev: boolean;
+  hasNext: boolean;
   nodes: readonly MapNode[];
   luxText: string;
   /** Stars toward the next Luxury roll, out of luxGoal. */
@@ -74,10 +77,10 @@ const sampleNodes = (current: number): MapNode[] =>
 
 export const LevelMenuView = defineView<LevelMenuModel>({
   name: 'LevelMenu',
-  description: 'Home: the level map of the current chapter, coins, stars, Luxury roll charge, PLAY and the bottom navigation. Intents: pick (payload: the level id), play, upgrades.',
+  description: 'Home: the level map of the current chapter, coins, stars, Luxury roll charge, PLAY and the bottom navigation. Intents: pick (payload: the level id), play, upgrades, prev-world and next-world (the arrows beside the world title).',
   samples: {
-    start: { coins: '0', stars: '0', chapter: 'CHAPTER 1', nodes: sampleNodes(1), luxText: '0 / 10', luxStars: 0, luxGoal: 10, luxReady: false, luxCount: '0', playDetail: 'Level 1 · Open Field', upReady: false, upBadge: '' },
-    mid: { coins: '1,240', stars: '12', chapter: 'CHAPTER 1', nodes: sampleNodes(6), luxText: '2 / 10', luxStars: 2, luxGoal: 10, luxReady: true, luxCount: '1', playDetail: 'Level 6 · Crossfire', upReady: true, upBadge: '1' },
+    start: { coins: '0', stars: '0', chapter: 'CHAPTER 1', hasPrev: false, hasNext: true, nodes: sampleNodes(1), luxText: '0 / 10', luxStars: 0, luxGoal: 10, luxReady: false, luxCount: '0', playDetail: 'Level 1 · Open Field', upReady: false, upBadge: '' },
+    mid: { coins: '1,240', stars: '12', chapter: 'CHAPTER 1', hasPrev: false, hasNext: true, nodes: sampleNodes(6), luxText: '2 / 10', luxStars: 2, luxGoal: 10, luxReady: true, luxCount: '1', playDetail: 'Level 6 · Crossfire', upReady: true, upBadge: '1' },
   },
   render: (model, { intent }) => {
     // The map box is --map-w wide and --map-h tall (ui/game.style.css: taller on narrow phones, wider and lower in landscape).
@@ -89,6 +92,8 @@ export const LevelMenuView = defineView<LevelMenuModel>({
         coins: () => model().coins,
         stars: () => model().stars,
         chapter: () => model().chapter,
+        hasPrev: () => model().hasPrev,
+        hasNext: () => model().hasNext,
         luxText: () => model().luxText,
         luxStars: () => model().luxStars,
         luxGoal: () => model().luxGoal,

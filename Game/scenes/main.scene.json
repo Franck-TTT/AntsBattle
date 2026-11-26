@@ -13,6 +13,12 @@
       "VisualOffset": {}
     },
     {
+      "name": "Post camera",
+      "id": "post-camera",
+      "Camera": { "order": 1, "clear": false, "layerMask": 0, "view": "WorldView" },
+      "LocalTransform": {}
+    },
+    {
       "name": "Effects",
       "id": "effects",
       "LocalTransform": {},

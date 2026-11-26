@@ -296,9 +296,11 @@
       "type": "element",
       "name": "Element",
       "children": [
+        "hm_prev",
         "hm_line_l",
         "hm_chapter_t",
-        "hm_line_r"
+        "hm_line_r",
+        "hm_next"
       ],
       "style": {
         "pad": 0,
@@ -522,6 +524,24 @@
         "w": "100%",
         "h": "100%"
       }
+    },
+    "hm_prev": {
+      "type": "use",
+      "doc": "world-arrow",
+      "key": "prev-world",
+      "name": "Previous world",
+      "props": {
+        "dir": "left"
+      }
+    },
+    "hm_next": {
+      "type": "use",
+      "doc": "world-arrow",
+      "key": "next-world",
+      "name": "Next world",
+      "props": {
+        "dir": "right"
+      }
     }
   },
   "view": {
@@ -574,6 +594,32 @@
       "type": "number",
       "default": 10,
       "format": "value"
+    },
+    "hasPrev": {
+      "type": "yesno",
+      "default": false,
+      "poses": {
+        "no": {
+          "set": {
+            "hm_prev": {
+              "opacity": 0.25
+            }
+          }
+        }
+      }
+    },
+    "hasNext": {
+      "type": "yesno",
+      "default": true,
+      "poses": {
+        "no": {
+          "set": {
+            "hm_next": {
+              "opacity": 0.25
+            }
+          }
+        }
+      }
     }
   },
   "samples": {

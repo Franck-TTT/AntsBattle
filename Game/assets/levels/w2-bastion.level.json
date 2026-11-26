@@ -1,0 +1,28 @@
+{
+  "$type": "LevelDef",
+  "id": "w2-bastion",
+  "name": "Bastion",
+  "order": 48,
+  "cols": 8,
+  "rows": 12,
+  "nests": [
+    { "col": 0, "row": 0, "fromWave": 1 },
+    { "col": 7, "row": 0, "fromWave": 2 },
+    { "col": 3, "row": 0, "fromWave": 5 },
+    { "col": 0, "row": 6, "fromWave": 8 }
+  ],
+  "base": { "col": 4, "row": 11 },
+  "blocks": [
+    { "shape": "b2x2", "col": 3, "row": 4 },
+    { "shape": "b1x3", "col": 1, "row": 7 },
+    { "shape": "b1x3", "col": 6, "row": 7 },
+    { "shape": "b2x1", "col": 3, "row": 9 }
+  ],
+  "weapons": [
+    { "kind": "cannon", "col": 3, "row": 4 },
+    { "kind": "tower", "col": 4, "row": 5 },
+    { "kind": "tower", "col": 1, "row": 8 },
+    { "kind": "tower", "col": 6, "row": 8 },
+    { "kind": "frost", "col": 4, "row": 9 }
+  ]
+}

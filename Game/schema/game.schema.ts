@@ -127,7 +127,7 @@ export const Run = resource(
     stars: u8({ doc: 'Stars this run earned (0 on a defeat)' }),
     newStars: u8({ doc: 'Stars above the best already won on this level (they charge the Luxury roll)' }),
     coinsWon: u32({ doc: 'Meta coins this run paid' }),
-    graced: u16({ doc: 'Placed blocks and weapons still inside their move grace window (MoveGrace runs, and the overlay draws their rings, only while it is above 0)' }),
+    graced: u16({ doc: 'Placed blocks and weapons still inside their move grace window (MoveGrace runs only while it is above 0)' }),
   },
   { sim: true },
 );

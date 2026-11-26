@@ -1,0 +1,9 @@
+{
+  "tonemap": "none",
+  "bloom": {
+    "enabled": false
+  },
+  "ssao": {
+    "enabled": false
+  }
+}
