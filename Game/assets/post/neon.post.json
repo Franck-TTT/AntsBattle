@@ -16,7 +16,7 @@
         "guid": "5e9a4542-881c-4945-99fe-7130a4c2db5d"
       },
       "optional": true,
-      "values": "period=10; sweep=1.2; width=0.05; shift=2.5; split=0.75; glow=0.04"
+      "values": "period=10; sweep=1.2; width=0.2; shift=2.5; split=0.75; glow=0.04"
     },
     "chromaticEdges": {
       "material": {

@@ -4,5 +4,6 @@
   "singlePick": 1,
   "caInner": 0.75,
   "caStrength": 5,
-  "caInsetTop": 0.08
+  "caInsetTop": 0.08,
+  "crtWidth": 0.2
 }
